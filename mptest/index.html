@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>
+<title>FASTRIX: проверка онлайна</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;background:#16131f;color:#f3f0ff;font:16px/1.4 system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+header{padding:12px 16px}
+h1{font-size:18px;margin:0 0 6px}
+#st{font-size:14px;color:#b9b3d6;white-space:pre-line}
+button{font:600 16px system-ui;padding:10px 16px;border-radius:10px;border:0;background:#ffd23f;color:#16131f;margin:6px 6px 0 0}
+#field{position:relative;margin:12px 16px;height:55vh;border-radius:14px;background:#231e33;overflow:hidden}
+.dot{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;display:grid;place-items:center;font:700 12px system-ui;color:#16131f;transition:left .08s linear,top .08s linear}
+#log{padding:0 16px 16px;font:12px ui-monospace,monospace;color:#8f88ad;white-space:pre-line;max-height:20vh;overflow:auto}
+</style></head><body>
+<header><h1>Проверка онлайна FASTRIX</h1>
+<div id="st">Загрузка…</div>
+<button id="go">Найти комнату</button><button id="leave" hidden>Выйти</button></header>
+<div id="field"></div>
+<div id="log"></div>
+<script>
+(function(){
+  var st=document.getElementById('st'), field=document.getElementById('field'), logEl=document.getElementById('log');
+  var COLORS=['#ffd23f','#5ef38c','#5ec8ff','#ff7ab6','#c39bff','#ff9f43','#ffffff','#9df0e8'];
+  var me={x:.5,y:.5}, pos={}, pingSent={}, lastRtt=null, B=null, sendT=0;
+  function log(s){logEl.textContent=new Date().toLocaleTimeString()+'  '+s+'\n'+logEl.textContent;}
+  function render(){
+    var M=B&&B.multiplayer; var ids=M&&M.players?M.players.map(function(p){return p.id}):[];
+    field.innerHTML='';
+    (M&&M.players||[]).forEach(function(p,i){
+      var q=p.id===M.playerId?me:(pos[p.id]||{x:.5,y:.5});
+      var d=document.createElement('div'); d.className='dot'; d.style.background=COLORS[i%COLORS.length];
+      d.style.left=(q.x*100)+'%'; d.style.top=(q.y*100)+'%'; d.textContent=(p.id===M.playerId?'Я':i+1)+(p.isHost?'★':'');
+      field.appendChild(d);
+    });
+    if(!M) return;
+    st.textContent='Связь: '+M.state+(M.roomId?'\nКомната: '+M.roomId+'  игроков: '+M.players.length+(M.isHost?'  (вы хост)':''):'')+
+      (lastRtt!=null?'\nЗадержка туда-обратно: '+lastRtt+' мс':'')+(M.region?'\nРегион: '+M.region:'');
+  }
+  function move(e){
+    var r=field.getBoundingClientRect(), t=e.touches?e.touches[0]:e;
+    me.x=Math.min(1,Math.max(0,(t.clientX-r.left)/r.width)); me.y=Math.min(1,Math.max(0,(t.clientY-r.top)/r.height));
+    var now=Date.now(); if(B&&B.multiplayer.roomId&&now-sendT>66){sendT=now; B.multiplayer.send('pos',{x:+me.x.toFixed(3),y:+me.y.toFixed(3)});}
+    render(); if(e.cancelable) e.preventDefault();
+  }
+  ['pointerdown','pointermove'].forEach(function(n){field.addEventListener(n,function(e){if(n==='pointermove'&&!e.buttons&&e.pointerType==='mouse')return;move(e)},{passive:false})});
+  field.addEventListener('touchmove',move,{passive:false});
+  function ping(){ if(!B||!B.multiplayer.roomId||B.multiplayer.players.length<2) return;
+    var id=Math.random().toString(36).slice(2,8); pingSent[id]=performance.now(); B.multiplayer.send('ping',{id:id}); }
+  setInterval(ping,2000);
+  function boot(){
+    B=window.bridge;
+    if(!B){st.textContent='Не загрузился Playgama Bridge (нет сети до bridge.playgama.com).';return;}
+    B.initialize().then(function(){
+      var M=B.multiplayer;
+      st.textContent='Платформа: '+B.platform.id+'\nОнлайн поддерживается: '+(M.isSupported?'да':'нет');
+      var E=B.EVENT_NAME;
+      M.on(E.MULTIPLAYER_STATE_CHANGED,function(s){log('связь: '+s);render()});
+      M.on(E.MULTIPLAYER_PLAYER_JOINED,function(p){log('вошёл игрок '+p.id.slice(0,6));render()});
+      M.on(E.MULTIPLAYER_PLAYER_LEFT,function(p){log('вышел игрок '+p.id.slice(0,6));delete pos[p.id];render()});
+      M.on(E.MULTIPLAYER_HOST_CHANGED,function(h){log('новый хост: '+(h?h.id.slice(0,6):'нет'));render()});
+      M.on(E.MULTIPLAYER_ROOM_LEFT,function(r){log('вышли из комнаты: '+r);render();document.getElementById('leave').hidden=true});
+      M.on(E.MULTIPLAYER_MESSAGE_RECEIVED,function(m){
+        if(m.type==='pos'){pos[m.from]=m.data;render();}
+        else if(m.type==='ping'){M.send('pong',{id:m.data.id},{to:m.from});}
+        else if(m.type==='pong'&&pingSent[m.data.id]){lastRtt=Math.round(performance.now()-pingSent[m.data.id]);delete pingSent[m.data.id];render();}
+      });
+      document.getElementById('go').onclick=function(){
+        log('ищу комнату…');
+        M.joinOrCreateRoom({maxPlayers:8,filter:{mode:'mptest',v:1}}).then(function(id){
+          log('в комнате '+id+(M.isHost?' (создана, вы хост)':''));document.getElementById('leave').hidden=false;
+          M.send('pos',me);render();
+        }).catch(function(e){log('ошибка: '+(e&&e.code||e));});
+      };
+      document.getElementById('leave').onclick=function(){M.leaveRoom();};
+      render();
+    }).catch(function(e){st.textContent='Ошибка запуска Bridge: '+e;});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script></body></html>

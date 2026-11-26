@@ -10,6 +10,7 @@ git -C "$ROOT" fetch -q origin +refs/heads/gh-pages:refs/remotes/origin/gh-pages
 git -C "$ROOT" worktree add -q "$W" origin/gh-pages --detach
 find "$W" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -r "$TMP/out/." "$W/"
+[ -d "$ROOT/mptest" ] && cp -r "$ROOT/mptest" "$W/mptest"   # two-device online test page
 git -C "$W" add -A
 git -C "$W" commit -q -m "Play build $VER for testers (no Bridge)" || echo "nothing changed"
 git -C "$W" push -q origin HEAD:gh-pages
