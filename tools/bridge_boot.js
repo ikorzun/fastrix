@@ -60,6 +60,23 @@
   // is actually shown; no timers of our own.
   window.__fxAd = function () { try { window.bridge.advertisement.showInterstitial(); } catch (e) {} };
 
+  // Rewarded ads (opt-in, e.g. "x2 coins"). The game shows its button only when
+  // window.__fxRewarded exists, so platforms without rewarded ads never see it.
+  // cb(true) only in the "rewarded" state; cb(false) if closed or failed first.
+  function setupRewarded(B) {
+    try { if (!B.advertisement.isRewardedSupported) return; } catch (e) { return; }
+    var pending = null, granted = false;
+    B.advertisement.on(B.EVENT_NAME.REWARDED_STATE_CHANGED, function (st) {
+      if (!pending) return;
+      if (st === 'rewarded') { granted = true; var cb = pending; pending = null; cb(true); }
+      else if (st === 'closed' || st === 'failed') { var cb2 = pending; pending = null; if (!granted) cb2(false); }
+    });
+    window.__fxRewarded = function (cb) {
+      if (pending) return; pending = cb; granted = false;
+      try { B.advertisement.showRewarded(); } catch (e) { pending = null; cb(false); }
+    };
+  }
+
   function boot() {
     var B = window.bridge;
     if (!B) return runGame(); // SDK failed to load: still let the game run
@@ -67,6 +84,7 @@
       .then(function () {
         window.__fxLang = B.platform.language || 'en';
         audioOn = B.platform.isAudioEnabled !== false;
+        setupRewarded(B);
         return B.storage.get([SAVE_KEY]);
       })
       .then(function (v) {
