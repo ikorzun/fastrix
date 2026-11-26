@@ -1,0 +1,22 @@
+# Fastrix
+
+Fastrix: FPS Arena Shooter Online, браузерный шутер для телефонов и ПК под Playgama.
+
+## Сборка под Playgama
+
+Источник игры пока один: однофайловая версия арены, которую ведёт основная ветка
+(`/mnt/project-files/shooter_builds/shooter_arena_vNN.html`). Эта папка её не правит,
+а только собирает из неё архив для Playgama. Код игры переедет сюда на этапе 2 (сетевой рефакторинг).
+
+Сборка (из корня репозитория):
+
+    python3 -I tools/build.py /mnt/project-files/shooter_builds/<файл>.html builds/<имя>
+
+Что делает: three.js r128 и шрифты Rubik/Unbounded кладёт внутрь архива вместо
+cdnjs и Google Fonts (требование 1.2.5), добавляет `<!doctype>` и `charset`,
+кладёт `playgama-bridge-config.json`, если он есть, и лицензии; печатает, что
+ещё не проходит модерацию. Код завершения 1, если остались загрузки из сети.
+
+- `vendor/` — three.min.js 0.128.0 (MIT), woff2 Rubik и Unbounded (OFL) из @fontsource 5.0.20, латиница и кириллица.
+- `builds/` — готовые архивы и скриншот проверки.
+- План целиком: https://claude.ai/artifact/TYNxgQ7HbewTMGesd9XYZd

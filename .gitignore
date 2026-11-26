@@ -1,0 +1,4 @@
+dist/
+dist.zip
+builds/
+__pycache__/
