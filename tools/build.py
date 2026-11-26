@@ -130,7 +130,8 @@ def main():
             notes.append('%s: %d' % (label, c))
     count(r'\blocalStorage\b', 'TODO 3.2.1 localStorage uses left (move to bridge.storage)')
     count(r'createOscillator', 'TODO 3.3.2 synthesized sounds (createOscillator)')
-    count(r'[\U0001F300-\U0001FAFF☀-➿]', 'TODO 4.3.2 emoji characters in the file')
+    # ★ ☆ ♥ are ordinary font glyphs, not emoji
+    count(r'(?![★☆♥])[\U0001F300-\U0001FAFF☀-➿]', 'TODO 4.3.2 emoji characters in the file')
     count(r'Esc\s*[—-]', 'TODO 1.5.2 game text mentions Esc (browser reserves it)')
     if 'playgama-bridge.js' not in html:
         notes.append('TODO 1.1.1 Playgama Bridge script not added yet (stage 1)')
