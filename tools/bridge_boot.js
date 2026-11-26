@@ -17,9 +17,13 @@
     _queue: function () { var s = this; s._dirty = true; clearTimeout(s._t); s._t = setTimeout(function () { s.flush(); }, 1000); },
     flush: function () {
       if (!this._dirty) return; this._dirty = false; clearTimeout(this._t);
-      try { window.bridge.storage.set(SAVE_KEY, JSON.stringify(this._d)).catch(function () {}); } catch (e) {}
+      try { return window.bridge.storage.set(SAVE_KEY, JSON.stringify(this._d)).catch(function () {}); } catch (e) {}
     }
   };
+  // For the game: call before a page reload so the last change is not lost.
+  // Returns a promise that settles when Bridge storage has the data.
+  window.__fxBridge = true;
+  window.__fxSaveNow = function () { return Promise.resolve(store.flush()); };
   addEventListener('pagehide', function () { store.flush(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden) store.flush(); });
 
