@@ -347,7 +347,6 @@
   #start .row { display: flex; flex-wrap: wrap; gap: 8px; }
   #start button.sw { border: 3px solid var(--o); box-shadow: 0 3px 0 var(--o); padding: 0; }
   #start button.sw.sel { border-color: #ff4fb8; }
-  #play { animation: wobble 1.6s ease-in-out infinite; }
   @keyframes wobble { 50% { transform: scale(1.06) rotate(-2deg); } }
   #start .mapRow button { display: flex; flex-direction: column; align-items: center; line-height: 1.1; gap: 2px; }
   #start .mapRow button small { font-size: 9px; opacity: .75; font-weight: 600; }
@@ -694,80 +693,105 @@
   #pmTabs svg { width: 26px; height: 26px; flex: none; }
   #pmTabs .ti { height: 26px; width: 40px; object-fit: contain; flex: none; }
   #pmTabs button.dot::after { content: ""; position: absolute; right: 3px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--coral); border: 2.5px solid var(--ink); box-sizing: border-box; }
-  /* Бой */
-  #lobby .lh { position: absolute; left: var(--sl); top: 66px; margin: 0; font: 800 15px/20px var(--font); color: #fff; }
-  #mapBtns { position: absolute; left: var(--sl); top: 92px; display: flex; gap: 12px; }
-  #lobby .map { position: relative; width: 150px; height: 140px; display: flex; flex-direction: column; align-items: center; background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 3px 4px 0 var(--ink); }
-  #lobby .map .im { width: 144px; height: 78px; object-fit: cover; display: block; border-radius: 15px 15px 0 0; border-bottom: 3px solid var(--ink); background: #2a1a5c; }
-  #lobby .map b { margin-top: 7px; font: 800 16px/20px var(--stk); }
-  #lobby .map small { margin-top: 2px; font: 600 13px/16px var(--font); color: #5a4a78; }
-  #lobby .map.sel { background: var(--yel); }
-  #lobby .map .chk { position: absolute; right: -9px; top: -9px; display: none; }
-  #lobby .map.sel .chk { display: grid; }
-  #mMode { position: absolute; left: var(--sl); top: 246px; height: 36px; display: flex; align-items: center; padding: 0 14px; font: 700 15px var(--font); white-space: nowrap; }
+  /* Бой (v18): mode line on top, three arena cards in the centre (a tap starts the match), quests in a strip below */
+  #lobby .lh { display: none; }
+  #mMode { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); height: 32px; display: flex; align-items: center; padding: 0 14px; font: 700 14px var(--font); white-space: nowrap; }
   #mMode i { width: 5px; height: 5px; border-radius: 50%; background: var(--yel); margin: 0 8px; flex: none; }
-  #lobby #pmQuests { position: absolute; right: var(--sr); top: 66px; width: 258px; box-sizing: border-box; padding: 10px 14px 12px; border-radius: 18px; display: grid; gap: 8px; }
-  #pmQuests h3 { margin: 0; font: 800 15px/18px var(--font); color: #fff; }
-  #pmQuests .lq { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 4px; align-items: center; }
+  #mapBtns { position: absolute; left: 50%; top: 98px; transform: translateX(-50%); display: flex; gap: 16px; }
+  #lobby .map { position: relative; width: 220px; height: 156px; display: flex; flex-direction: column; align-items: stretch; background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: 4px 5px 0 var(--ink); }
+  #lobby .map .im { width: 100%; height: 98px; object-fit: cover; display: block; border-radius: 15px 15px 0 0; border-bottom: 3px solid var(--ink); background: #2a1a5c; box-sizing: border-box; }
+  #lobby .map .mt { display: flex; flex-direction: column; justify-content: center; flex: 1; padding: 0 12px; min-width: 0; }
+  #lobby .map b { font: 800 17px/21px var(--stk); white-space: nowrap; }
+  #lobby .map small { font: 600 13px/16px var(--font); color: #5a4a78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lobby .map .go { position: absolute; right: 10px; top: 72px; display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 14px 0 10px; border-radius: 14px; background: var(--mint); border: 3px solid var(--ink); box-shadow: 2px 3px 0 var(--ink); font: 900 15px/1 var(--stk); box-sizing: border-box; transform: rotate(-2deg); }
+  #lobby .map .go svg { width: 20px; height: 20px; }
+  #lobby .map.ld .go { background: #fff; }
+  #lobby #pmQuests { position: absolute; left: 50%; top: 266px; transform: translateX(-50%); width: auto; padding: 0; background: none; box-shadow: none; display: flex; gap: 8px; }
+  #pmQuests h3 { display: none; }
+  #pmQuests .lq { width: 236px; height: 44px; box-sizing: border-box; padding: 0 12px 0 6px; border-radius: 999px; background: #1b1036b8; box-shadow: inset 0 2px 0 #fff2;
+    display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 3px; align-content: center; align-items: center; }
   #pmQuests .lq img { grid-row: 1 / span 2; width: 30px; height: 30px; object-fit: contain; }
-  #pmQuests .lq .t { grid-column: 2 / span 2; font: 700 14px/17px var(--font); color: #fff; }
-  #pmQuests .lq .b { height: 6px; border-radius: 999px; background: #ffffff2e; overflow: hidden; }
+  #pmQuests .lq .t { grid-column: 2; font: 700 13px/16px var(--font); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #pmQuests .lq .b { grid-column: 2; height: 5px; border-radius: 999px; background: #ffffff2e; overflow: hidden; }
   #pmQuests .lq .b i { display: block; height: 100%; background: var(--yel); border-radius: 999px; }
-  #pmQuests .lq em { font: 800 13px/15px var(--stk); font-style: normal; color: var(--yel); }
+  #pmQuests .lq em { grid-column: 3; grid-row: 1 / span 2; font: 800 13px/15px var(--stk); font-style: normal; color: var(--yel); }
   #pmQuests .lq.done .b i { background: var(--mint); } #pmQuests .lq.done em { color: var(--mint); }
-  #lobby #play { position: absolute; right: calc(var(--sr) + 4px); top: 244px; width: 250px; height: 64px; animation: none; }
-  /* Арсенал */
-  #arsSeg { position: absolute; left: var(--sl); top: 62px; width: 350px; height: 40px; display: flex; box-sizing: border-box; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); overflow: hidden; }
+  #goTap { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; background: #1b103666; }
+  #goTap button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 30px; font: 900 22px/1.1 var(--stk); }
+  #goTap small { font: 700 14px var(--font); color: #3b2c5c; }
+  /* Арсенал (v18): one centred block. Segments on top, a 3 x 2 grid of wide tiles; each tile has its own action button,
+     a tap on the tile body opens the item popup (#ipop) */
+  #arsSeg { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); width: 372px; height: 40px; display: flex; box-sizing: border-box; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); overflow: hidden; }
   #arsSeg button { flex: 1; display: grid; place-items: center; font: 800 15px var(--font); }
   #arsSeg button + button { border-left: 3px solid var(--ink); }
   #arsSeg button.on { background: var(--yel); }
   #arsSeg button:active, :is(#lobby, #pauseL) .tseg button:active { transform: none; }
-  #arsGrid { position: absolute; left: var(--sl); top: 112px; width: 476px; display: grid; grid-template-columns: repeat(4, 108px); grid-auto-rows: 96px; gap: 8px 12px; }
-  #arsGrid.g-s { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: 62px; gap: 8px 10px; }
-  #lobby .wcd, #lobby .ecd, #lobby .skc { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 3px 4px 0 var(--ink); text-align: center; min-width: 0; }
-  #lobby .wcd.sel, #lobby .ecd.sel, #lobby .skc.sel { background: #fff6cf; box-shadow: 0 0 0 3px var(--yel), 3px 4px 0 3px var(--ink); }
-  #lobby .wcd .wi { width: 80px; height: 44px; object-fit: contain; }
-  #lobby .wcd b, #lobby .ecd b { font: 800 14px/17px var(--font); white-space: nowrap; }
-  #lobby .wcd.dim .wi { filter: grayscale(.7); opacity: .75; }
-  #lobby .chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; font: 800 12px/1 var(--font); border: 2px solid var(--ink); background: #fff; box-sizing: border-box; white-space: nowrap; }
-  #lobby .chip img { width: 16px; height: 16px; object-fit: contain; }
-  #lobby .chip svg { width: 14px; height: 14px; margin-left: -2px; }
-  #lobby .chip.ok { background: var(--mint); }
-  #lobby .chip.lk { background: #e6e2f2; color: #5a4a78; }
-  #lobby .nw { position: absolute; left: -8px; top: -9px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--coral); color: #fff; border: 2px solid var(--ink); font: 800 12px/16px var(--font); box-sizing: border-box; }
-  #lobby .skc { gap: 4px; padding: 0 3px; }
+  #arsGrid { position: absolute; left: 50%; top: 106px; transform: translateX(-50%); width: 740px; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 96px; gap: 10px 12px; }
+  #arsGrid.g-s { left: auto; right: max(var(--sr), calc(50% - 370px)); transform: none; width: 476px; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 61px; gap: 8px; }
+  #arsStage { position: absolute; left: max(var(--sl), calc(50% - 370px)); top: 106px; width: 250px; height: 199px; padding: 0; overflow: hidden; }
+  #arsStage .sth { position: absolute; left: 12px; top: 8px; z-index: 1; font: 900 18px/22px var(--stk); pointer-events: none; }
+  #arsStage .stn { position: absolute; left: 12px; bottom: 8px; z-index: 1; font: 700 12px/15px var(--font); color: #6a5a8a; pointer-events: none; }
+  :is(#arsStage, #ipStage) { background: radial-gradient(circle at 50% 58%, #fff 0, #efeafc 55%, #ddd5f6 100%); }
+  :is(#arsStage, #ipStage) canvas.pv3 { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  :is(#arsStage, #ipStage) .pvf { position: absolute; left: 10%; top: 20%; width: 80%; height: 60%; object-fit: contain; }
+  #lobby .wcd, #lobby .ecd { position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 10px; align-items: center; padding: 6px 10px 6px 6px; box-sizing: border-box;
+    background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 3px 4px 0 var(--ink); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .12s ease-out; min-width: 0; }
+  #lobby .wcd:active:not(:has(.tact:active)), #lobby .ecd:active:not(:has(.tact:active)) { transform: scale(.97); }
+  #lobby .wcd:focus-visible, #lobby .ecd:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  #lobby .wcd .pic, #lobby .ecd .pic { grid-row: 1 / span 2; height: 78px; border-radius: 12px; background: #f1edfb; display: grid; place-items: center; overflow: hidden; }
+  #lobby .wcd .wi { width: 88px; height: 52px; object-fit: contain; }
+  #lobby .wcd.dim .wi { filter: grayscale(.7); opacity: .7; }
+  #lobby .ecd .erow { display: grid; grid-template-columns: 30px 30px; gap: 2px 4px; }
+  #lobby .ecd .erow .ei { width: 30px; height: 30px; vertical-align: 0; display: block; }
+  #lobby .wcd .nm, #lobby .ecd .nm { align-self: end; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  #lobby .wcd .nm b, #lobby .ecd .nm b { font: 800 16px/20px var(--font); white-space: nowrap; }
+  #lobby .wcd .nm small, #lobby .ecd .nm small { font: 600 12px/15px var(--font); color: #7a6aa0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lobby .tact { align-self: start; margin-top: 5px; height: 44px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; box-shadow: 2px 3px 0 var(--ink);
+    font: 800 15px/1 var(--font); white-space: nowrap; box-sizing: border-box; }
+  #lobby .tact img { width: 22px; height: 22px; object-fit: contain; }
+  #lobby .tact svg { width: 18px; height: 18px; flex: none; }
+  #lobby .tact.buy { background: var(--yel); font: 900 16px/1 var(--stk); }
+  #lobby .tact.no { color: #8a80a6; font: 900 16px/1 var(--stk); }
+  #lobby .tact.no img { opacity: .6; }
+  #lobby .tact.on { background: var(--mint); box-shadow: none; }
+  #lobby .tact.lk { background: #e6e2f2; color: #5a4a78; box-shadow: none; border-color: #b9b0d6; }
+  #lobby .tact.msg { font: 800 13px/1 var(--font); color: #d8344a; }
+  #lobby .nw { position: absolute; left: -8px; top: -9px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--coral); color: #fff; border: 2px solid var(--ink); font: 800 12px/16px var(--font); box-sizing: border-box; z-index: 1; }
+  #lobby .skc { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 3px; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); min-width: 0; }
+  #lobby .skc.sel { background: #fff6cf; box-shadow: 0 0 0 3px var(--yel), 3px 4px 0 3px var(--ink); }
   #lobby .skc .swt { width: 100%; max-width: 66px; height: 22px; border-radius: 8px; border: 2px solid var(--ink); box-sizing: border-box; flex: none; }
-  #lobby .skc b { font: 700 12px/14px var(--font); }
+  #lobby .skc b { font: 700 12px/14px var(--font); white-space: nowrap; }
   #lobby .skc .chk { position: absolute; right: -9px; top: -9px; }
-  #lobby .ecd .erow { display: flex; gap: 2px; height: 30px; align-items: center; }
-  #lobby .ecd .erow .ei { width: 26px; height: 26px; vertical-align: 0; display: block; }
-  #arsDet { position: absolute; right: var(--sr); top: 62px; width: 264px; height: 250px; padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
-  #arsDet .dh { display: grid; gap: 4px; }
-  #arsDet h4 { margin: 0; font: 900 22px/26px var(--stk); white-space: nowrap; }
-  #arsDet .dr { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 40px; }
-  #arsDet .role { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--coral); color: #fff; border: 2px solid var(--ink); font: 800 13px/1 var(--font); box-sizing: border-box; white-space: nowrap; }
-  #arsDet .role.sk { background: var(--blue); color: var(--ink); }
-  #arsDet .dimg { width: 70px; height: 40px; object-fit: contain; }
-  #arsDet .stats { display: grid; grid-template-columns: 128px 1fr; align-items: center; row-gap: 5px; column-gap: 8px; }
-  #arsDet .sn { font: 700 13px/16px var(--font); color: #4a3d5c; }
-  #arsDet .sbar { height: 10px; border-radius: 999px; border: 2px solid var(--ink); background: #f1eef9; overflow: hidden; }
-  #arsDet .sbar i { display: block; height: 100%; border-radius: 999px; }
-  #arsDet .sv { font: 800 13px/16px var(--font); }
-  #arsDet .dbtn { margin-top: auto; height: 52px; flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); font: 800 17px var(--font); background: #fff; white-space: nowrap; }
-  #arsDet .dbtn img { width: 22px; height: 22px; object-fit: contain; }
-  #arsDet .dbtn svg { width: 20px; height: 20px; }
-  #arsDet .dbtn.buy { background: var(--yel); }
-  #arsDet .dbtn.no { color: #8a80a6; }
-  #arsDet .dbtn.off { background: #eeeaf7; color: #6a5a8a; box-shadow: none; border-color: #cfc8e6; }
-  #arsDet .dn { margin: 0; font: 600 13px/17px var(--font); color: #5a4a78; }
-  #arsDet .skp { height: 74px; flex: none; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
-  #arsDet .eh { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
-  #arsDet .eall { display: flex; flex-wrap: wrap; gap: 4px 3px; }
-  #arsDet .eall i { display: block; font-style: normal; }
-  #arsDet .eall .ei { width: 30px; height: 30px; vertical-align: 0; display: block; }
-  #arsDet .eall i.bop { animation: ebop .42s cubic-bezier(.3,1.6,.5,1); }
-  #arsDet .lsn { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; box-shadow: 2px 3px 0 var(--ink); display: grid; place-items: center; flex: none; }
-  #arsDet .lsn svg { width: 24px; height: 24px; }
+  /* item popup */
+  #ipop { position: absolute; inset: 0; z-index: 5; }
+  #ipop .shade { position: absolute; inset: 0; background: #1b1036b3; }
+  #ipBox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 620px; display: flex; flex-direction: column; gap: 10px; padding: 12px 18px 18px; }
+  #ipBox .ipb { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 18px; }
+  #ipStage { position: relative; height: 212px; border-radius: 14px; border: 3px solid var(--ink); overflow: hidden; box-sizing: border-box; }
+  #ipStage .hint { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font: 700 12px var(--font); color: #7a6aa0; pointer-events: none; }
+  #ipStage .eall { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; align-content: center; gap: 10px 18px; }
+  #ipStage .eall i { display: block; font-style: normal; }
+  #ipStage .eall .ei { width: 64px; height: 64px; display: block; vertical-align: 0; }
+  #ipStage .eall.c2 { grid-template-columns: repeat(2, 72px); gap: 14px 30px; } #ipStage .eall.c2 .ei { width: 72px; height: 72px; }
+  #ipStage .eall.c5 { grid-template-columns: repeat(5, 44px); gap: 14px 8px; } #ipStage .eall.c5 .ei { width: 44px; height: 44px; }
+  #ipStage .eall i.bop { animation: ebop .42s cubic-bezier(.3,1.6,.5,1); }
+  #ipBox .ipi { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  #ipBox .role { align-self: flex-start; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--coral); color: #fff; border: 2px solid var(--ink); font: 800 13px/1 var(--font); box-sizing: border-box; }
+  #ipBox .stats { display: grid; grid-template-columns: 128px 1fr; align-items: center; row-gap: 6px; column-gap: 8px; }
+  #ipBox .sn { font: 700 13px/16px var(--font); color: #4a3d5c; }
+  #ipBox .sbar { height: 10px; border-radius: 999px; border: 2px solid var(--ink); background: #f1eef9; overflow: hidden; }
+  #ipBox .sbar i { display: block; height: 100%; border-radius: 999px; }
+  #ipBox .sv { font: 800 13px/16px var(--font); }
+  #ipBox .dn { margin: 0; font: 600 13px/17px var(--font); color: #5a4a78; }
+  #ipBox .lsn { align-self: flex-start; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 10px; border-radius: 14px; border: 3px solid var(--ink); background: #fff; box-shadow: 2px 3px 0 var(--ink); font: 800 15px var(--font); box-sizing: border-box; }
+  #ipBox .lsn svg { width: 24px; height: 24px; }
+  #ipBox .dbtn { margin-top: auto; height: 54px; flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); background: #fff;
+    font: 900 18px/1 var(--stk); white-space: nowrap; box-sizing: border-box; }
+  #ipBox .dbtn img { width: 24px; height: 24px; object-fit: contain; }
+  #ipBox .dbtn svg { width: 20px; height: 20px; }
+  #ipBox .dbtn.buy { background: var(--yel); }
+  #ipBox .dbtn.no { color: #8a80a6; font: 800 15px var(--font); }
+  #ipBox .dbtn.off { background: #eeeaf7; color: #6a5a8a; box-shadow: none; border-color: #cfc8e6; font: 800 15px var(--font); }
   /* Настройки */
   #setGrid { position: absolute; left: var(--sl); right: var(--sr); top: 62px; display: flex; justify-content: space-between; gap: 16px; }
   #setGrid .tcol { width: 370px; display: flex; flex-direction: column; gap: 12px; }
@@ -917,6 +941,28 @@
   #race #dmTime.hot { color: #ff7b7b; background: none; }
   #race small { font: 700 12px var(--font); color: #cfc6ec; }
   #race.pop .ld { animation: bump .3s ease-out; }
+  /* v18: top centre = timer + every player's head with kills, ordered by score (Ivan 20:42) */
+  #hudv #race { display: none; }
+  #hudv #board { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  #hudv #board .clk { display: flex; align-items: baseline; gap: 8px; height: 30px; padding: 0 14px; border-radius: 999px; background: var(--cara2); box-shadow: inset 0 2px 0 rgba(255,255,255,.13); box-sizing: border-box; align-items: center; }
+  #hudv #board #dmTime { font: 900 17px/1 var(--stk); color: #fff; min-width: 52px; text-align: center; background: none; border: 0; box-shadow: none; padding: 0; transform: none; }
+  #hudv #board #dmTime.hot { color: #ff7b7b; background: none; }
+  #hudv #board .clk small { font: 700 12px var(--font); color: #cfc6ec; white-space: nowrap; }
+  #hudv #board #dmRow { display: flex; gap: 3px; padding: 4px 8px 9px; border-radius: 18px; background: var(--cara2); box-shadow: inset 0 2px 0 rgba(255,255,255,.13); }
+  #hudv #board .av { position: relative; width: 32px; height: 32px; display: block; transition: transform .25s; }
+  #hudv #board .av { border-radius: 50%; background: #fff; }
+  #hudv #board .av img { width: 32px; height: 32px; border: 0; border-radius: 0; background: none; display: block; box-shadow: none; clip-path: circle(34% at 50% 40%); transform: scale(1.47) translateY(7%); }
+  #hudv #board .av::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2.5px solid #fff; pointer-events: none; }
+  #hudv #board .av i { display: none; }
+  #hudv #board .av b { z-index: 1; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); min-width: 20px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 999px;
+    background: var(--ink); color: #fff; font: 900 12px/16px var(--stk); text-align: center; text-shadow: none; margin: 0; }
+  #hudv #board .av.me::after { border: 3px solid #ffd23f; box-shadow: 0 0 0 2px #ffd23f; }
+  #hudv #board .av.me b { background: #ffd23f; color: var(--ink); }
+  #hudv #board .av.lead::before { content: ""; position: absolute; left: 50%; top: -9px; width: 20px; height: 12px; transform: translateX(-50%) rotate(-8deg); z-index: 1;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 12'%3E%3Cpath d='M2 11 1 2l5 4 4-5 4 5 5-4-1 9z' fill='%23ffd23f' stroke='%231b1036' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat; }
+  #hudv #board .av.dead img { filter: grayscale(1) brightness(.7); opacity: .6; }
+  #hudv #board .av.pop { animation: avPop .45s ease-out; }
+  #hudv #quests .q { max-width: 188px !important; }
   /* top right: pause, wallet (only while it changes), kill feed */
   #hudv #tr { right: var(--sr); top: var(--st); left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0; z-index: 3; }
   #hudv #pauseBtn { width: 44px; height: 44px; border: 0; box-shadow: none; background-color: transparent; transition: transform .12s, filter .12s; }
@@ -927,7 +973,7 @@
   body.walshow #hudv #purse { opacity: 1; transform: none; }
   #hudv #purse > div { height: 32px; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 3px; background: var(--cara2); border: 0; border-radius: 999px; min-width: 0; font: 900 14px var(--stk); color: #fff; text-shadow: none; }
   #hudv #purse .ic { width: 26px; height: 26px; }
-  #hudv #feed { top: calc(var(--st) + 54px) !important; right: var(--sr) !important; left: auto !important; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; transition: transform .2s; }
+  #hudv #feed { top: calc(var(--st) + 100px) !important; right: var(--sr) !important; left: auto !important; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; transition: transform .2s; }
   body.walshow #hudv #feed { transform: translateY(40px) !important; }
   #hudv #feed div { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 10px !important; background: var(--cara2) !important; border: 0 !important; border-radius: 999px !important;
     font: 700 13px var(--font); text-shadow: none; box-sizing: border-box; }
@@ -935,7 +981,7 @@
   #hudv #feed .fi { height: 18px; width: auto; }
   body.dead #hudv #feed, body.dead #hudv #tips, body.dead #hudv #wheel { visibility: hidden !important; }
   /* reward pops: one white sticker under the race */
-  #hudv #lane { left: 0; right: 0; top: calc(var(--st) + 50px); height: 56px; transform: none; z-index: 3; }
+  #hudv #lane { left: 0; right: 0; top: calc(var(--st) + 100px); height: 56px; transform: none; z-index: 3; }
   #hudv .rw { gap: 8px; height: 48px; padding: 4px 14px 4px 4px; box-sizing: border-box; background: #fff; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 3px 4px 0 var(--ink); transform: rotate(-2deg); }
   #hudv .rw .ico, #hudv .rw .ico.stk { width: 40px; height: 34px; filter: none; }
   #hudv .rw .ico.wide { width: 64px; filter: none; }
@@ -1150,6 +1196,18 @@
   @media (prefers-reduced-motion: reduce) { #tips .tipS, #tips .tipRing, #tips .ghost, #tips .ghost i, #tips .ghostT, #tips .swp::after { animation: none; } }
 </style>
 
+<style>
+  /* v18f: compact right-hand buttons (Ivan 20:53) */
+  body.touch #hudv #fire { width: 88px; height: 88px; }
+  body.touch #hudv #jump { width: 66px; height: 66px; right: calc(var(--sr) + 98px); }
+  body.touch #hudv #slide { width: 52px; height: 52px; right: calc(var(--sr) + 105px); bottom: calc(var(--sb) + 78px); }
+  body.touch #hudv #nade { width: 52px; height: 52px; right: calc(var(--sr) + 18px); bottom: calc(var(--sb) + 102px); }
+  /* the ten heads clear the health bar; the kill feed rows clear the grenade button */
+  #hudv #board .av, #hudv #board .av img { width: 30px; height: 30px; }
+  #hudv #board #dmRow { gap: 2px; padding: 4px 7px 9px; }
+  #hudv #feed { top: calc(var(--st) + 96px) !important; gap: 3px; }
+  #hudv #feed div { height: 24px; }
+</style>
 <canvas id="game"></canvas>
 <div id="stats" class="hud">— fps</div>
 <canvas id="fxc" class="hud"></canvas>
@@ -1194,7 +1252,7 @@
 <div id="dead" class="hud" hidden>
   <div id="kbMark" hidden><div><b id="kbMarkN"></b><span><i id="kbMarkHp"></i></span></div></div>
   <div id="deadIn" class="kbox">
-    <div id="kbCard"><span class="kav"><img id="deadAv" alt=""></span><div class="kbt"><small id="kbHead">ТЕБЯ ПОБЕДИЛ БОТ</small><b id="deadBy"></b></div><div id="kbW"></div><p id="kbLine"></p></div>
+    <div id="kbCard"><span class="kav"><img id="deadAv" alt=""></span><div class="kbt"><small id="kbHead">ТЕБЯ ПОБЕДИЛ ИГРОК</small><b id="deadBy"></b></div><div id="kbW"></div><p id="kbLine"></p></div>
     <div id="revTag" hidden><img id="revIc" alt=""><span id="revSub"></span></div>
     <div id="dPick"><div class="dcol"><div class="nwT" id="nwT">Оружие на следующую жизнь</div><div id="nextWbar"></div></div><div id="respWrap"><div id="respRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rb" cx="60" cy="60" r="50"/><circle id="respArc" cx="60" cy="60" r="50"/></svg><b id="respN">5</b></div><div class="rlab">Возрождение</div></div></div>
   </div>
@@ -1208,20 +1266,19 @@
     <div id="mWal"><button id="sndBtn" type="button" class="sndb" aria-label="Звук"></button><span class="cara wl"><img id="pwCi" alt="Монеты"><b id="pwC">0</b></span><span class="cara wl"><img id="pwGi" alt="Кристаллы"><b id="pwG">0</b></span></div>
     <div class="lmid">
       <section class="lpane" data-p="match">
-        <h3 class="lh">Карта</h3>
-        <div id="mapBtns"></div>
         <div id="mMode" class="cara"></div>
-        <div id="pmQuests" class="cara"></div>
-        <button id="play" type="button" class="pri">ИГРАТЬ</button>
+        <div id="mapBtns" role="group" aria-label="Арены: нажми, чтобы начать бой"></div>
+        <div id="pmQuests"></div>
       </section>
       <section class="lpane" data-p="ars" hidden>
         <div id="arsSeg" role="tablist" aria-label="Арсенал"><button type="button" data-s="w" role="tab">Оружие</button><button type="button" data-s="s" role="tab">Скины</button><button type="button" data-s="e" role="tab">Эмодзи</button></div>
+        <div id="arsStage" class="lpanel" hidden></div>
         <div id="arsGrid"></div>
-        <div id="arsDet" class="lpanel"></div>
       </section>
       <section class="lpane" data-p="set" hidden><div id="setGrid"></div></section>
     </div>
     <nav id="pmTabs" class="lpanel" role="tablist" aria-label="Меню"></nav>
+    <div id="ipop" hidden><div class="shade"></div><div id="ipBox" class="lpanel" role="dialog" aria-modal="true"></div></div>
     <div id="lsheet" hidden><div class="shade"></div><div id="lsBox" class="lpanel" role="dialog" aria-modal="true"></div></div>
   </div>
   <p id="help" hidden></p>
@@ -5589,8 +5646,8 @@ try { sens = Math.max(0.3, Math.min(2.5, +localStorage.getItem('arenaSens') || 1
 if (btnSize === 's' || btnSize === 'l') document.body.classList.add('bs-' + btnSize);
 function vib(p) { if (vibOn && navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
 document.getElementById('help').textContent = isTouch
-  ? 'Левый палец — ходьба, правый — обзор. ОГОНЬ стреляет, пока держишь. Внизу — оружие, оранжевая кнопка — граната. ПОДКАТ на земле, а в воздухе это рывок. СУПЕР-ПРЫЖОК работает и в воздухе, даже после батута. Дезматч: побеждает тот, кто первым сделает 30 убийств или лидирует через 8 минут. Боты дерутся и друг с другом. Магнит притягивает монеты издалека.'
-  : 'WASD — ходьба, Shift — бег, пробел — прыжок, E — супер-прыжок (и в воздухе), C — подкат, а в воздухе рывок, R — перезарядка, 1–6 или колесо — оружие, Q — прошлое оружие, F — граната, T — скин, мышь — обзор, P — пауза. Дезматч: побеждает тот, кто первым сделает 30 убийств или лидирует через 8 минут. Боты дерутся и друг с другом.';
+  ? 'Левый палец — ходьба, правый — обзор. ОГОНЬ стреляет, пока держишь. Внизу — оружие, оранжевая кнопка — граната. ПОДКАТ на земле, а в воздухе это рывок. СУПЕР-ПРЫЖОК работает и в воздухе, даже после батута. Дезматч: побеждает тот, кто первым сделает 30 убийств или лидирует через 8 минут. Магнит притягивает монеты издалека.'
+  : 'WASD — ходьба, Shift — бег, пробел — прыжок, E — супер-прыжок (и в воздухе), C — подкат, а в воздухе рывок, R — перезарядка, 1–6 или колесо — оружие, Q — прошлое оружие, F — граната, T — скин, мышь — обзор, P — пауза. Дезматч: побеждает тот, кто первым сделает 30 убийств или лидирует через 8 минут.';
 
 // ---------- renderer / scene ----------
 const canvas = document.getElementById('game');
@@ -5833,7 +5890,7 @@ function resize() {
   hiMix = gfx === 'mix' && HI_OK && !hiFail;
   renderer.setPixelRatio(shotSize ? (inkOn && !hiMix ? rows / h : 1) : hiMix ? Math.min(devicePixelRatio, 2) : inkOn ? rows / h : Math.min(devicePixelRatio, isTouch ? 1.25 : 2));
   canvas.style.imageRendering = inkOn && !hiMix ? 'pixelated' : 'auto';
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); if (gunFitOk) fitGun();
   if (!shotSize) document.documentElement.style.setProperty('--u', Math.max(0.8, Math.min(1.35, Math.min(w, h) / 390)).toFixed(3));
   if (!shotSize) document.documentElement.style.setProperty('--k', Math.max(0.7, Math.min(1.35, Math.min(w / 844, h / 390))).toFixed(3));
   if (!shotSize) document.documentElement.style.setProperty('--kl', Math.max(0.6, Math.min(1.35, Math.min(w / 844, h / 390))).toFixed(3));
@@ -6556,6 +6613,15 @@ function updateSmoke(dt) {
 // rifle recoil pattern: each shot kicks the gun back, tilts the muzzle up and jerks it a little sideways, then springs back
 let kickYaw = 0, kickRoll = 0, kickBack = 0, burstN = 0, burstT = 0;
 const gunRest = new THREE.Vector3(0.26, -0.25, -0.5);
+// v18f: keep the aim point clear on wide screens. The vertical FOV is fixed, so the same x offset lands closer to the middle
+// the wider the screen; scale it with the aspect (16:9 is the reference), and on touch sit a little lower and smaller.
+var gunFitOk = false;
+function fitGun() {
+  const a = camera.aspect || 1.78, wide = Math.min(1.75, Math.max(1, a / 1.78)), t = isTouch;
+  gunRest.x = 0.26 * wide;
+  gunRest.y = -0.215 - (t ? 0.02 + 0.03 * (wide - 1) : 0);
+  gun.scale.setScalar(t ? 0.78 : 0.85);
+}
 gun.scale.setScalar(0.85); gun.position.copy(gunRest); camera.add(gun);
 // the gun is drawn in a second pass on top of the world, so it never sinks into walls or crates
 gun.traverse(o => o.layers.set(1));
@@ -7242,7 +7308,7 @@ function drawSpeed(dt) {
 
 // ---------- quests: always three on screen, each one done pays out and is replaced ----------
 const QUEST_POOL = [
-  { id: 'kill', text: n => `Сломай ${n} ${plural(n, 'бота', 'ботов', 'ботов')}`, n: [3, 5, 8] }, { id: 'head', text: n => `Сделай ${n} ${plural(n, 'хедшот', 'хедшота', 'хедшотов')}`, n: [2, 3, 5] },
+  { id: 'kill', text: n => `Выбей ${n} ${plural(n, 'игрока', 'игроков', 'игроков')}`, n: [3, 5, 8] }, { id: 'head', text: n => `Сделай ${n} ${plural(n, 'хедшот', 'хедшота', 'хедшотов')}`, n: [2, 3, 5] },
   { id: 'coin', text: n => `Собери ${n} монет`, n: [50, 100, 200] }, { id: 'pad', text: n => `Прыгни на батут ${n} ${plural(n, 'раз', 'раза', 'раз')}`, n: [2, 4, 6] },
   { id: 'gem', text: n => `Найди ${n} ${plural(n, 'кристалл', 'кристалла', 'кристаллов')}`, n: [2, 3, 5] }, { id: 'combo', text: n => `Комбо ×${n}`, n: [8, 12, 20] },
   { id: 'multi', text: () => 'Двойное убийство', n: [1] }, { id: 'roof', text: () => MAP === 'room' ? 'Залезь на полку' : 'Залезь на башню', n: [1] },
@@ -7401,7 +7467,7 @@ function makeBot() {
   const legR = new THREE.Mesh(bLeg, legMat); legR.position.set(0.17, 0.375, 0); g.add(legR);
   const gunM = new THREE.Mesh(bGun, botGunMat); gunM.position.set(0.3, 1.25, -0.35); g.add(gunM);
   const bot = { g, torso, head, legL, legR, visor, gunM, mats: [mat, headMat], pos: new THREE.Vector3(), r: 0.4, h: 1.9, onGround: true,
-    name: 'Бот ' + (bots.length + 1), hp: 100, dead: 0, goal: new THREE.Vector3(), fireCd: 1, strafe: 1, strafeT: 0, seeT: 0, walk: 0, flashT: 0 };
+    name: nickOne(), hp: 100, dead: 0, goal: new THREE.Vector3(), fireCd: 1, strafe: 1, strafeT: 0, seeT: 0, walk: 0, flashT: 0 };
   torso.userData.bot = bot; torso.userData.part = 'body';
   head.userData.bot = bot; head.userData.part = 'head';
   legL.userData.bot = bot; legL.userData.part = 'body'; legR.userData.bot = bot; legR.userData.part = 'body';
@@ -7424,7 +7490,7 @@ function spawnBot(b) {
   const s = farSpawn(b); let sx = s.x + (Math.random() - .5) * 3, sz = s.z + (Math.random() - .5) * 3; if (!isFree(sx, sz, 0.6)) { sx = s.x; sz = s.z; }
   b.pos.set(sx, 0, sz); b.spawned = true;
   b.maxHp = Math.round(100 + 40 * (diff == null ? 0.35 : diff)); b.hp = b.maxHp; b.dead = 0; b.dmgByMe = 0; b.hunting = false; b.g.visible = true; b.g.rotation.set(0, 0, 0); b.g.position.copy(b.pos);
-  b.fireCd = 1 + Math.random(); pickGoal(b);
+  b.fireCd = 1 + Math.random(); pickGoal(b); b.clip = null; b.dry = false;
   b.vy = 0; b.onGround = true; b.mode = 'roam'; b.burst = 0; b.coverT = 0; b.lastSeen = -99; b.stuckT = 0; b.dodgeT = 0; b.roamSp = 4.2 + Math.random() * 1.3; b.cvPh = 0; b.engaged = false; b.foeLos = false;
   b.role = (b.gob && b.gob.role) || ['rusher', 'sniper', 'flanker'][bots.indexOf(b) % 3]; const R = ROLES[b.role]; b.R = R; b.cheerT = 0;
   b.react = R.react + Math.random() * 0.2; b.range = R.range[0] + Math.random() * (R.range[1] - R.range[0]); b.skill = R.skill * (0.9 + Math.random() * 0.2);
@@ -8166,7 +8232,7 @@ function gobSwapAll() {
   if (typeof spawnBot === 'function') bots.forEach(b => { if (b.gob && b.dead <= 0) spawnBot(b); });
   if (typeof xrayHidden !== 'undefined') { xrayHidden.skinning = true; xrayShown.skinning = true; xrayHidden.needsUpdate = xrayShown.needsUpdate = true; }
 }
-// ===== GOBKIT BOTS (end) =====
+
 // ===== BLOKIT v2: our own blocky avatar constructor, built on the same RULES as a classic R15 block avatar =====
 // What follows the rules (Roblox Creator Hub: character body specs, rigid accessory specs, classic clothing, HumanoidDescription,
 // AnimationPriority); all art (faces, prints, accessories, colours, names) is our own and made in code:
@@ -8214,12 +8280,12 @@ const BLK_SLOTS = { Hat: 'Шляпа', Hair: 'Волосы', Face: 'На лиц�
 const BLK_SLOT_BOX = { Hat: [3, 4, 3], Hair: [3, 5, 3.5], Face: [3, 2, 2], Neck: [3, 3, 2], Shoulder: [7, 3, 3], Front: [3, 3, 3], Back: [10, 7, 4.5], Waist: [4, 3.5, 7] };
 const BLK_EMOTES = { cheer: 'Ура', wave: 'Привет', point: 'Туда', salute: 'Честь', shrug: 'Не знаю', laugh: 'Смех', dance: 'Танец' };
 // animation packs: the loco numbers override GOB_LOCO for this avatar, arms = how unarmed arms move
-const BLK_PACKS = {
-  base: { ru: 'Обычный', loco: {}, arms: 'swing', amp: [0.45, 0.85] },
-  robot: { ru: 'Робот', loco: { twist: [0.02, 0.04], roll: 0.01, lean: 0.02, rigid: { fMin: 1.3, fK: 0.2, fMax: 2.2, stWalk: 0.5, stRun: 0.42, fold: 0.0, flight: 0.0 } }, arms: 'stiff', amp: [0.3, 0.4] },
-  ninja: { ru: 'Ниндзя', loco: { lean: 0.12, leanMax: 0.55, rigid: { fMin: 1.3, fK: 0.33, fMax: 2.8, stWalk: 0.5, stRun: 0.32, fold: 0.3, flight: 0.08 } }, arms: 'back', amp: [0.4, 0.5] },
-  zombie: { ru: 'Зомби', loco: { lean: 0.02, roll: 0.14, twist: [0.15, 0.2], rigid: { fMin: 0.9, fK: 0.18, fMax: 1.6, stWalk: 0.6, stRun: 0.45, fold: 0.1, flight: 0.0 } }, arms: 'forward', amp: [0.1, 0.15] },
-  bouncy: { ru: 'Пружинка', loco: { rigid: { fMin: 1.3, fK: 0.3, fMax: 2.7, stWalk: 0.45, stRun: 0.3, fold: 0.38, flight: 0.2 } }, arms: 'swing', amp: [0.7, 1.15] }
+const BLK_PACKS = {   // each pack is a set of cycles built from the same authored keys (blkGait), like Roblox animation packs replace walk/run/idle/jump/fall
+  base:   { ru: 'Обычный', walk: { len: 0.9, legK: 1.05, kneeK: 1.15, footK: 1, yK: 1.8, arm: 36, armOff: 1, elb: -22, lean: 4, twist: 6 }, run: { len: 0.56, legK: 1.02, kneeK: 1.1, footK: 1, yK: 2.0, arm: 60, armOff: -4, elb: -40, lean: 9, twist: 9 }, arms: 'swing' },   // close to «Пружинка», Ivan's favourite (20:31)
+  robot:  { ru: 'Робот', walk: { len: 1.0, legK: 0.75, kneeK: 0, footK: 0, yK: 0.4, arm: 24, armOff: 0, elb: 0, lean: 0, twist: 0 }, run: { len: 0.66, legK: 0.85, kneeK: 0.15, footK: 0, yK: 0.5, arm: 36, armOff: 0, elb: 0, lean: 2, twist: 0 }, arms: 'stiff', jerk: true },
+  ninja:  { ru: 'Ниндзя', walk: { len: 0.9, legK: 0.95, kneeK: 1.1, footK: 1, yK: 1, arm: 22, armOff: 4, elb: -24, lean: 7, twist: 6 }, run: { len: 0.54, legK: 1.12, kneeK: 1.15, footK: 1, yK: 1.1, arm: 0, armOff: 0, elb: -8, lean: 26, twist: 4 }, arms: 'back' },
+  zombie: { ru: 'Зомби', walk: { len: 1.2, legK: 0.6, kneeK: 0.5, footK: 0.5, yK: 0.6, arm: 6, armOff: 0, elb: -6, lean: 10, twist: 10, limp: 7 }, run: { len: 0.8, legK: 0.8, kneeK: 0.8, footK: 0.6, yK: 0.8, arm: 10, armOff: 0, elb: -6, lean: 16, twist: 12, limp: 9 }, arms: 'forward' },
+  bouncy: { ru: 'Пружинка', walk: { len: 0.78, legK: 1.1, kneeK: 1.3, footK: 1.1, yK: 2.4, arm: 44, armOff: 0, elb: -26, lean: 3, twist: 6 }, run: { len: 0.52, legK: 1.05, kneeK: 1.2, footK: 1.1, yK: 2.6, arm: 66, armOff: -4, elb: -36, lean: 8, twist: 9 }, arms: 'swing' }
 };
 // accessories: built in studs around their own attachment point (origin = the attachment), facing +Z
 const BLK_ACC = {};
@@ -8592,11 +8658,8 @@ function attachBlokit(b, i, pick, seed, desc) {
   root.rotation.y = Math.PI;   // built facing +Z, our bots face -Z
   b.g.add(root); b.model = root; b.blk = d; b.blkBuilt = built; b.gobBones = B; b.gobSk = null;
   b.gob = pick || { role: b.role || 'rusher' }; b.gobT = { scale: 100 };   // gobLoco works in bone units * 0.01 * scale = metres
-  const pk = BLK_PACKS[d.pack] || BLK_PACKS.base; b.locoP = blkMergeDeep(GOB_LOCO, pk.loco); b.blkPack = pk;
   b.name = d.name; b.color = new THREE.Color(d.shirt && d.shirt.id !== 'none' ? d.shirt.c1 : d.colors.torso); b.mats = [built.mat];
-  b.gl = { yaw: 0, lean: 0, roll: 0, pitch: 0, kick: 0, flinch: 0, fx: 0, fz: 0, twT: 1 + Math.random() * 3, twA: 0, hp0: b.hp, rec0: 0, lastRot: b.g.rotation.y, air0: false, look: 0, idleT: 0, emT: 0 };
-  b.gw = { air: 0, aim: 0, hit: 0, cheer: 0, tool: b.blkTool === false ? 0 : 1, em: 0, idleA: 1, idleB: 0 };
-  b.blkTr = { idleA: blkTrack('Idle'), idleB: blkTrack('Idle'), legs: blkTrack('Movement'), torso: blkTrack('Movement'), swing: blkTrack('Movement'), tool: blkTrack('Action'), emote: blkTrack('Action2'), flinch: blkTrack('Action3') };
+  blkMotionInit(b);
   b.gobW = null; b.gobOld = false;
   if (b.blkTool !== false) blkSetWeapon(b);
   // hit boxes follow the scaled body
@@ -8615,7 +8678,7 @@ function attachBlokit(b, i, pick, seed, desc) {
 }
 // gun at the right grip; barrel along the arm, its top facing the arm's back
 const _bkM = new THREE.Matrix4(), _bkBox = new THREE.Box3(), _bkV = new THREE.Vector3();
-const BLK_GUN_LEN = { rifle: 0.95, shotgun: 0.95, sniper: 1.25, pistol: 0.42 };
+const BLK_GUN_LEN = { rifle: 1.15, shotgun: 1.1, sniper: 1.45, pistol: 0.62 };   // metres at the classic 1-stud hand; Roblox guns are about 1.5-4 studs long
 function blkSetWeapon(b) {
   const w = b.wpn || 'rifle'; if (b.gobW === w) return;
   if (b.gunG && b.gunG.parent) b.gunG.parent.remove(b.gunG);
@@ -8623,13 +8686,14 @@ function blkSetWeapon(b) {
   const src = GOB.gun[w] || GOB.gun.rifle; if (!src) return; const gun = src.clone(true);
   gun.traverse(o => { if (o.isMesh) { o.material = gobGunMat(o.material); o.frustumCulled = false; } });
   gun.rotation.y = -Math.PI / 2; gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
-  const len = _bkBox.max.z - _bkBox.min.z || 1, s = (BLK_GUN_LEN[w] || 0.9) / len; gun.scale.setScalar(s); gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
-  const gz = _bkBox.max.z - (_bkBox.max.z - _bkBox.min.z) * (w === 'pistol' ? 0.25 : 0.32), gy = (_bkBox.min.y + _bkBox.max.y) / 2;
-  gun.position.set(-(_bkBox.min.x + _bkBox.max.x) / 2, -gy + 0.02, -gz);
+  const K = b.blkBuilt.k, len = _bkBox.max.z - _bkBox.min.z || 1, s = (BLK_GUN_LEN[w] || 0.9) * (K.sx / BLK_STUD) / len; gun.scale.setScalar(s); gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
+  // the handle (rear part, lower part of the gun) sits inside the block hand, like a Roblox tool Grip at RightGripAttachment
+  const gh = _bkBox.max.y - _bkBox.min.y, gz = _bkBox.max.z - (_bkBox.max.z - _bkBox.min.z) * (w === 'pistol' ? 0.2 : 0.3), gy = _bkBox.min.y + gh * (w === 'pistol' ? 0.3 : 0.38);
+  gun.position.set(-(_bkBox.min.x + _bkBox.max.x) / 2, -gy, -gz);
   const holder = new THREE.Group(); holder.add(gun);
   _bkM.makeBasis(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0)); holder.quaternion.setFromRotationMatrix(_bkM);
-  const A = b.blkBuilt.att.RightGripAttachment; holder.position.set(A[1], A[2] + 0.02, A[3] + 0.02); b.gobBones.handR.add(holder); b.gunG = holder; b.gobW = w;
-  b.muzZ = _bkBox.min.z - gz; b.muzY = 0.05;
+  const A = b.blkBuilt.att.RightGripAttachment; holder.position.set(A[1], A[2] * 0.5, A[3]); b.gobBones.handR.add(holder); b.gunG = holder; b.gobW = w;
+  b.muzZ = _bkBox.min.z - gz; b.muzY = _bkBox.min.y + gh * 0.72 - gy;
   if (typeof markClean === 'function') markClean(holder);
   if (b.xrayOn) holder.traverse(o => o.layers.enable(2));
 }
@@ -8647,83 +8711,267 @@ function blkEmotePose(tr, kind, t) {
     blkSet(tr, 'hips', 0, sw * 0.35, 0); blkSet(tr, 'spine', 0, -sw * 0.25, sw * 0.1); blkSet(tr, 'neck', 0, 0, -sw * 0.15);
     blkSet(tr, 'legL', -0.45 * Math.max(0, sw)); blkSet(tr, 'legLo', 0.8 * Math.max(0, sw)); blkSet(tr, 'legR', -0.45 * Math.max(0, -sw)); blkSet(tr, 'legRo', 0.8 * Math.max(0, -sw)); }
 }
+// =============== MOTION: the Roblox «Animate» model on our own clips ===============
+// Rules taken from Roblox (Animate script + Humanoid), the clips themselves are ours:
+// - one core animation per Humanoid state: idle / walk+run / jump / fall; a new state fades the old one out
+//   (walk and idle 0.2 s, jump 0.1 s, fall 0.2 s, landing back to the ground 0.1 s);
+// - jump plays 0.31 s, then the freefall pose loops until the feet touch the ground;
+// - walk and run are one cycle: speed in studs/s * 1.25 / 16 / heightScale gives 0.5 = walk, 1 = run; below 0.5 the walk is
+//   time-warped slower, between 0.5 and 1 walk and run cross-blend, above 1 the run is time-warped faster;
+// - idle has weighted variants (9 : 1 : 1), the pick is made again each time a loop ends;
+// - priorities Core < Idle < Movement < Action (tool hold) < Action2 (emote) < Action3 (flinch);
+// - scripted offsets on top of the animation, like Motor6D.C0 in Roblox shooters: hips turn to the run direction,
+//   the waist and neck turn back to the target, the gun recoils;
+// - death = BreakJointsOnDeath: every joint breaks, each body part becomes a free rigid body (blkShatter / blkDebrisStep).
+const BLK_D2R = Math.PI / 180;
+// one key: [t (0..1 of the clip), x, y, z] in degrees; the in-between is Cubic InOut, like the default Roblox easing for these clips
+function blkKeys(fn, n) { const k = []; for (let i = 0; i <= n; i++) { const t = i / n, v = fn(t); k.push([t, v[0] || 0, v[1] || 0, v[2] || 0]); } return k; }
+function blkClip(len, loop, chans) { const c = { len, loop, k: {} }; for (const j in chans) c.k[j] = chans[j].map(r => [r[0], r[1] * BLK_D2R, r[2] * BLK_D2R, r[3] * BLK_D2R]); return c; }
+function blkEase(u) { return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
+const _bkcs_ = [0, 0, 0];
+// looping clips: Catmull-Rom through the keys (no stop at every key, the limb keeps its speed); one-shot clips: Cubic InOut between keys
+function blkSample(keys, t, loop) {
+  const n = keys.length; let i = 1; while (i < n - 1 && keys[i][0] < t) i++;
+  const a = keys[i - 1], b = keys[i], u = b[0] > a[0] ? Math.max(0, Math.min(1, (t - a[0]) / (b[0] - a[0]))) : 1;
+  if (!loop || n < 3) { const e = blkEase(u); for (let c = 0; c < 3; c++) _bkcs_[c] = a[c + 1] + (b[c + 1] - a[c + 1]) * e; return _bkcs_; }
+  const p0 = i >= 2 ? keys[i - 2] : keys[n - 2], p3 = i + 1 < n ? keys[i + 1] : keys[1], u2 = u * u, u3 = u2 * u;
+  for (let c = 1; c < 4; c++) _bkcs_[c - 1] = 0.5 * (2 * a[c] + (-p0[c] + b[c]) * u + (2 * p0[c] - 5 * a[c] + 4 * b[c] - p3[c]) * u2 + (-p0[c] + 3 * a[c] - 3 * b[c] + p3[c]) * u3);
+  return _bkcs_;
+}
+// writes clip c at normalised time t into track tr; the special channel Y is the hips height (in leg lengths) and goes to out.y
+function blkPlay(tr, c, t, out, w) {
+  for (const j in c.k) { const v = blkSample(c.k[j], t, c.loop); if (j === 'Y') { if (out) out.y += v[0] / BLK_D2R * w; continue; } blkSet(tr, j, v[0], v[1], v[2]); }
+}
+// authored cycles. Left leg [thigh, knee, foot] in degrees at t = 0, 1/8 .. 7/8; t = 0: the left heel strikes in front
+// (contact, down, passing, push-off, then the swing: the heel kicks up and the leg reaches forward). The right leg is the same half a cycle later.
+// The hips height comes from the planted foot (blkSoleY); BLK_*_Y only adds the run's flight over a half cycle (leg lengths).
+const BLK_RUN_L = [[-40, 14, -10], [-24, 40, 0], [2, 20, 8], [28, 14, 22], [38, 56, 30], [16, 100, 24], [-28, 86, 8], [-52, 36, -8]];
+const BLK_RUN_Y = [0, 0, 0.012, 0.04];   // added on top of the planted-foot height: the run leaves the ground after the push-off
+const BLK_WALK_L = [[-24, 4, -12], [-14, 14, 0], [0, 6, 2], [14, 4, 6], [22, 16, 18], [10, 42, 12], [-12, 36, 2], [-26, 12, -10]];
+const BLK_WALK_Y = [0, 0, 0, 0];
+function blkGait(p, arms, run) {
+  const L = run ? BLK_RUN_L : BLK_WALK_L, YY = run ? BLK_RUN_Y : BLK_WALK_Y, C = t => Math.cos(2 * Math.PI * t), Sn = t => Math.sin(2 * Math.PI * t);
+  const ch = {}, ks = (f) => { const k = []; for (let s = 0; s <= 8; s++) { const v = f(s % 8, s / 8); k.push([s / 8, v[0] || 0, v[1] || 0, v[2] || 0]); } return k; };
+  for (const [side, o] of [['L', 0], ['R', 4]]) {
+    ch['leg' + side] = ks(s => [L[(s + o) % 8][0] * p.legK, 0, 0]);
+    ch['leg' + side + 'o'] = ks(s => [L[(s + o) % 8][1] * p.kneeK, 0, 0]);
+    ch['foot' + side] = ks(s => [L[(s + o) % 8][2] * p.footK, 0, 0]);
+  }
+  ch.Y = ks(s => [YY[s % 4] * p.yK, 0, 0]);
+  const sw = (o, sg) => blkKeys(t => [p.armOff + p.arm * C(t + o), 0, sg * 6], 8), el = (o) => blkKeys(t => [p.elb * (1.15 - 0.15 * C(t + o)), 0, 0], 8);
+  if (arms === 'back') { ch.armL = blkKeys(t => [70 + 4 * C(t), 0, 12], 4); ch.armR = blkKeys(t => [70 - 4 * C(t), 0, -12], 4); ch.armLo = ch.armRo = [[0, -8, 0, 0], [0.5, -8, 0, 0], [1, -8, 0, 0]]; }
+  else if (arms === 'forward') { ch.armL = blkKeys(t => [-85 + p.arm * C(t), 0, 4], 4); ch.armR = blkKeys(t => [-85 - p.arm * C(t), 0, -4], 4); ch.armLo = ch.armRo = [[0, -6, 0, 0], [0.5, -6, 0, 0], [1, -6, 0, 0]]; }
+  else { ch.armL = sw(0, 1); ch.armR = sw(0.5, -1); ch.armLo = el(0); ch.armRo = el(0.5); }
+  ch.spine = blkKeys(t => [p.lean + 1.5 * C(2 * t), p.twist * C(t), (p.limp || 0) * 0.5 * Sn(t)], 8);
+  ch.hips = blkKeys(t => [0, -p.twist * 0.6 * C(t), (p.limp || 0) * C(t) + 2.5 * Sn(2 * t) * p.legK], 8);
+  ch.head = blkKeys(t => [-p.lean * 0.5 - 1.2 * C(2 * t), -p.twist * 0.5 * C(t), 0], 8);
+  if (arms === 'stiff') ch.head = [[0, 0, 3, 0], [0.5, 0, -3, 0], [1, 0, 3, 0]];
+  return ch;
+}
+const BLK_CLIPS = {};
+function blkClips(id) {
+  if (BLK_CLIPS[id]) return BLK_CLIPS[id];
+  const P = BLK_PACKS[id] || BLK_PACKS.base, A = P.arms;
+  const up = A === 'forward' ? -95 : -165, upZ = A === 'forward' ? 6 : 18;
+  const c = {
+    // idle 1 (weight 9): breathing, the arms hang a little away from the body
+    idle1: blkClip(4, true, { armL: [[0, 0, 0, 4], [0.5, -2, 0, 7], [1, 0, 0, 4]], armR: [[0, 0, 0, -4], [0.5, -2, 0, -7], [1, 0, 0, -4]], armLo: [[0, -6, 0, 0], [1, -6, 0, 0]], armRo: [[0, -6, 0, 0], [1, -6, 0, 0]],
+      spine: [[0, 0, 0, 0], [0.5, -1.5, 0, 0], [1, 0, 0, 0]], neck: [[0, 0, 0, 0], [0.5, 1.5, 0, 0], [1, 0, 0, 0]], Y: [[0, 0, 0, 0], [0.5, -0.006, 0, 0], [1, 0, 0, 0]] }),
+    // idle 2 (weight 1): looks around
+    idle2: blkClip(5, true, { armL: [[0, 0, 0, 4], [1, 0, 0, 4]], armR: [[0, 0, 0, -4], [1, 0, 0, -4]], armLo: [[0, -6, 0, 0], [1, -6, 0, 0]], armRo: [[0, -6, 0, 0], [1, -6, 0, 0]],
+      head: [[0, 0, 0, 0], [0.18, 0, 32, 0], [0.42, 0, 32, 0], [0.58, 4, -30, 0], [0.82, 4, -30, 0], [1, 0, 0, 0]], spine: [[0, 0, 0, 0], [0.3, 0, 6, 0], [0.7, 0, -6, 0], [1, 0, 0, 0]] }),
+    // idle 3 (weight 1): a hand on the hip, weight on one leg
+    idle3: blkClip(4.5, true, { armL: [[0, 14, 0, 31], [1, 14, 0, 31]], armLo: [[0, -20, 0, -72], [1, -20, 0, -72]], handL: [[0, 0, 0, 11], [1, 0, 0, 11]], armR: [[0, 0, 0, -4], [0.5, -2, 0, -6], [1, 0, 0, -4]], armRo: [[0, -8, 0, 0], [1, -8, 0, 0]],
+      hips: [[0, 0, 0, 3], [0.5, 0, 0, 4], [1, 0, 0, 3]], spine: [[0, 0, 0, -3], [1, 0, 0, -3]], legL: [[0, -5, 0, 2], [1, -5, 0, 2]], legLo: [[0, 6, 0, 0], [1, 6, 0, 0]], head: [[0, 0, 0, 4], [1, 0, 0, 4]] }),
+    walk: blkClip(P.walk.len, true, blkGait(P.walk, A, false)),
+    run: blkClip(P.run.len, true, blkGait(P.run, A, true)),
+    // jump (0.31 s, then holds): the arms go up, one knee comes up
+    jump: blkClip(0.31, false, { armL: [[0, -40, 0, 10], [1, up, 0, upZ]], armR: [[0, -40, 0, -10], [1, up, 0, -upZ]], armLo: [[0, -10, 0, 0], [1, -6, 0, 0]], armRo: [[0, -10, 0, 0], [1, -6, 0, 0]],
+      legL: [[0, -10, 0, 0], [1, -32, 0, 0]], legLo: [[0, 20, 0, 0], [1, 48, 0, 0]], legR: [[0, 0, 0, 0], [1, 8, 0, 0]], legRo: [[0, 6, 0, 0], [1, 12, 0, 0]], spine: [[0, 4, 0, 0], [1, -4, 0, 0]] }),
+    // freefall (loop): arms up and out, a slow flail, legs apart
+    fall: blkClip(1.2, true, { armL: [[0, up + 15, 0, upZ + 22], [0.5, up + 25, 0, upZ + 32], [1, up + 15, 0, upZ + 22]], armR: [[0, up + 25, 0, -upZ - 32], [0.5, up + 15, 0, -upZ - 22], [1, up + 25, 0, -upZ - 32]],
+      armLo: [[0, -8, 0, 0], [1, -8, 0, 0]], armRo: [[0, -8, 0, 0], [1, -8, 0, 0]], legL: [[0, -16, 0, 6], [0.5, -10, 0, 8], [1, -16, 0, 6]], legLo: [[0, 24, 0, 0], [0.5, 16, 0, 0], [1, 24, 0, 0]],
+      legR: [[0, 6, 0, -6], [0.5, 2, 0, -8], [1, 6, 0, -6]], legRo: [[0, 14, 0, 0], [1, 14, 0, 0]], spine: [[0, -3, 0, 0], [1, -3, 0, 0]] }),
+    // landing (0.25 s): knees give, the chest dips
+    land: blkClip(0.25, false, { legL: [[0, -24, 0, 0], [1, 0, 0, 0]], legLo: [[0, 44, 0, 0], [1, 0, 0, 0]], legR: [[0, -24, 0, 0], [1, 0, 0, 0]], legRo: [[0, 44, 0, 0], [1, 0, 0, 0]],
+      spine: [[0, 16, 0, 0], [1, 0, 0, 0]], Y: [[0, -0.14, 0, 0], [1, 0, 0, 0]] })
+  };
+  c.idleW = [9, 1, 1];
+  return (BLK_CLIPS[id] = c);
+}
+function blkMotionInit(b) {
+  const pk = b.blk && BLK_PACKS[b.blk.pack] ? b.blk.pack : 'base';
+  b.blkPack = BLK_PACKS[pk]; b.blkClips = blkClips(pk);
+  b.gl = { st: 'idle', airT: 0, jumpT: 0, landT: 9, ph: Math.random(), idleV: 0, idleT: 0, lvx: 0, lvz: 0, hy: 0, roll: 0, pitch: 0, kick: 0, flinch: 0, fx: 0, hp0: b.hp, rec0: 0,
+    lastRot: b.g.rotation.y, look: Math.random() * 9, twT: 1 + Math.random() * 3, twA: 0, emT: 0, sb: 0, y0: 0, hs: 0 };
+  b.gw = { idle: 1, walk: 0, run: 0, jump: 0, fall: 0, move: 0, aim: 0, tool: b.blkTool === false ? 0 : 1, em: 0, i1: 1, i2: 0, i3: 0 };
+  b.blkTr = { idle1: blkTrack('Idle'), idle2: blkTrack('Idle'), idle3: blkTrack('Idle'), walk: blkTrack('Movement'), run: blkTrack('Movement'), jump: blkTrack('Movement'), fall: blkTrack('Movement'),
+    land: blkTrack('Movement'), extra: blkTrack('Movement'), tool: blkTrack('Action'), emote: blkTrack('Action2'), flinch: blkTrack('Action3') };
+}
+// fades a weight towards a target over the Roblox fade time f (linear, like AnimationTrack:Play(fadeTime))
+function blkFadeTo(v, to, dt, f) { const s = dt / Math.max(f, 1e-3); return v < to ? Math.min(to, v + s) : Math.max(to, v - s); }
+const _bkmQ_ = new THREE.Quaternion(), _bkmQ2_ = new THREE.Quaternion(), _bkmA_ = new THREE.Vector3(), _bkmY_ = new THREE.Vector3(0, 1, 0), _bkmZ_ = new THREE.Vector3(0, 0, 1), _bkmE_ = new THREE.Euler();
+// lowest point of a foot (heel or toe) relative to the hips joint, through the posed hips, thigh, knee and ankle
+const _bkS1 = new THREE.Vector3();
+function blkSoleY(B, sd, K) {
+  let m = 1e9; for (const z of [-0.5, 0.5]) { const v = _bkS1.set(0, -0.3 * K.sy, z * K.sz).applyQuaternion(B['foot' + sd].quaternion).add(B['foot' + sd].position)
+    .applyQuaternion(B['leg' + sd + 'o'].quaternion).add(B['leg' + sd + 'o'].position).applyQuaternion(B['leg' + sd].quaternion).add(B['leg' + sd].position).applyQuaternion(B.hips.quaternion); m = Math.min(m, v.y); }
+  return m;
+}
 function blkAnimate(b, dt, speed, camDist) {
-  const S = b.gl, w = b.gw, B = b.gobBones, TR = b.blkTr; if (!B || !TR) return;
+  const S = b.gl, w = b.gw, B = b.gobBones, TR = b.blkTr, C = b.blkClips; if (!B || !TR || !C) return;
   b.recoilT = (b.recoilT || 0) - dt;
-  // a kill or an emote button: the avatar's own emote (the kill one also hops)
   if (b.cheerT > 0) { b.cheerT -= dt; if (!S.cheered) { S.emT = 0; S.emK = b.blkEmote || (b.blk && b.blk.emote) || 'cheer'; if (b.onGround && b.blkHop !== false) { b.vy = 6.5; b.onGround = false; } S.cheered = true; } } else S.cheered = false;
-  w.em = gobFade(w.em, b.cheerT > 0 ? 1 : 0, dt, 0.12); S.emT += dt;
-  w.air = gobFade(w.air, b.onGround ? 0 : 1, dt, b.onGround ? 0.12 : 0.06);
-  w.tool = gobFade(w.tool, b.blkTool === false ? 0 : 1, dt, 0.15);
-  const tgt = b.seeT > 0 ? (typeof player !== 'undefined' ? player.pos : null) : (b.foe && b.foe.dead <= 0 ? b.foe.pos : null);
-  w.aim = gobFade(w.aim, tgt ? 1 : (b.recoilT > -0.6 ? 0.7 : 0), dt, tgt ? 0.12 : 0.35);
   if (b.hp < S.hp0 - 0.5 && b.dead <= 0) { S.flinch = 1; S.fx = Math.random() - 0.5; } S.hp0 = b.hp;
+  if (b.recoilT > S.rec0 + dt + 0.01) S.kick = Math.min(1, S.kick + (b.wpn === 'sniper' || b.wpn === 'shotgun' ? 1 : 0.55)); S.rec0 = b.recoilT;
   b.animAcc = (b.animAcc || 0) + dt; if (camDist > 40 && b.animAcc < 0.1) return; const adt = b.animAcc; b.animAcc = 0;
-  const ry = b.g.rotation.y; let dr = ry - S.lastRot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); S.lastRot = ry;
-  S.turnW = gobFade(S.turnW || 0, dr / Math.max(adt, 1e-3), adt, 0.1);
-  const sp = Math.hypot(b.vx || 0, b.vz || 0);
-  S.roll = gobFade(S.roll, Math.max(-0.3, Math.min(0.3, -dr / Math.max(adt, 1e-3) * 0.045 * Math.min(1, sp / 4))), adt, 0.15);
-  let pitch = 0; if (tgt) { const dx = tgt.x - b.pos.x, dz = tgt.z - b.pos.z, dy = (tgt.y + 1.2) - (b.pos.y + 1.5); pitch = Math.max(-0.7, Math.min(0.7, Math.atan2(dy, Math.hypot(dx, dz) + 0.01))); }
-  S.pitch = gobFade(S.pitch, pitch * w.aim, adt, 0.08);
-  if (b.recoilT > S.rec0 + dt + 0.01) S.kick = Math.min(1, S.kick + (b.wpn === 'sniper' || b.wpn === 'shotgun' ? 1 : 0.55));
-  S.rec0 = b.recoilT; S.kick = Math.max(0, S.kick - adt * 7); S.flinch = Math.max(0, S.flinch - adt * 5);
-  // Movement / legs: the procedural run writes hips and legs; we keep them as the legs track
-  const L = gobLoco(b, adt, S, B, ry, w);
+  const K = b.blkBuilt.k, legL = 2 * K.sy, hs = K.sy / BLK_STUD;   // leg length in metres, Roblox heightScale
+  // ---- Humanoid state (Running / Jumping / Freefall / Landed) ----
+  const ry = b.g.rotation.y, th = -(ry + Math.PI), cs = Math.cos(th), sn = Math.sin(th), ground = !!b.onGround;
+  S.lvx = gobFade(S.lvx, ground ? (b.vx || 0) * cs + (b.vz || 0) * sn : S.lvx, adt, 0.06); S.lvz = gobFade(S.lvz, ground ? -(b.vx || 0) * sn + (b.vz || 0) * cs : S.lvz, adt, 0.06);
+  const v = Math.hypot(S.lvx, S.lvz), rs = v / K.sy * 1.25 / 16 / 1;   // studs/s of this avatar -> normalised run speed (heightScale is already in K.sy)
+  let st = S.st;
+  if (!ground) { S.airT += adt;
+    if (st !== 'jump' && st !== 'fall') { if ((b.vy || 0) > 0.5) { st = 'jump'; S.jumpT = 0; } else if (S.airT > 0.12) st = 'fall'; }
+    else if (st === 'jump') { S.jumpT += adt; if (S.jumpT >= 0.31) st = 'fall'; }
+  } else { if (st === 'jump' || st === 'fall') { if (S.airT > 0.2) S.landT = 0; } S.airT = 0; st = rs > (S.st === 'move' ? 0.05 : 0.1) ? 'move' : 'idle'; }
+  const fade = st === 'jump' ? 0.1 : st === 'fall' ? 0.2 : (S.st === 'jump' || S.st === 'fall') ? 0.1 : 0.2;
+  if (st === 'idle' && S.st !== 'idle') S.idleT = 0;
+  S.st = st;
+  w.idle = blkFadeTo(w.idle, st === 'idle' ? 1 : 0, adt, fade); w.move = blkFadeTo(w.move, st === 'move' ? 1 : 0, adt, fade);
+  w.jump = blkFadeTo(w.jump, st === 'jump' ? 1 : 0, adt, fade); w.fall = blkFadeTo(w.fall, st === 'fall' ? 1 : 0, adt, fade);
+  // ---- walk / run: one phase, cross-blend by speed, time-warp outside the 0.5..1 band ----
+  let ww = 1, wr = 0, tw = 1;
+  if (rs <= 0.5) { tw = rs / 0.5; } else if (rs < 1) { wr = (rs - 0.5) / 0.5; ww = 1 - wr; } else { ww = 0; wr = 1; tw = rs; }
+  if (st !== 'move') tw = 0;   // the cycle stops where it is while airborne or idle (Roblox stops the track)
+  const bal = Math.abs(Math.atan2(S.lvx, S.lvz)), back = S.back = v > 0.3 && bal > (S.back ? 1.75 : 2.05);
+  const rate = (ww / C.walk.len + wr / C.run.len) * (ww ? (rs <= 0.5 ? tw : 1) : 1) * (rs >= 1 ? tw : 1);
+  S.ph = (S.ph + rate * adt * (back ? -1 : 1) + 1) % 1;
+  w.walk = gobFade(w.walk, ww, adt, 0.08); w.run = gobFade(w.run, wr, adt, 0.08);
+  // ---- idle: weighted variant, re-picked at the end of each loop ----
+  S.idleT += adt; const iv = [C.idle1, C.idle2, C.idle3][S.idleV];
+  if (S.idleT >= iv.len) { S.idleT = 0; const W = C.idleW, r = Math.random() * (W[0] + W[1] + W[2]); S.idleV = r < W[0] ? 0 : r < W[0] + W[1] ? 1 : 2; }
+  w.i1 = blkFadeTo(w.i1, S.idleV === 0 ? 1 : 0, adt, 0.3); w.i2 = blkFadeTo(w.i2, S.idleV === 1 ? 1 : 0, adt, 0.3); w.i3 = blkFadeTo(w.i3, S.idleV === 2 ? 1 : 0, adt, 0.3);
   for (const t in TR) blkClear(TR[t]);
-  const lg = TR.legs; lg.w = 1; for (const j of ['hips', 'legL', 'legLo', 'legR', 'legRo']) blkSetQ(lg, j, B[j].quaternion);
-  // Idle: two weighted variants (1 : 2), the pick changes every 6-12 s; breathing and a look around
-  S.idleT -= adt; if (S.idleT <= 0) { S.idleT = 6 + Math.random() * 6; S.idleV = Math.random() < 1 / 3 ? 0 : 1; }
-  w.idleA = gobFade(w.idleA, S.idleV ? 0 : 1, adt, 0.4); w.idleB = gobFade(w.idleB, S.idleV ? 1 : 0, adt, 0.4); TR.idleA.w = w.idleA; TR.idleB.w = w.idleB;
-  const br = L.breath;
-  blkSet(TR.idleA, 'armL', br * 0.6, 0, 0.07 + br); blkSet(TR.idleA, 'armR', br * 0.6, 0, -0.07 - br); blkSet(TR.idleA, 'armLo', -0.08); blkSet(TR.idleA, 'armRo', -0.08); blkSet(TR.idleA, 'spine', -br);
-  blkSet(TR.idleB, 'armL', 0.25, 0, 0.55); blkSet(TR.idleB, 'armLo', -0.35, 0, -1.25); blkSet(TR.idleB, 'handL', 0, 0, 0.2); blkSet(TR.idleB, 'armR', br * 0.6, 0, -0.07 - br); blkSet(TR.idleB, 'armRo', -0.1); blkSet(TR.idleB, 'spine', -br, 0, 0.04);
-  // Movement / torso: chest turns back from the hips, leans, follows the aim; head looks around
-  const tor = TR.torso; tor.w = 1;
-  blkSet(tor, 'spine', -S.pitch * 0.4 - S.kick * 0.12 + L.bounce - L.lean * 0.35 * w.aim - br, -L.yaw - L.twist * 0.6, -L.roll * 0.6);
-  blkSet(tor, 'neck', -S.pitch * 0.45 - L.bounce * 0.8 + br * 0.5);
-  S.twT -= adt; if (S.twT <= 0) { S.twT = 1.2 + Math.random() * 3.5; S.twA = (Math.random() - 0.5) * (b.blkPack && b.blkPack.arms === 'stiff' ? 1.6 : 1.0); }
-  S.twA *= Math.exp(-adt * 7);
-  let hy = 0; if (!tgt) { S.look += adt; hy = Math.sin(S.look * 0.9 + (b.name || '').length) * 0.45;
-    if (b.mode === 'hunt' && b.last) { let a = Math.atan2(-(b.last.x - b.pos.x), -(b.last.z - b.pos.z)) - ry; a = Math.atan2(Math.sin(a), Math.cos(a)); hy = Math.max(-1.1, Math.min(1.1, a)); }
-    S.hy = gobFade(S.hy || 0, hy * (b.mode === 'hunt' ? 1 : 1 - 0.75 * Math.min(1, sp / 2)), adt, 0.15); } else S.hy = 0;
-  blkSet(tor, 'head', 0, S.hy, S.twA * (1 - w.aim * 0.7));
-  // Movement / arm swing (no gun): style from the animation pack; air pose when jumping
-  const pk = b.blkPack || BLK_PACKS.base, mv = L.mv || 0, run = L.run || 0, amp = (pk.amp[0] + (pk.amp[1] - pk.amp[0]) * run) * (L.ratio || 0);
-  const sw = TR.swing; sw.w = Math.max(mv, w.air);
-  let aL = amp, aR = -amp, eL = -0.25 - 0.9 * run, eR = eL, zl = 0.08, zr = -0.08;
-  if (pk.arms === 'stiff') { eL = eR = 0; }
-  else if (pk.arms === 'back') { const k = run; aL = aL * (1 - k) + 1.1 * k; aR = aR * (1 - k) + 1.1 * k; eL = eR = -0.1; zl = 0.15; zr = -0.15; }
-  else if (pk.arms === 'forward') { aL = -1.45 + amp * 0.3; aR = -1.45 - amp * 0.3; eL = eR = -0.1; }
-  aL += (-0.5 - aL) * w.air; aR += (-0.5 - aR) * w.air; zl += (0.5 - zl) * w.air; zr += (-0.5 - zr) * w.air;
-  blkSet(sw, 'armL', aL, 0, zl); blkSet(sw, 'armR', aR, 0, zr); blkSet(sw, 'armLo', eL); blkSet(sw, 'armRo', eR);
-  if (B.tail) blkSet(sw, 'tail', Math.sin(S.look * 6) * 0.1 * mv, Math.sin(S.look * 9) * 0.35 * mv);
-  // cape hangs back with speed (Movement)
-  blkSet(sw, 'cape', 0.18 + Math.min(0.9, sp * 0.14) + L.bounce * 2);
-  // Action / tool: two-hand gun hold, aim or low ready swaying with the stride
+  const Y = { y: 0 };
+  TR.idle1.w = w.idle * w.i1; TR.idle2.w = w.idle * w.i2; TR.idle3.w = w.idle * w.i3;
+  const it = S.idleT / iv.len;
+  if (TR.idle1.w > 0.001) blkPlay(TR.idle1, C.idle1, S.idleV === 0 ? it : 0, Y, TR.idle1.w);
+  if (TR.idle2.w > 0.001) blkPlay(TR.idle2, C.idle2, S.idleV === 1 ? it : 0, Y, TR.idle2.w);
+  if (TR.idle3.w > 0.001) blkPlay(TR.idle3, C.idle3, S.idleV === 2 ? it : 0, Y, TR.idle3.w);
+  TR.walk.w = w.move * w.walk; TR.run.w = w.move * w.run;
+  if (TR.walk.w > 0.001) blkPlay(TR.walk, C.walk, S.ph, Y, TR.walk.w);
+  if (TR.run.w > 0.001) blkPlay(TR.run, C.run, S.ph, Y, TR.run.w);
+  TR.jump.w = w.jump; if (w.jump > 0.001) blkPlay(TR.jump, C.jump, Math.min(1, S.jumpT / 0.31), null, 1);
+  TR.fall.w = w.fall; if (w.fall > 0.001) { S.fallT = (S.fallT || 0) + adt; blkPlay(TR.fall, C.fall, (S.fallT / C.fall.len) % 1, null, 1); }
+  S.landT += adt; const lw = S.landT < 0.25 ? 1 - S.landT / 0.25 : 0; TR.land.w = lw * 0.9; if (lw > 0) blkPlay(TR.land, C.land, S.landT / 0.25, Y, lw * 0.9);
+  // the cape and the tail follow the motion (Movement, separate joints)
+  const sp = Math.hypot(b.vx || 0, b.vz || 0); S.look += adt; TR.extra.w = 1;
+  blkSet(TR.extra, 'cape', 0.18 + Math.min(0.9, sp * 0.14) + w.fall * 0.6 + Y.y * 2);
+  if (B.tail) blkSet(TR.extra, 'tail', Math.sin(S.look * 6) * 0.1 * w.move, Math.sin(S.look * 9) * 0.35 * w.move);
+  // ---- Action: tool hold (toolnone), aims with the target, low-ready otherwise; recoil is a spring on top ----
+  const tgt = b.seeT > 0 ? (typeof player !== 'undefined' ? player.pos : null) : (b.foe && b.foe.dead <= 0 ? b.foe.pos : null);
+  w.aim = gobFade(w.aim, tgt ? 1 : (b.recoilT > -0.6 ? 0.7 : 0), adt, tgt ? 0.12 : 0.35);
+  w.tool = gobFade(w.tool, b.blkTool === false ? 0 : 1, adt, 0.1);
+  let pitch = 0; if (tgt) { const dx = tgt.x - b.pos.x, dz = tgt.z - b.pos.z, dy = (tgt.y + 1.2) - (b.pos.y + 1.5); pitch = Math.max(-0.7, Math.min(0.7, Math.atan2(dy, Math.hypot(dx, dz) + 0.01))); }
+  S.pitch = gobFade(S.pitch, pitch * w.aim, adt, 0.08); S.kick = Math.max(0, S.kick - adt * 7); S.flinch = Math.max(0, S.flinch - adt * 5);
+  const bv = (Y.y - S.y0) / Math.max(adt, 1e-3); S.y0 = Y.y; S.sb = gobFade(S.sb, Math.max(-0.14, Math.min(0.14, -bv * legL * 0.1)), adt, 0.07);
   const tl = TR.tool; tl.w = w.tool;
-  const aim = w.aim, low = (1 - aim) * 0.4 - L.lean * 0.9 + L.bounce * 0.6 * (1 - 0.6 * aim), sway = L.twist * 0.8;
-  const ax = -Math.PI / 2 + S.pitch * 0.45 + low - S.kick * 0.35;
+  const aim = w.aim, run = w.move * w.run, low = (1 - aim) * 0.4 + S.sb * 0.6 * (1 - 0.6 * aim) - run * 0.12 * aim, sway = Math.sin(S.ph * 2 * Math.PI) * 0.08 * w.move;
+  const ax = -Math.PI / 2 + S.pitch * 0.45 + low - S.kick * 0.35 + w.fall * 0.15;
   blkSet(tl, 'armR', ax, 0.12 + sway, 0); blkSet(tl, 'armRo', -0.05 - S.kick * 0.2); blkSet(tl, 'handR', 0);
   blkSet(tl, 'armL', ax + 0.18, -0.62 + sway, 0); blkSet(tl, 'armLo', -0.35); blkSet(tl, 'handL', 0);
-  // Action2 / emote
+  // ---- Action2: emote; Action3: hit flinch (partial weight, bends what is underneath) ----
+  w.em = gobFade(w.em, b.cheerT > 0 ? 1 : 0, adt, 0.1); S.emT += adt;
   const em = TR.emote; em.w = w.em; if (w.em > 0.01) blkEmotePose(em, S.emK || 'cheer', S.emT);
-  // Action3 / hit flinch (partial weight, so it bends what is underneath)
   const fl = TR.flinch; fl.w = S.flinch * 0.75; if (fl.w > 0.01) { blkSet(fl, 'spine', 0.55, 0, S.fx * 0.9); blkSet(fl, 'neck', 0.45, 0, -S.fx * 0.4); }
-  blkEval(B, [TR.idleA, TR.idleB, lg, tor, sw, tl, em, fl]);
+  blkEval(B, [TR.idle1, TR.idle2, TR.idle3, TR.walk, TR.run, TR.jump, TR.fall, TR.land, TR.extra, tl, em, fl]);
+  // ---- scripted offsets on top (Roblox shooters do this with Motor6D.C0) ----
+  // Root: the hips turn to the run direction (backpedal: they face forward and the cycle runs backwards), lean into turns
+  let dr = ry - S.lastRot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); S.lastRot = ry;
+  S.roll = gobFade(S.roll, Math.max(-0.3, Math.min(0.3, -dr / Math.max(adt, 1e-3) * 0.045 * Math.min(1, sp / 4))), adt, 0.15);
+  let hy = 0; if (v > 0.4 && ground) { const al = Math.atan2(S.lvx, S.lvz); hy = back ? Math.max(-0.6, Math.min(0.6, al - Math.sign(al) * Math.PI)) : Math.max(-0.95, Math.min(0.95, al)); }
+  S.hy = gobFade(S.hy, hy * w.move, adt, 0.12);
+  _bkmQ_.setFromAxisAngle(_bkmY_, S.hy).multiply(_bkmQ2_.setFromAxisAngle(_bkmZ_, S.roll)); B.hips.quaternion.premultiply(_bkmQ_);
+  // the hips ride as high as the legs allow: the lowest heel or toe stays on the ground (no floating, no sinking), the run adds its flight on top
+  if (!S.hp0p) S.hp0p = B.hips.position.y;
+  const plant = 1 - Math.max(w.jump, w.fall), reach = Math.min(blkSoleY(B, 'L', K), blkSoleY(B, 'R', K));
+  S.hpl = gobFade(S.hpl == null ? 0 : S.hpl, (-reach - S.hp0p) * plant, adt, 0.03);
+  B.hips.position.y = S.hp0p + S.hpl + Y.y * legL;
+  // Waist: the chest turns back to the aim and pitches with it; Neck: head pitch, idle look, small twitches
+  _bkmQ_.setFromEuler(_bkmE_.set(-S.pitch * 0.4 - S.kick * 0.12, -S.hy, -S.roll * 0.6, 'YXZ')); B.spine.quaternion.multiply(_bkmQ_);
+  S.twT -= adt; if (S.twT <= 0) { S.twT = 1.2 + Math.random() * 3.5; S.twA = (Math.random() - 0.5) * (b.blkPack && b.blkPack.jerk ? 1.6 : 1.0); } S.twA *= Math.exp(-adt * 7);
+  let hl = 0; if (!tgt && b.mode === 'hunt' && b.last) { let a = Math.atan2(-(b.last.x - b.pos.x), -(b.last.z - b.pos.z)) - ry; a = Math.atan2(Math.sin(a), Math.cos(a)); hl = Math.max(-1.1, Math.min(1.1, a)); }
+  S.hl = gobFade(S.hl || 0, hl, adt, 0.15);
+  _bkmQ_.setFromEuler(_bkmE_.set(-S.pitch * 0.45, S.hl, S.twA * 0.3 * (1 - w.aim * 0.7), 'YXZ')); B.neck.quaternion.multiply(_bkmQ_);
+  b.blkState = st;
+}
+// ----- death: BreakJointsOnDeath. Every bone part becomes a free box body: gravity, bounces on corners, friction, rolls over and settles -----
+const BLK_DEB = [], _bkdq_ = new THREE.Quaternion(), _bkdr_ = new THREE.Vector3(), _bkdv_ = new THREE.Vector3(), _bkdn_ = new THREE.Vector3(), _bkdj_ = new THREE.Vector3(), _bkdt_ = new THREE.Vector3(), _bkdc_ = new THREE.Vector3(), _bkdm4_ = new THREE.Matrix4();
+const BLK_CORN = [[-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1], [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]];
+function blkInvI(e) {   // world inverse inertia = R D R^T
+  const r = _bkdm4_.makeRotationFromQuaternion(e.m.quaternion).elements, d = e.iD, o = e.invI;
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { let s = 0; for (let k = 0; k < 3; k++) s += r[i + 4 * k] * d[k] * r[j + 4 * k]; o[i * 3 + j] = s; }
+}
+function blkMulI(e, a, out) { const o = e.invI; return out.set(o[0] * a.x + o[1] * a.y + o[2] * a.z, o[3] * a.x + o[4] * a.y + o[5] * a.z, o[6] * a.x + o[7] * a.y + o[8] * a.z); }
+function blkImpulse(e, r, J) { e.v.add(J); e.w.add(blkMulI(e, _bkdc_.copy(r).cross(J), _bkdj_)); }
+function blkKEff(e, r, n) { blkMulI(e, _bkdc_.copy(r).cross(n), _bkdj_); return 1 + _bkdc_.copy(_bkdj_).cross(r).dot(n); }
+function blkBodyStep(e, h) {
+  const o = e.m; e.v.y -= 24 * h; o.position.addScaledVector(e.v, h);
+  const w = e.w; _bkdq_.set(w.x * h * 0.5, w.y * h * 0.5, w.z * h * 0.5, 0).multiply(o.quaternion);
+  o.quaternion.set(o.quaternion.x + _bkdq_.x, o.quaternion.y + _bkdq_.y, o.quaternion.z + _bkdq_.z, o.quaternion.w + _bkdq_.w).normalize();
+  blkInvI(e);
+  const gh = typeof groundHeightAt === 'function' ? groundHeightAt(o.position.x, o.position.z, o.position.y + 0.25, e.r * 0.5) : 0;
+  let pen = 0; const cts = e.cts; cts.length = 0;
+  for (const c of BLK_CORN) { _bkdr_.set(c[0] * e.he.x, c[1] * e.he.y, c[2] * e.he.z).applyQuaternion(o.quaternion); const py = o.position.y + _bkdr_.y; if (py < gh) { pen = Math.max(pen, gh - py); cts.push(_bkdr_.clone()); } }
+  if (cts.length) {
+    o.position.y += pen; _bkdn_.set(0, 1, 0);
+    for (let it = 0; it < 2; it++) for (const r of cts) {
+      _bkdv_.copy(e.w).cross(r).add(e.v); const vn = _bkdv_.y; if (vn >= 0) continue;
+      const jn = -(1 + (vn < -2.5 ? 0.25 : 0)) * vn / blkKEff(e, r, _bkdn_); blkImpulse(e, r, _bkdt_.set(0, jn, 0));
+      _bkdv_.copy(e.w).cross(r).add(e.v); _bkdv_.y = 0; const vt = _bkdv_.length();
+      if (vt > 1e-4) { _bkdn_.copy(_bkdv_).multiplyScalar(1 / vt); const jt = Math.min(vt / blkKEff(e, r, _bkdn_), 0.6 * jn); blkImpulse(e, r, _bkdt_.copy(_bkdn_).multiplyScalar(-jt)); _bkdn_.set(0, 1, 0); }
+    }
+  }
+  // walls and crates: push the part out sideways, it bounces back softly
+  if (typeof solids !== 'undefined') { const p = o.position, r = e.r * 0.6;
+    for (const bx of solids) { if (p.y > bx.max.y - 0.05 || p.y < bx.min.y - r) continue;
+      if (p.x > bx.min.x - r && p.x < bx.max.x + r && p.z > bx.min.z - r && p.z < bx.max.z + r) {
+        const a = p.x - (bx.min.x - r), b2 = bx.max.x + r - p.x, c2 = p.z - (bx.min.z - r), d2 = bx.max.z + r - p.z, m = Math.min(a, b2, c2, d2);
+        if (m === a) { p.x = bx.min.x - r; if (e.v.x > 0) e.v.x *= -0.3; } else if (m === b2) { p.x = bx.max.x + r; if (e.v.x < 0) e.v.x *= -0.3; }
+        else if (m === c2) { p.z = bx.min.z - r; if (e.v.z > 0) e.v.z *= -0.3; } else { p.z = bx.max.z + r; if (e.v.z < 0) e.v.z *= -0.3; } } } }
+  if (typeof S === 'number') { const L = S - 0.6; if (Math.abs(o.position.x) > L) { o.position.x = Math.sign(o.position.x) * L; e.v.x *= -0.3; } if (Math.abs(o.position.z) > L) { o.position.z = Math.sign(o.position.z) * L; e.v.z *= -0.3; } }
+  e.w.multiplyScalar(1 - 0.5 * h);
+  if (cts.length && e.v.lengthSq() < 0.05 && e.w.lengthSq() < 0.3) { e.still += h; if (e.still > 0.3) e.sleep = true; } else e.still = 0;
+}
+function blkDebrisStep(dt) {
+  if (!BLK_DEB.length) return; dt = Math.min(dt, 0.05); const n = dt > 0.025 ? 3 : 2;
+  for (let i = BLK_DEB.length - 1; i >= 0; i--) { const e = BLK_DEB[i]; if (!e.m.parent) { BLK_DEB.splice(i, 1); continue; } if (e.sleep) continue; e.age += dt; if (e.age > 6) { e.sleep = true; continue; } for (let s = 0; s < n; s++) blkBodyStep(e, dt / n); }
 }
 function blkShatter(b, from, kind) {
   const bt = b.blkBuilt; if (!bt) return; b.g.updateMatrixWorld(true); b.gobBones.spine.getWorldPosition(_bkV);
   let dx = _bkV.x - from.x, dz = _bkV.z - from.z; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
-  const boom = kind === 'nade' ? 1.7 : kind === 'shotgun' || kind === 'sniper' ? 1.3 : 1;
-  for (const jn in bt.jointGeo) {
-    const o = new THREE.Mesh(bt.jointGeo[jn], bt.rigid); b.gobBones[jn].matrixWorld.decompose(o.position, o.quaternion, o.scale);
-    if (typeof scene !== 'undefined') scene.add(o); if (typeof markClean === 'function') markClean(o);
-    const sp = (2.5 + Math.random() * 4) * boom;
-    debris.push({ m: o, tmp: true, sw: o.scale.clone(), owner: b, rest: false, v: new THREE.Vector3(dx * sp + (Math.random() - .5) * 4, (3 + Math.random() * 4) * boom, dz * sp + (Math.random() - .5) * 4),
-      w: new THREE.Vector3((Math.random() - .5) * 14, (Math.random() - .5) * 10, (Math.random() - .5) * 14) });
+  // the kill decides the push: a bullet nudges, a shotgun or a sniper shot throws, a grenade blasts from below
+  const P = kind === 'nade' ? [7, 7] : kind === 'shotgun' || kind === 'sniper' ? [4.5, 3.5] : kind === 'sword' ? [2.5, 2] : [2, 1.8];
+  const bvx = b.vx || 0, bvz = b.vz || 0, bvy = Math.max(0, b.vy || 0), sc = typeof scene !== 'undefined' ? scene : null;
+  const parts = []; for (const jn in bt.jointGeo) parts.push([jn, bt.jointGeo[jn], bt.rigid]);
+  if (b.gunG && b.gunG.children[0]) parts.push(['gun', null, null]);
+  for (const [jn, g, mat] of parts) {
+    const piv = new THREE.Group(), pos = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    let he, inner;
+    if (jn === 'gun') { inner = b.gunG.children[0].clone(true); b.gunG.children[0].matrixWorld.decompose(pos, q, s); inner.position.set(0, 0, 0); inner.quaternion.identity(); inner.scale.copy(s); he = new THREE.Vector3(0.08, 0.1, 0.45); }
+    else { if (!g.boundingBox) g.computeBoundingBox(); const bb = g.boundingBox, c = bb.getCenter(new THREE.Vector3()); b.gobBones[jn].matrixWorld.decompose(pos, q, s);
+      inner = new THREE.Mesh(g, mat); inner.scale.copy(s); inner.position.copy(c).multiply(s).negate(); pos.add(c.clone().multiply(s).applyQuaternion(q));
+      he = bb.getSize(new THREE.Vector3()).multiply(s).multiplyScalar(0.5); he.x = Math.max(he.x, 0.04); he.y = Math.max(he.y, 0.04); he.z = Math.max(he.z, 0.04); }
+    piv.position.copy(pos); piv.quaternion.copy(q); piv.add(inner); if (sc) sc.add(piv); if (typeof markClean === 'function') markClean(piv);
+    const up = jn === 'head' ? 1.4 : 1, k = 0.6 + Math.random() * 0.8;
+    const v = new THREE.Vector3(bvx * 0.8 + dx * P[0] * k + (Math.random() - 0.5) * 1.6, bvy * 0.5 + P[1] * (0.6 + Math.random() * 0.6) * up, bvz * 0.8 + dz * P[0] * k + (Math.random() - 0.5) * 1.6);
+    const wv = new THREE.Vector3(dz, 0, -dx).multiplyScalar(P[0] * (1 + Math.random() * 2)).add(new THREE.Vector3((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4));
+    const fx = 2 * he.x, fy = 2 * he.y, fz = 2 * he.z;
+    const e = { m: piv, v, w: wv, he, r: Math.max(he.x, he.y, he.z), iD: [12 / (fy * fy + fz * fz), 12 / (fx * fx + fz * fz), 12 / (fx * fx + fy * fy)], invI: new Array(9).fill(0), cts: [], still: 0, sleep: false, age: 0, owner: b };
+    BLK_DEB.push(e);
+    if (typeof debris !== 'undefined') debris.push({ m: piv, tmp: true, sw: piv.scale.clone(), owner: b, rest: true, v: new THREE.Vector3(), w: new THREE.Vector3() });   // the game shrinks and removes it before the respawn
   }
-  if (b.gunG) { const gm = b.gunG.children[0]; if (gm) { const c = gm.clone(true); gm.matrixWorld.decompose(c.position, c.quaternion, c.scale); scene.add(c);
-    debris.push({ m: c, tmp: true, sw: c.scale.clone(), owner: b, rest: false, v: new THREE.Vector3(dx * 3, 4, dz * 3), w: new THREE.Vector3(6, 3, 8) }); } }
 }
 function blkPortrait(b) {
   if (typeof renderer === 'undefined' || !renderer || !b.blk) return null;
@@ -8753,9 +9001,9 @@ function blkSwapAll() {
   if (typeof spawnBot === 'function') bots.forEach(b => { if (b.gob && b.dead <= 0) spawnBot(b); });
   if (typeof xrayHidden !== 'undefined') { xrayHidden.skinning = true; xrayShown.skinning = true; xrayHidden.needsUpdate = xrayShown.needsUpdate = true; }
 }
+// ===== GOBKIT BOTS (end) =====
 
-
-gobLoad(blkSwapAll);
+gobLoad(() => { blkSwapAll(); nickAll(); });
 function animateBot(b, dt, moving, dist, run) {
   // blend weights directly (always summing to 1) so the robot never falls back to its T-pose
   const k = Math.min(1, dt * 8);
@@ -8819,9 +9067,9 @@ function onPlayerKill(bot, head) {
   const old = diff; diff = Math.min(1, diff + 0.025 + (head ? 0.01 : 0) + (multi >= 2 ? 0.015 : 0));
   learn.range += (Math.hypot(bot.pos.x - player.pos.x, bot.pos.z - player.pos.z) - learn.range) * 0.2;
   lifeStats.kills++; if (head) { lifeStats.heads++; if (matchStats) matchStats.heads++; }
-  saveDiff(); if (Math.floor(diff * 5) > Math.floor(old * 5)) stamp('БОТЫ УМНЕЮТ!', 'red', 'skull', { small: true });
+  saveDiff();
 }
-function saveDiff() { try { localStorage.setItem('arenaDiff', diff.toFixed(3)); } catch (e) {} const el = document.getElementById('botLvl'); if (el) el.textContent = 'Боты: ' + BOT_WORD[Math.min(4, Math.floor(diff * 4.99))]; }
+function saveDiff() { try { localStorage.setItem('arenaDiff', diff.toFixed(3)); } catch (e) {} const el = document.getElementById('botLvl'); if (el) el.textContent = 'Соперники: ' + BOT_WORD[Math.min(4, Math.floor(diff * 4.99))]; }
 function respawnPlayer() {
   document.body.classList.remove('dead'); restoreDebris('me'); deathCam = null; killFov = 75; kbMark.hidden = true;
   for (const b of bots) b.dmgByMe = 0;
@@ -8829,7 +9077,7 @@ function respawnPlayer() {
     if (kb && kb.dead <= 0 && matchOver <= 0) { revName = kb.name; revT = 6; kb.spotT = 6; stamp('МЕСТЬ: ×2 ПО ' + kb.name.toUpperCase(), 'red', 'revenge', { small: true }); } }
   let best = spawnPts[0], bestD = -1;
   for (const [x, z] of spawnPts) { let d = 1e9; for (const b of bots) if (b.dead <= 0) d = Math.min(d, Math.hypot(b.pos.x - x, b.pos.z - z)); if (d > bestD) { bestD = d; best = [x, z]; } }
-  player.pos.set(best[0], 0, best[1]); player.vel.set(0, 0, 0); setHp(100); deadEl.hidden = true; for (const w of WEAPONS) w.ammo = w.mag; ammo = MAG; energy = 100; overheat = false; nades = NADE_MAX; updNade(); reloadT = 0; ammoEl.classList.remove('rl'); updAmmo(); stamina = 1; tired = false; lastRespawnMs = performance.now();
+  player.pos.set(best[0], 0, best[1]); player.vel.set(0, 0, 0); setHp(100); deadEl.hidden = true; for (const w of WEAPONS) w.ammo = w.mag; ammo = MAG; energy = 100; overheat = false; resetReserves(); nades = NADE_MAX; updNade(); reloadT = 0; ammoEl.classList.remove('rl'); updAmmo(); stamina = 1; tired = false; lastRespawnMs = performance.now();
   if (pendingW) { const wi = WEAPONS.findIndex(w => w.id === pendingW); pendingW = null; if (wi >= 0) switchWeapon(wi, true); }
   yaw = Math.atan2(player.pos.x, player.pos.z); pitch = 0; gunFireT = 0; power.fire = 0;
   Object.assign(lifeStats, { kills: 0, heads: 0, shots: 0, hits: 0, best: 0, coins0: coins, gems0: gems });
@@ -8839,12 +9087,26 @@ function respawnPlayer() {
 const MATCH_GOAL = 30, MATCH_TIME = 480, BOT_WORD = ['очень лёгкие', 'лёгкие', 'средние', 'сильные', 'очень сильные'];
 var matchT = MATCH_TIME, matchOver = 0, matchFirst = false, meF = null, fighters = [], boardTick = 0;
 const dmRow = document.getElementById('dmRow'), dmTime = document.getElementById('dmTime'), resultsEl = document.getElementById('results');
+let boardBox = null, myAvU = null;
+function mountBoard() {
+  if (boardBox) return; const dm = document.getElementById('dm'); if (!dm) return;
+  boardBox = document.createElement('div'); boardBox.id = 'board';
+  const clk = document.createElement('div'); clk.className = 'clk'; const g = document.createElement('small'); g.id = 'bGoal'; g.textContent = 'до ' + MATCH_GOAL;
+  clk.append(document.getElementById('dmTime'), g); boardBox.append(clk, dmRow); dm.prepend(boardBox);
+}
+// your head next to the others: a Blokit portrait of the default friendly look, made once
+function myAvatar() {
+  if (myAvU) return myAvU;
+  try { if (typeof blkPortrait === 'function' && typeof blkDefault === 'function') myAvU = blkPortrait({ blk: blkDefault(), color: 0xffd23f }); } catch (e) {}
+  return myAvU || (myAvU = avatarURL(0xf5cd30, 'cool', 'cap', 1, '#ffd23f'));
+}
 function initBoard() {
-  meF = { name: 'Ты', me: true, sk: 0, sd: 0, avURL: avatarURL(0xf5cd30, 'cool', 'cap', 1, '#ffd23f') };
+  mountBoard();
+  meF = { name: 'Ты', me: true, sk: 0, sd: 0, avURL: myAvatar() };
   fighters = bots.concat([meF]); dmRow.textContent = '';
   for (const f of fighters) {
     f.sk = 0; f.sd = 0;
-    const el = document.createElement('div'); el.className = 'av' + (f.me ? ' me' : ''); el.innerHTML = `<img alt="" src="${f.avURL}"><i></i><b>0</b>`;
+    const el = document.createElement('div'); el.className = 'av' + (f.me ? ' me' : ''); el.innerHTML = `<img alt="${f.me ? 'Ты' : f.name}" src="${f.avURL}"><i></i><b>0</b>`;
     f.boardEl = el; dmRow.appendChild(el);
   }
   drawBoard();
@@ -8855,7 +9117,8 @@ const dmLead = document.getElementById('dmLead'), dmLeadN = document.getElementB
 let leadWas = null;
 function drawBoard(pop) {
   const order = boardOrder();
-  order.forEach((f, i) => { const el = f.boardEl; el.style.order = i; el.children[1].textContent = '#' + (i + 1); el.children[2].textContent = f.sk; });
+  order.forEach((f, i) => { const el = f.boardEl; el.style.order = i; el.children[1].textContent = '#' + (i + 1); el.children[2].textContent = f.sk;
+    el.classList.toggle('lead', i === 0 && f.sk > 0); const im = el.firstElementChild; if (im && f.avURL && im.getAttribute('src') !== f.avURL) im.src = f.avURL; });
   const L = order[0], S2 = L === meF ? order[1] : L; dmLead.firstElementChild.textContent = L === meF ? 2 : 1; dmLeadN.textContent = S2 ? S2.name : '—'; dmLeadK.textContent = S2 ? S2.sk : 0;
   dmMeR.textContent = order.indexOf(meF) + 1; dmMeK.textContent = meF.sk;
   { const ahead = L === meF && (!order[1] || meF.sk > order[1].sk); rMeK.textContent = meF.sk; rLdT.textContent = ahead ? '2-й' : 'Лидер'; rLdK.textContent = ahead ? order[1].sk : L.sk; }
@@ -9042,7 +9305,38 @@ addEventListener('keydown', e => { // Space / Enter: «ЕЩЁ МАТЧ» on the 
   if (!rw.open) { if (!resultsEl.hidden) resPick('again'); return; }
   if (rw.stage === 0) rwTap(); else if (rw.stage === 1) rwCollect();
 });
+// v18 (Ivan 20:37): opponents pass for online players with silly gamer nicknames, a fresh set every match.
+// Everything that decides how the names look is in nickWords(): swap the lists to change the style.
+function nickWords() { return {
+  w: ['Plurius', 'Glorpus', 'Bubuntus', 'Zoinkus', 'Snorbo', 'Flumpo', 'Wubbix', 'Grimbo', 'Doodlus', 'Zibzab', 'Bonkus', 'Shnorkel', 'Tumbix',
+      'Yoinker', 'Noodlix', 'Blorbo', 'Kabachok', 'Pelmen', 'Tapochek', 'Kotletus', 'Pirozhok', 'Sosiskin', 'Bulka', 'Ogurchik', 'Kompotik',
+      'Barsik', 'Pupsik', 'Ezhik', 'Krokozyabra', 'Vzhuh', 'Bruh', 'Mops', 'Gusyan', 'Kartoshkin', 'Bublik', 'Zhmyx', 'Kukuruza', 'Shmyak',
+      'Hrum', 'Tyktyk', 'Bombastik', 'Kekster', 'Noob', 'Aura', 'NPC', 'Kloun', 'Banan', 'Kaktus', 'Sushka', 'Kisel', 'Tvorozhok', 'Valenok',
+      'Shapka', 'Ded', 'Babka', 'Pelmeshka', 'Kubik', 'Tuchka', 'Bobik', 'Zefirka'],
+  n: ['7', '9', '13', '23', '42', '67', '77', '99', '101', '123', '404', '777', '1000', '2007', '2012', '3000', '9000', '1337'],
+  fixed: ['Six7', 'Plurius 23'],
+  max: 14 }; }
+function nickOne() {
+  const W = nickWords(), R = Math.random, pick = a => a[R() * a.length | 0];
+  for (let g = 0; g < 40; g++) {
+    const w = pick(W.w), w2 = pick(W.w), n = pick(W.n), lw = w.toLowerCase();
+    const leet = t => t.replace(/o/g, '0').replace(/e/g, '3').replace(/i/g, '1');
+    const F = [() => w + ' ' + n, () => w + n, () => lw + '_' + n, () => 'xX_' + w + '_Xx', () => 'Pro100' + w, () => 'Mr' + w, () => w + w2,
+      () => lw + '.exe', () => leet(w) + n, () => w.toUpperCase(), () => w + w.slice(-1).repeat(2), () => 'Lord' + w, () => w + '_TV', () => 'iam' + lw];
+    const s = pick(F)();
+    if (s.length <= W.max && s !== w2 + w2) return s;
+  }
+  return pick(W.fixed);
+}
+function nickBatch(k) {
+  const W = nickWords(), out = new Set();
+  if (Math.random() < 0.6) out.add(W.fixed[Math.random() * W.fixed.length | 0]);
+  for (let g = 0; out.size < k && g < 400; g++) out.add(nickOne());
+  return [...out].sort(() => Math.random() - 0.5).slice(0, k);
+}
+function nickAll() { const N = nickBatch(bots.length); bots.forEach((b, i) => { b.name = N[i] || nickOne(); if (b.blk) b.blk.name = b.name; }); }
 function newMatch() {
+  nickAll();
   closeRewards(); xpMatch = 0; lvlAtStart = prog.lvl; matchStats.heads = 0; matchStats.best = 0;
   matchOver = 0; matchT = MATCH_TIME; matchFirst = false; firstBlood = false;
   resultsEl.hidden = true; document.body.classList.remove('over');
@@ -9058,7 +9352,7 @@ const deadAv = document.getElementById('deadAv'), deadByEl = document.getElement
 const revTagEl = document.getElementById('revTag'), nextWbarEl = document.getElementById('nextWbar'), nwTEl = document.getElementById('nwT'), kbHeadEl = document.getElementById('kbHead');
 function openDeath(kb, wpn) {
   deadAv.src = kb ? kb.avURL : meF.avURL;
-  kbHeadEl.textContent = kb ? 'ТЕБЯ ПОБЕДИЛ БОТ' : 'НЕСЧАСТНЫЙ СЛУЧАЙ';
+  kbHeadEl.textContent = kb ? 'ТЕБЯ ПОБЕДИЛ ИГРОК' : 'НЕСЧАСТНЫЙ СЛУЧАЙ';
   deadByEl.textContent = kb ? kb.name : 'Ты сам'; deadByEl.style.fontSize = '';
   const wn = wpn === 'nade' ? 'Граната' : (WEAPONS.find(w => w.id === wpn) || {}).name || '';
   kbWEl.innerHTML = wpn ? wIcon(wpn, 'gp') + `<span>${wn}</span>` : '';
@@ -9067,7 +9361,7 @@ function openDeath(kb, wpn) {
     + (eg ? ` · +${eg} ${plural(eg, 'кристалл', 'кристалла', 'кристаллов')}` : '');
   kbLineEl.innerHTML = (kb ? `У соперника осталось <b class="co">${ki.hp}<img class="hrt" alt="" src="${ICONS.heart || ''}"></b> · ты нанёс <b class="mi">${ki.dealt}</b><br>` : '') + `<small>${life}</small>`;
   revTagEl.hidden = !kb;
-  if (kb) { document.getElementById('revSub').textContent = `Месть: ×2 урон по боту ${kb.name} 6 с`; document.getElementById('revIc').src = ICONS.s_revenge || ICONS.skull || ''; }
+  if (kb) { document.getElementById('revSub').textContent = `Месть: ×2 урон по ${kb.name}, 6 с`; document.getElementById('revIc').src = ICONS.s_revenge || ICONS.skull || ''; }
   nwRestore(); renderNextW(); respShown = -1; deadEl.hidden = false; updRespRing();
   for (let fs = 26; fs > 16 && deadByEl.scrollWidth > deadByEl.clientWidth + 1; fs -= 2) deadByEl.style.fontSize = (fs - 2) + 'px';
 }
@@ -9152,8 +9446,35 @@ function findCover(b) {
   }
   return best;
 }
+const BOT_MAG = { rifle: 30, pistol: 12, shotgun: 6, sniper: 5 };
+function botArm(b) { const m = BOT_MAG[b.wpn || 'rifle'] || 30; b.clip = m; b.bres = m * 4; b.dry = false; }
+// one round per shot; an empty clip means a reload pause, an empty reserve means no shooting until it finds a box
+function botRound(b) {
+  if (b.clip == null) botArm(b);
+  if (b.clip > 0) { b.clip--; return true; }
+  const w = b.wpn || 'rifle', m = BOT_MAG[w] || 30;
+  if (b.bres > 0) { const t = Math.min(m, b.bres); b.clip = t; b.bres -= t; b.fireCd = w === 'shotgun' ? 2.0 : 1.6; b.burst = 0; b.charged = false; return false; }
+  b.dry = true; b.fireCd = 0.6; botSeekAmmo(b); return false;
+}
+const _baV = new THREE.Vector3();
+function botSeekAmmo(b) {
+  let best = null, bd = 45;
+  for (const o of loot) { if (!o.live || o.type !== 'ammo' || o.magnet) continue; const d = Math.hypot(o.p.x - b.pos.x, o.p.z - b.pos.z); if (d < bd) { bd = d; best = o; } }
+  if (best) { b.mode = 'roam'; b.holdT = 0; b.padGoal = false; b.goal.set(best.p.x, 0, best.p.z); }
+}
+function botAmmoTick(dt) {
+  for (const b of bots) {
+    if (!b.dry || b.dead > 0) continue;
+    for (const o of loot) { if (!o.live || o.type !== 'ammo' || o.magnet) continue;
+      if (Math.hypot(o.p.x - b.pos.x, o.p.z - b.pos.z) < 1.8 && Math.abs(o.p.y - b.pos.y) < 2.5) {
+        o.live = false; if (o.mesh) o.mesh.visible = false; const m = BOT_MAG[b.wpn || 'rifle'] || 30; b.bres = m * 3; b.clip = 0; b.dry = false;
+        burstAt(_baV.set(o.p.x, o.p.y, o.p.z), 0xffb020, 8, 4, 0.1); break; } }
+    if (b.dry && (b.ammoLookT = (b.ammoLookT || 0) - dt) <= 0) { b.ammoLookT = 0.8; botSeekAmmo(b); }
+  }
+}
 function botShoot(b, dist, moving) {
   const w = b.wpn || 'rifle';
+  if (!(w === 'sniper' && !b.charged) && !botRound(b)) return;
   if (w === 'sniper' && !b.charged) { b.charged = true; b.chargeT = b.fireCd = 0.9 * (1.3 - diff * 0.6); return; }   // red laser sight warns you first
   b.charged = false; b.chargeT = 0;
   if (w === 'sniper') b.fireCd = (2.0 + Math.random() * 0.8) * (1.2 - 0.4 * diff);
@@ -9197,10 +9518,11 @@ function findBotFoe(b, now, maxD) {
 function botHurtBot(b, o, dmg, wpn) {
   if (o.dead > 0 || matchOver > 0) return; wpn = wpn || b.wpn || 'rifle'; o.hp -= dmg; o.flashT = 0.08; o.mats.forEach(m => m.emissive && m.emissive.setHex(0x664444));
   if (!o.foe || Math.random() < 0.85) { o.foe = b; o.foeT = performance.now() * 0.001; }
-  if (o.hp <= 0) { o.dead = 2.5; o.killedBy = 'bot'; burstBot(o, wpn, b.pos); feed(b.name, o.name, false, wpn, nameCol(b), nameCol(o)); scoreKill(b, o); b.foe = null; b.cheerT = 1.1;
+  if (o.hp <= 0) { o.dead = 2.5; o.killedBy = 'bot'; b.bres = Math.min((BOT_MAG[b.wpn || 'rifle'] || 30) * 6, (b.bres || 0) + (BOT_MAG[b.wpn || 'rifle'] || 30) * 2); b.dry = false; burstBot(o, wpn, b.pos); feed(b.name, o.name, false, wpn, nameCol(b), nameCol(o)); scoreKill(b, o); b.foe = null; b.cheerT = 1.1;
     for (let i = 0; i < 8; i++) spawnLoot('coin', o.pos, 0.6); if (Math.random() < 0.5) spawnLoot('health', o.pos, 0.5); if (Math.random() < 0.3) spawnLoot('gem', o.pos, 0.6); }
 }
 function botShootBot(b, o, dist) {
+  if (!botRound(b)) return;
   botNoise = { x: b.pos.x, z: b.pos.z, t: performance.now() * 0.001, by: b };
   if (b.burst <= 0) b.burst = 2 + (Math.random() * 3 | 0);
   b.burst--; b.fireCd = b.burst > 0 ? 0.15 : 0.8 + Math.random() * 0.8;
@@ -9469,6 +9791,7 @@ function restoreDebris(owner) {
   if (owner === 'me' && meAv) meAv.visible = false;
 }
 function updateDebris(dt) {
+  if (typeof blkDebrisStep === 'function') blkDebrisStep(dt);
   for (const e of debris) {
     const o = e.m;
     if (!e.rest) {
@@ -9604,8 +9927,8 @@ function burstAt(p, color, n, speed, size = 0.16) {
 
 // ----- loot: coins (one instanced mesh), health, gems, bonuses
 // they burst out wide with glowing trails, land and shimmer, and fly into you when you come close
-const LOOT_COLOR = { coin: 0xffc93c, gem: 0x4de8ff, bonus: 0xc48bff, health: 0x4ade80, magnet: 0xff3b4e };
-const MAGNET_R = { coin: 9, gem: 10, bonus: 10, health: 10, magnet: 10 };
+const LOOT_COLOR = { coin: 0xffc93c, gem: 0x4de8ff, bonus: 0xc48bff, health: 0x4ade80, magnet: 0xff3b4e, ammo: 0xffb020 };
+const MAGNET_R = { coin: 9, gem: 10, bonus: 10, health: 10, magnet: 10, ammo: 10 };
 const lootMat = {
   coin: new THREE.MeshToonMaterial({ color: 0xffd24a, emissive: 0x8a5a00, gradientMap: gradTex }),
   gem: new THREE.MeshToonMaterial({ color: 0x4de8ff, emissive: 0x0a5a70, gradientMap: gradTex }),
@@ -9614,6 +9937,10 @@ const lootMat = {
   hpB: new THREE.MeshBasicMaterial({ color: 0xffffff }),
   mag: new THREE.MeshToonMaterial({ color: 0xff3b4e, emissive: 0x5a0010, gradientMap: gradTex }),
   tip: new THREE.MeshToonMaterial({ color: 0xe9edf2, emissive: 0x3a3a3a, gradientMap: gradTex }),
+  amA: new THREE.MeshToonMaterial({ color: 0xffb020, emissive: 0x5a3200, gradientMap: gradTex }),
+  amB: new THREE.MeshToonMaterial({ color: 0x1b1036, emissive: 0x0a0418, gradientMap: gradTex }),
+  amC: new THREE.MeshToonMaterial({ color: 0xffd23f, emissive: 0x6a4a00, gradientMap: gradTex }),
+  amD: new THREE.MeshToonMaterial({ color: 0xff5d5d, emissive: 0x5a0010, gradientMap: gradTex }),
 };
 for (const k in lootMat) lootMat[k].opacity = 0.5;
 const COIN_MAX = 400;
@@ -9626,6 +9953,11 @@ function makeMesh(type) {
   if (type === 'health') {
     m = new THREE.Group(); m.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), lootMat.hpA));
     m.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.1, 0.52), lootMat.hpB), new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.52), lootMat.hpB));
+  } else if (type === 'ammo') {        // an amber ammo crate with a navy band and three brass rounds sticking out of the top
+    m = new THREE.Group(); const B = (geo, mat, x, y, z) => { const q = new THREE.Mesh(geo, mat); q.position.set(x, y, z); m.add(q); };
+    B(new THREE.BoxGeometry(0.56, 0.3, 0.38), lootMat.amA, 0, 0, 0); B(new THREE.BoxGeometry(0.575, 0.08, 0.395), lootMat.amB, 0, 0.03, 0);
+    for (let i = -1; i <= 1; i++) { B(new THREE.CylinderGeometry(0.045, 0.045, 0.2, 8), lootMat.amC, i * 0.13, 0.22, 0); B(new THREE.ConeGeometry(0.045, 0.08, 8), lootMat.amD, i * 0.13, 0.36, 0); }
+    m.scale.setScalar(1.15);
   } else if (type === 'magnet') {      // a red horseshoe magnet with silver tips
     m = new THREE.Group(); const B = (w, h, d, mat, x, y) => { const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); q.position.set(x, y, 0); m.add(q); };
     B(0.14, 0.42, 0.14, lootMat.mag, -0.17, 0.05); B(0.14, 0.42, 0.14, lootMat.mag, 0.17, 0.05); B(0.48, 0.14, 0.14, lootMat.mag, 0, -0.2);
@@ -9647,6 +9979,8 @@ function dropLoot(b) {
   const n = 16 + Math.floor(Math.random() * 10) + Math.min(10, streak * 2);
   for (let i = 0; i < n; i++) spawnLoot('coin', b.pos);
   spawnLoot('health', b.pos, 0.6);                       // every bot drops health
+  spawnLoot('ammo', b.pos, 0.6);                         // and an ammo box; a second one when your gun is running low
+  if (W && !W.melee && resOf(W) < (W.energy ? 100 : W.mag || 30)) spawnLoot('ammo', b.pos, 0.6);
   if (hp < 50) spawnLoot('health', b.pos, 0.6);           // and a second one when you're hurt
   if (Math.random() < 0.4) spawnLoot('gem', b.pos, 0.7);
   if (Math.random() < 0.2) spawnLoot('bonus', b.pos, 0.6);
@@ -9670,6 +10004,8 @@ function collect(u) {
     banner('+1 БРИЛЛИАНТ', 'gem'); pickFlash('77,232,255');
   } else if (u.type === 'health') {
     setHp(Math.min(100, hp + 25)); sfx('heal'); banner('+25 ЗДОРОВЬЯ', 'hp'); pickFlash('74,222,128');
+  } else if (u.type === 'ammo') {
+    giveAmmoBox();
   } else if (u.type === 'magnet') {
     giveMagnet(12); pickFlash('255,59,78');
   } else if (u.type === 'bonus') {
@@ -9680,7 +10016,7 @@ function collect(u) {
 }
 const dm2 = new THREE.Object3D();
 function updateLoot(dt) {
-  coinChainT -= dt;
+  coinChainT -= dt; botAmmoTick(dt);
   headV.set(player.pos.x, player.pos.y + 0.6, player.pos.z);
   { const cp = Math.cos(pitch), sp = Math.sin(pitch), cy = Math.cos(yaw), sy = Math.sin(yaw);
     lootEye.copy(yawObj.position); lootF.set(-sy * cp, sp, -cy * cp); lootU.set(sy * sp, cp, cy * sp);
@@ -9753,15 +10089,42 @@ const ammoEl = document.getElementById('ammo'), ammoN = document.getElementById(
 const stamEl = document.getElementById('stam'), stamFill = document.getElementById('stamFill');
 const abilFill = document.getElementById('abilFill'), superBtn = document.getElementById('super'), reloadBtn = document.getElementById('reload');
 var wbarReady = false;
-function updAmmo() { ammoN.textContent = W && (W.melee || (power.fire > 0 && !W.energy)) ? '∞' : W && W.energy ? Math.round(energy) : ammo; ammoEl.classList.toggle('low', ammo <= 6 && reloadT <= 0); wbarAmmo(); }
+function updAmmo() { ammoN.textContent = W && W.melee ? '∞' : W && W.energy ? Math.round(energy) : ammo;
+  try { if (W) ammoMax.textContent = W.melee ? '' : W.energy ? '% · ' + Math.round(resOf(W)) : '/' + resOf(W); } catch (e) {} ammoEl.classList.toggle('low', ammo <= 6 && ammo !== 1 && reloadT <= 0); ammoEl.classList.toggle('gold', !!W && !W.melee && !W.energy && ammo === 1 && W.mag > 1 && reloadT <= 0); wbarAmmo(); }
 function startReload() {
   if (reloadT > 0 || ammo === MAG || deadT > 0 || (W && (W.melee || W.energy))) return;
+  if (resOf(W) <= 0) { if (ammo <= 0) outOfAmmo(); return; }
   reloadT = RELOAD_T; ammoEl.classList.add('rl'); sfx('reload');
 }
 
 // ---------- weapons: rifle, pistol, shotgun, sniper, laser, sword + grenades ----------
 var energy = 100;
 var W = null;
+// ----- ammo reserve: nothing is infinite; each gun carries spare rounds, defeated opponents drop ammo boxes
+const AMMO_START = { rifle: 90, pistol: 36, shotgun: 12, sniper: 10, laser: 200 }, AMMO_CAP = { rifle: 240, pistol: 96, shotgun: 36, sniper: 25, laser: 400 };
+const AMMO_BOX = { rifle: 45, pistol: 24, shotgun: 8, sniper: 5, laser: 150 };   // one box for the gun in hand; other owned guns get half
+var ammoDry = false;   // every gun empty: the sword is lent until you pick up a box
+function resetReserves() { for (const w of WEAPONS) if (AMMO_START[w.id] != null) w.res = AMMO_START[w.id]; ammoDry = false; }
+function resOf(w) { return w && w.res != null ? w.res : 0; }
+function hasAmmo(w) { return !!w && (w.melee || (w.energy ? (w === W ? energy : 100) > 1 || resOf(w) > 0 : (w === W ? ammo : (w.ammo != null ? w.ammo : w.mag)) > 0 || resOf(w) > 0)); }
+function outOfAmmo() {
+  const i = WEAPONS.findIndex(w => !w.melee && w !== W && owns(w) && hasAmmo(w));
+  if (i >= 0) { banner(W.name.toUpperCase() + ': ПАТРОНЫ КОНЧИЛИСЬ', 'ammo'); switchWeapon(i); return; }
+  if (!ammoDry) { ammoDry = true; banner('ПАТРОНЫ КОНЧИЛИСЬ — СОБИРАЙ С СОПЕРНИКОВ', 'ammo'); sfx('ui_error', 0.5); }
+  const sw = WEAPONS.findIndex(w => w.melee); if (sw >= 0 && W !== WEAPONS[sw]) switchWeapon(sw, true);
+}
+function giveAmmoBox() {
+  // the full box goes to the gun in hand (or, holding the sword, to the gun you last used); the others get half
+  const main = W && !W.melee ? W : (WEAPONS[lastW] && !WEAPONS[lastW].melee && owns(WEAPONS[lastW]) ? WEAPONS[lastW] : WEAPONS.find(w => !w.melee && owns(w)));
+  for (const w of WEAPONS) { if (AMMO_BOX[w.id] == null || !(owns(w) || w === W)) continue;
+    w.res = Math.min(AMMO_CAP[w.id], resOf(w) + Math.round(AMMO_BOX[w.id] * (w === main ? 1 : 0.5))); }
+  sfx('reloaded', 0.9, 1.3); sfx('coin', 0.45, 0.62); banner('+ПАТРОНЫ', 'ammo'); pickFlash('255,176,32');
+  const wasDry = ammoDry; ammoDry = false;
+  if (wasDry && W && W.melee) { const i = main ? WEAPONS.indexOf(main) : WEAPONS.findIndex(w => !w.melee && owns(w) && hasAmmo(w)); if (i >= 0) switchWeapon(i); }
+  if (W && !W.melee && !W.energy && ammo <= 0) { reloadT = 0; startReload(); }
+  updAmmo();
+}
+try { document.head.insertAdjacentHTML('beforeend', '<style>#banner.ammo{color:#ffd23f}#ammo.gold #ammoN{color:#ffd23f;text-shadow:0 0 10px #ffb020,0 2px 0 #1b1036}</style>'); } catch (e) {}
 const WEAPONS = [
   { id: 'rifle', name: 'Автомат', mag: 30, rate: 0.085, reload: 1.3, body: 25, head: 50, spread: 0.01, kick: 1, snd: 'w_rifle', vol: 0.55, flashZ: -1.05, flashS: 1 },
   { id: 'pistol', name: 'Пистолет', lvl: 3, mag: 12, rate: 0.19, reload: 0.9, body: 34, head: 85, spread: 0.006, kick: 0.9, snd: 'w_pistol', vol: 0.6, flashZ: -0.52, flashS: 0.7 },
@@ -9770,6 +10133,7 @@ const WEAPONS = [
   { id: 'laser', name: 'Лазер', energy: true, mag: 100, rate: 0.06, body: 5, head: 11, kick: 0.15, flashZ: -0.78, flashS: 0.5, price: [0, 40] },
   { id: 'sword', name: 'Меч', melee: true, mag: 0, rate: 0.42, body: 70, head: 70, kick: 0, price: [0, 25] },
 ];
+resetReserves();
 const W_ICON = {
   rifle: '<rect x="6" y="7" width="26" height="7"/><rect x="32" y="9" width="14" height="3"/><rect x="17" y="14" width="5" height="8"/><rect x="0" y="8" width="7" height="7"/><rect x="10" y="14" width="4" height="6"/>',
   pistol: '<rect x="12" y="5" width="24" height="7"/><rect x="14" y="12" width="7" height="11"/><rect x="21" y="12" width="5" height="4"/>',
@@ -9865,6 +10229,79 @@ const beam = new THREE.Mesh(beamGeo, beamMat), beamCore = new THREE.Mesh(beamGeo
 beam.visible = beamCore.visible = false; beam.frustumCulled = beamCore.frustumCulled = false; scene.add(beam, beamCore);
 function setBeam(a, b) { const d = a.distanceTo(b); for (const [m, r] of [[beam, 0.06 + Math.random() * 0.04], [beamCore, 0.022]]) { m.position.copy(a); m.lookAt(b); m.scale.set(r, r, d); m.visible = true; } beamMat.color.copy(glowMat.color); }
 
+// ----- first-person arms: blocky square hands and forearms like the Blokit avatars, holding every weapon
+// points are in each weapon model's own space (barrel along -Z, grip below the receiver); shoulders sit off screen
+const FP_GRIP = {
+  rifle:   { R: [0.01, -0.17, -0.04], L: [-0.01, -0.115, -0.64] },
+  pistol:  { R: [0, -0.15, 0.0],   L: [-0.07, -0.2, -0.02] },
+  shotgun: { R: [0.01, -0.09, 0.06], L: [-0.01, -0.13, -0.8], Lpart: 'pump' },
+  sniper:  { R: [0.01, -0.21, -0.04], L: [-0.01, -0.125, -0.55] },
+  laser:   { R: [0.01, -0.14, -0.27], L: [-0.01, -0.1, -0.64] },
+  sword:   { R: [0, -0.1, 0], Rin: true } };
+const FP_SH_R = new THREE.Vector3(0.7, -0.6, 0.75), FP_SH_L = new THREE.Vector3(-1.05, -0.55, 0.65);
+// soft clay matcap: the face toward you is light, the sides of each block go a step darker, so pale skin still reads on the sand
+const fpClay = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#7d7480'; g.fillRect(0, 0, 128, 128);
+  const r = g.createRadialGradient(52, 46, 4, 64, 64, 66); r.addColorStop(0, '#ffffff'); r.addColorStop(0.55, '#e9e4e6'); r.addColorStop(0.8, '#b8b0b6'); r.addColorStop(1, '#7d7480');
+  g.fillStyle = r; g.beginPath(); g.arc(64, 64, 64, 0, Math.PI * 2); g.fill(); return new THREE.CanvasTexture(c); })();
+const fpSkinMat = new THREE.MeshMatcapMaterial({ color: 0xffd9b0, matcap: fpClay }), fpSleeveMat = new THREE.MeshMatcapMaterial({ color: 0x3a86ff, matcap: fpClay }),
+  fpForeMat = new THREE.MeshMatcapMaterial({ color: 0xffd9b0, matcap: fpClay });
+gunRest.y = -0.215; gunFitOk = true; fitGun();   // the view model sits a little higher so the gripping hand clears the weapon card
+const fpBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);   // unit block growing along +Z from its origin
+function fpArmsLook(d) {
+  d = d || (typeof blkDefault === 'function' ? blkDefault() : null); if (!d) return;
+  const sk = (d.colors && (d.colors.rightArm != null ? d.colors.rightArm : d.colors.torso)) ?? 0xffd9b0, sh = d.shirt || {};
+  fpSkinMat.color.setHex(sk);
+  const bare = !sh.id || sh.id === 'none' || sh.id === 'tank', short = sh.id === 'tee' || sh.id === 'stripes' || sh.id === 'vest';
+  fpSleeveMat.color.setHex(bare ? sk : (sh.c1 ?? 0x3a86ff)); fpForeMat.color.setHex(bare || short ? sk : (sh.c1 ?? 0x3a86ff));
+}
+function fpMakeArm() {
+  const g = new THREE.Group(), mk = (m, w) => { const b = new THREE.Mesh(fpBox, m); b.scale.set(w, w, 1); g.add(b); return b; };
+  const a = { g, hand: new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.22), fpSkinMat), fore: mk(fpForeMat, 0.22), upper: mk(fpSleeveMat, 0.25),
+    h: new THREE.Vector3(), e: new THREE.Vector3(), s: new THREE.Vector3() };
+  g.add(a.hand); return a;
+}
+const _fpZ = new THREE.Vector3(0, 0, 1), _fpD = new THREE.Vector3(), _fpV = new THREE.Vector3();
+function fpSeg(b, a, c) { _fpD.subVectors(c, a); const L = _fpD.length(); b.position.copy(a); b.quaternion.setFromUnitVectors(_fpZ, _fpD.divideScalar(L || 1)); b.scale.z = L; }
+// hand at h, elbow bent outward/down, shoulder s; everything in the arm group's parent space
+function fpPose(a, h, s, side) {
+  a.h.copy(h); a.s.copy(s); a.e.lerpVectors(h, s, 0.48).add(side > 0 ? _fpV.set(0.42, -0.06, -0.05) : _fpV.set(-0.22, -0.16, 0));
+  a.hand.position.copy(h); _fpD.subVectors(a.e, h).normalize(); a.hand.quaternion.setFromUnitVectors(_fpZ, _fpD);
+  fpSeg(a.fore, _fpV.copy(h).addScaledVector(_fpD, 0.05), a.e); fpSeg(a.upper, a.e, s);
+}
+const fpArms = {};
+(function buildFpArms() {
+  fpArmsLook();
+  for (const k in FP_GRIP) {
+    const mdl = wModels[k], G = FP_GRIP[k]; if (!mdl) continue;
+    const host = G.Rin ? mdl.children[0] : mdl, R = fpMakeArm(); host.add(R.g);
+    const sh = G.Rin ? FP_SH_R.clone().add(new THREE.Vector3(0.05, -0.15, -0.2)) : FP_SH_R;
+    fpPose(R, new THREE.Vector3(...G.R), sh, 1);
+    const e = { R, host, rH: new THREE.Vector3(...G.R) };
+    if (G.L) { const part = G.Lpart && WD[k] && WD[k][G.Lpart], lh = part || mdl, L = fpMakeArm(); lh.add(L.g);
+      e.L = L; e.lHost = lh; e.lRest = new THREE.Vector3(...G.L); if (part) { lh.updateMatrixWorld(true); }   // the pump group sits at the model origin, so model-space points work inside it
+      e.lSh = FP_SH_L.clone(); fpPose(L, e.lRest, e.lSh, -1); }
+    fpArms[k] = e;
+    host.traverse(o => o.layers.set(1));
+  }
+  if (wModels.sword) wModels.sword.position.set(-0.04, 0.16, 0.04);   // lift the sword so the hand on its hilt is in view
+  markClean(gun);
+})();
+const _fpM = new THREE.Vector3(), _fpT = new THREE.Vector3(), _fpS = new THREE.Vector3();
+// reload: the left hand goes down to the magazine (or the shotgun shell), follows it out and pushes it back in
+function updateFpArms(rp) {
+  const e = fpArms[W.id]; if (!e || !e.L) return;
+  const D = WD[W.id], tgt = D && (D.mag || (D.shell && D.shell.visible ? D.shell : null));
+  const k = rp > 0 ? Math.min(1, Math.sin(Math.min(1, rp / 0.9) * Math.PI) * 1.8) : 0;
+  _fpT.copy(e.lRest); _fpS.copy(e.lSh);
+  if (k > 0.001 && tgt) {
+    tgt.updateMatrixWorld(true); const bb = tgt.isMesh ? null : new THREE.Box3().setFromObject(tgt);
+    if (bb && !bb.isEmpty()) bb.getCenter(_fpM); else tgt.getWorldPosition(_fpM);
+    e.lHost.updateMatrixWorld(true); e.lHost.worldToLocal(_fpM); _fpM.y -= 0.06; _fpM.x -= 0.05;
+    _fpT.lerp(_fpM, k); _fpS.y -= 0.1 * k;
+  }
+  fpPose(e.L, _fpT, _fpS, -1);
+}
 let wIdx = 0, lastW = 1, swapT = 0, swingT = 0, swingDir = 1, overheat = false, laserTick = 0, laserN = 0, lastRespawnMs = 0, testAll = false, laserLoop = null, hitStop = 0;
 W = WEAPONS[0];
 try { testAll = localStorage.getItem('arenaAllW') === '1'; } catch (e) {}
@@ -9873,7 +10310,7 @@ if (prog.v !== 14) { prog.owned = prog.owned.filter(id => id !== 'rifle' && id !
 if (!Array.isArray(prog.newW)) prog.newW = [];
 for (const w of WEAPONS) w.ammo = w.mag;
 const lvlOk = w => !w.lvl || prog.lvl >= w.lvl;
-const owns = w => testAll || prog.owned.includes(w.id) || (!w.price && lvlOk(w));
+const owns = w => testAll || (w.melee && ammoDry) || prog.owned.includes(w.id) || (!w.price && lvlOk(w));
 const ammoMax = ammoEl.querySelector('small'), wbarEl = document.getElementById('wbar');
 const tmpV3 = new THREE.Vector3(), tmpV2D = new THREE.Vector2(), swV = new THREE.Vector3(), nadeV = new THREE.Vector3();
 // ----- weapon cards (UI spec): the weapon in hand is a big yellow card with its name and ammo, owned ones are white,
@@ -9925,8 +10362,8 @@ function updWbar() {
 function wbarAmmo() {
   if (!wbarReady) return;
   const c = wbarEl.querySelector('.wcur'); if (!c) return;
-  const w = W, a = ammo, inf = w.melee || (power.fire > 0 && !w.energy);
-  const t = String(inf ? '∞' : w.energy ? Math.round(energy) : a), m = inf ? '' : w.energy ? ' %' : ' / ' + w.mag;
+  const w = W, a = ammo, inf = w.melee;
+  const t = String(inf ? '∞' : w.energy ? Math.round(energy) : a), m = inf ? '' : w.energy ? ' % · ' + Math.round(resOf(w)) : ' / ' + resOf(w);
   const cn = c.querySelector('.cnt'), mx = c.querySelector('.mx');
   if (cn.textContent !== t) cn.textContent = t; if (mx.textContent !== m) mx.textContent = m;
   const empty = !inf && !w.energy && a <= 0 && reloadT <= 0, low = !inf && !w.energy && a > 0 && a <= Math.ceil((w.mag || 1) * 0.2) && reloadT <= 0;
@@ -10029,10 +10466,10 @@ function switchWeapon(i, quiet) {
   if (!owns(w)) { if (!quiet) { banner(!lvlOk(w) ? w.name.toUpperCase() + ' — С ' + w.lvl + ' УРОВНЯ' : w.name.toUpperCase() + ' — В АРСЕНАЛЕ', 'bonus'); sfx('ui_error', 0.6); } return; }
   if (prog.newW.includes(w.id)) { prog.newW = prog.newW.filter(x => x !== w.id); saveProg(); }
   W.ammo = ammo; lastW = wIdx; wIdx = i; W = w; ammo = W.ammo; MAG = W.mag || 1; RELOAD_T = W.reload || 1;
-  reloadT = 0; ammoEl.classList.remove('rl'); fireCd = Math.max(fireCd, 0.2); swapT = 0.22; swingT = 0; beam.visible = beamCore.visible = false; stopLaserLoop();
+  reloadT = 0; ammoEl.classList.remove('rl'); hotT = 0; hitChain = 0; fireCd = Math.max(fireCd, 0.2); swapT = 0.22; swingT = 0; beam.visible = beamCore.visible = false; stopLaserLoop();
   for (const k in wModels) wModels[k].visible = k === W.id;
   flash.position.set(0, 0.02, W.flashZ || -1.05);
-  ammoMax.textContent = W.melee ? '' : W.energy ? '%' : '/' + W.mag;
+  ammoMax.textContent = W.melee ? '' : W.energy ? '% · ' + Math.round(resOf(W)) : '/' + resOf(W);
   updAmmo(); updWbar(); if (!quiet) sfx('wswitch', 0.7);
   cross.className = 'hud' + (W.id === 'sniper' ? ' snipe' : W.id === 'shotgun' ? ' wide' : W.melee ? ' melee' : '');
 }
@@ -10107,7 +10544,7 @@ function castShot(spread, out) {
     const e = out.hits.get(bot) || { dmg: 0, head: false, point: h.point.clone() }; e.dmg += dmg; e.head = e.head || head; out.hits.set(bot, e);
     end = h.point; sparksAt(h.point); if (++nb >= (W.pierce || 1)) break;
   }
-  flash.getWorldPosition(tmpV3); tracer(tmpV3, end, power.fire > 0 ? 0xff7a1f : W.id === 'sniper' ? 0x38c6ff : 0xfff3c4, 0.06, STREAK_KIND[W.id] ? W.id : 'rifle');
+  flash.getWorldPosition(tmpV3); tracer(tmpV3, end, goldShot ? 0xffd23f : power.fire > 0 || hotT > 0 ? 0xff7a1f : W.id === 'sniper' ? 0x38c6ff : 0xfff3c4, 0.06, STREAK_KIND[W.id] ? W.id : 'rifle');
 }
 // ----- moving parts after each shot: rifle bolt, pistol slide, shotgun pump, sniper bolt; laser coils pulse while firing
 let wdT = 9, wdEj = true;
@@ -10178,8 +10615,15 @@ function updateSparkles(dt) {
 }
 function gunBurn(s) { gunFireT = Math.max(gunFireT, s); }
 let fireSkinK = 0;
+var hitChain = 0, hotT = 0, goldShot = false;
+function hotTick(dt) { if (hotT > 0 && (hotT -= dt) <= 0) { hotT = 0; hitChain = 0; } }   // player buff: real time, not world time
+function hotCount(hit) {
+  if (!hit) { hitChain = 0; return; }
+  if (++hitChain >= 3 && hotT <= 0) { hotT = 5; banner('ГОРЯЧИЙ СТВОЛ!', 'ammo'); sfx('equip', 0.8, 0.7); gunBurn(0.4); pickFlash('255,122,31'); }
+}
 function updateFireSkin(dt) {
-  const want = deadT > 0 ? 0 : power.fire > 0 ? 1 : gunFireT > 0 ? 0.55 : 0;
+  hotTick(dt);
+  const want = deadT > 0 ? 0 : power.fire > 0 ? 1 : hotT > 0 ? 0.8 : gunFireT > 0 ? 0.55 : 0;
   fireSkinK += (want - fireSkinK) * Math.min(1, dt * (want > fireSkinK ? 6 : 2.5));
   if (fireSkinK < 0.004) fireSkinK = 0;
   shineU.fireK.value = fireSkinK; shineU.fireT.value = performance.now() * 0.001;
@@ -10188,7 +10632,7 @@ function updateFireSkin(dt) {
 function allFire(s) {
   const was = power.fire > 0; power.fire = Math.max(power.fire, s); gunFireT = Math.max(gunFireT, s);
   if (reloadT > 0) { reloadT = 0; ammoEl.classList.remove('rl'); }
-  for (const w of WEAPONS) w.ammo = w.mag; ammo = MAG; energy = 100; overheat = false; updAmmo();
+  overheat = false; updAmmo();
   if (!was) { stamp('ВСЁ В ОГНЕ!', 'red', 'damage', { shake: true, rays: true }); sfx('super', 0.6, 0.8); }
 }
 function shoot() {
@@ -10198,8 +10642,10 @@ function shoot() {
   if (W.energy) return;
   if (reloadT > 0) return;
   if (ammo <= 0) { startReload(); return; }
-  if (power.fire <= 0) { ammo--; updAmmo(); if (ammo === 0) { setTimeout(startReload, 150); tipEmpty = true; } }
-  fireCd = W.rate * (power.rapid > 0 ? 0.6 : 1) * (power.fire > 0 ? 0.8 : 1); recoil = W.kick; flashT = 0.05; lifeStats.shots++;
+  goldShot = ammo === 1 && W.mag > 1 && (power.fire <= 0 || resOf(W) <= 0);
+  if (power.fire <= 0 || resOf(W) <= 0) { ammo--; updAmmo(); if (ammo === 0) { setTimeout(() => { if (!W.melee && ammo <= 0) startReload(); }, 150); tipEmpty = true; } }
+  else { W.res--; updAmmo(); }
+  fireCd = W.rate * (power.rapid > 0 ? 0.6 : 1) * (power.fire > 0 ? 0.8 : 1) * (hotT > 0 ? 0.66 : 1); recoil = W.kick; flashT = 0.05; lifeStats.shots++;
   noise = { x: player.pos.x, z: player.pos.z, t: performance.now() * 0.001 };
   flash.visible = true; flash.rotation.z = Math.random() * Math.PI; flash.scale.setScalar((0.8 + Math.random() * 0.5) * (W.flashS || 1));
   flashMat.map = FLASH_TEX[(Math.random() * FLASH_TEX.length) | 0]; fp2.scale.set(1, 0.7 + Math.random() * 0.6, 1); fp3.scale.set(1, 0.7 + Math.random() * 0.6, 1);
@@ -10217,7 +10663,11 @@ function shoot() {
   const out = { hits: new Map(), wall: false };
   const hip = W.id === 'sniper' && !isTouch ? 0.06 * (1 - aimK) : 0, tight = 1 - (AIM_TIGHT[W.id] || 0) * aimK;   // desktop sniper: accurate only when aimed
   for (let i = 0; i < (W.pellets || 1); i++) castShot((W.spread + moveSp + hip) * tight, out);
-  for (const [bot, e] of out.hits) damageBot(bot, e.dmg, e.head, e.point, { kind: W.id });
+  for (const [bot, e] of out.hits) {
+    if (goldShot) { e.dmg *= 2; burstAt(e.point, 0xffd23f, 12, 5, 0.13); burstAt(e.point, 0xffffff, 5, 3, 0.09); pfx('crit-hit', e.point, 1.3, { front: true }); sfx('head', 0.9, 0.75); }
+    damageBot(bot, e.dmg, e.head, e.point, { kind: W.id });
+  }
+  hotCount(out.hits.size > 0); goldShot = false;
 }
 function swordSwing() {
   fireCd = W.rate; swingT = 0.3; swingDir = -swingDir; lifeStats.shots++;
@@ -10248,10 +10698,12 @@ function weaponTick(dt) {
   // laser: a continuous beam that overheats
   const firing = W.energy && input.fire && deadT <= 0 && !overheat && swapT <= 0;
   if (!firing) {
-    energy = Math.min(100, energy + dt * (overheat ? 45 : 32)); if (overheat && energy >= 45) overheat = false;
+    { const lw = WEAPONS.find(w => w.energy), add = Math.max(0, Math.min(100 - energy, dt * (overheat ? 45 : 32), resOf(lw))); energy += add; if (lw) lw.res = resOf(lw) - add; }
+    if (overheat && (energy >= 45 || resOf(WEAPONS.find(w => w.energy)) <= 0 && energy > 1)) overheat = false;
+    if (W.energy && input.fire && energy <= 1 && resOf(W) <= 0 && deadT <= 0) outOfAmmo();
     beam.visible = beamCore.visible = false; stopLaserLoop(); if (W.energy) updAmmo();
   } else {
-    energy -= dt * (power.fire > 0 ? 0 : 34); if (energy <= 0) { energy = 0; overheat = true; banner('ПЕРЕГРЕВ!', 'bonus'); sfx('overheat', 0.8); }
+    if (power.fire > 0 && resOf(W) > 0) W.res = Math.max(0, W.res - dt * 34); else energy -= dt * 34; if (energy <= 0) { energy = 0; overheat = true; banner('ПЕРЕГРЕВ!', 'bonus'); sfx('overheat', 0.8); }
     startLaserLoop(); recoil = Math.max(recoil, 0.25); flash.visible = true; flashT = 0.05; flash.scale.setScalar(0.35 + Math.random() * 0.3);
     ray.setFromCamera(tmpV2D.set(0, 0), camera);
     const hits = ray.intersectObjects(botParts.filter(m => m.userData.bot.dead <= 0).concat(solidMeshes), false);
@@ -10360,7 +10812,7 @@ addEventListener('wheel', e => { if (!playing || deadT > 0) return; const dir = 
 function updateGear(dt) {
   if (reloadT > 0) {
     reloadT -= dt; reloadFill.style.width = (100 * (1 - Math.max(0, reloadT) / RELOAD_T)) + '%'; wbarRl(1 - Math.max(0, reloadT) / RELOAD_T);
-    if (reloadT <= 0) { ammo = MAG; ammoEl.classList.remove('rl'); wbarRl(-1); sfx('reloaded'); updAmmo(); }
+    if (reloadT <= 0) { { const take = Math.min(MAG - ammo, resOf(W)); ammo += take; W.res = resOf(W) - take; } ammoEl.classList.remove('rl'); wbarRl(-1); sfx('reloaded'); updAmmo(); }
   }
   // stamina: sprint drains it in ~4 s, it refills after a short breather; when empty you're "tired" until 35 %
   const moving = Math.hypot(input.mx, input.mz) > 0.3;
@@ -10487,8 +10939,8 @@ let playing = false;
 const startEl = document.getElementById('lobby');
 function initAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); loadSfx(); } catch (e) {} }
 // ---------- v17 menu (HIG spec §2, §6): a lobby with three tabs (Бой, Арсенал, Настройки) and a pause window over the frozen match
-const pauseL = document.getElementById('pauseL'), playBtn = document.getElementById('play'), pmTabs = document.getElementById('pmTabs'), pmQuests = document.getElementById('pmQuests');
-const arsGrid = document.getElementById('arsGrid'), arsDet = document.getElementById('arsDet'), arsSeg = document.getElementById('arsSeg'), setGrid = document.getElementById('setGrid');
+const pauseL = document.getElementById('pauseL'), pmTabs = document.getElementById('pmTabs'), pmQuests = document.getElementById('pmQuests');
+const arsGrid = document.getElementById('arsGrid'), arsStage = document.getElementById('arsStage'), ipop = document.getElementById('ipop'), ipBox = document.getElementById('ipBox'), arsSeg = document.getElementById('arsSeg'), setGrid = document.getElementById('setGrid');
 const pBox = document.getElementById('pBox'), pV = document.getElementById('pV'), pT = document.getElementById('pT'), pS = document.getElementById('pS'), pBack = document.getElementById('pBack');
 const lsheet = document.getElementById('lsheet'), lsBox = document.getElementById('lsBox'), mapBox = document.getElementById('mapBtns');
 let pmMode = 'start', pmTab = 'match', arsSel = 'shotgun', arsMode = 'w', emSel = '', pauseOpen = false, pauseAt = 0, pvCur = 'main', pTitle0 = 'Пауза', sheetOpen = false;
@@ -10527,7 +10979,7 @@ function showStart(title) {
 }
 function goPlay(fresh) {
   if (!actx) initAudio(); startMusic(); sfx(fresh ? 'start' : 'ui_close', 0.8);
-  pauseOpen = false; pauseL.hidden = true; closeSheet(true); startEl.hidden = true; pmMode = 'play';
+  pauseOpen = false; pauseL.hidden = true; closeSheet(true); closePop(true); pvStop(); startEl.hidden = true; pmMode = 'play';
   playing = true; document.body.classList.add('playing'); resetTouches();
   if (isTouch) {
     const de = document.documentElement;
@@ -10542,8 +10994,6 @@ function enterStartMode() {
   playing = false; document.body.classList.remove('playing'); resetTouches();
   pauseOpen = false; pauseL.hidden = true; pmMode = 'start'; startEl.hidden = false; setTab(pmTab);
 }
-playBtn.innerHTML = IC.play + 'ИГРАТЬ';
-playBtn.addEventListener('click', () => goPlay(pmMode === 'start'));
 // ---- lobby: status row and tabs
 pmTabs.innerHTML = `<button type="button" data-t="match" role="tab">${IC.cross}Бой</button><button type="button" data-t="ars" role="tab">${wIcon('rifle', 'ti')}Арсенал</button><button type="button" data-t="set" role="tab">${IC.gear}Настройки</button>`;
 function updStatus() {
@@ -10562,6 +11012,7 @@ function setTab(t) {
   pmTab = t;
   for (const b of pmTabs.children) { const on = b.dataset.t === t; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
   for (const s of startEl.querySelectorAll('.lpane')) s.hidden = s.dataset.p !== t;
+  closePop(true); if (t !== 'ars') pvStop();
   if (t === 'match') { renderMaps(); updMode(); drawPauseQuests(); }
   else if (t === 'ars') renderArsenal();
   else renderSettings();
@@ -10573,20 +11024,22 @@ const MAP_HINT = { arena: 'открытая, батуты', bunker: 'ближн�
 const MAP_PREV = {"arena":"data:image/jpeg;base64,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","bunker":"data:image/jpeg;base64,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","room":"data:image/jpeg;base64,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"};
 function renderMaps() {
   if (!mapBox.children.length) for (const k in MAPS) {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'map'; b.dataset.m = k;
-    b.innerHTML = `<img class="im" alt="" src="${MAP_PREV[k] || ''}"><b>${MAPS[k]}</b><small>${MAP_HINT[k] || ''}</small><span class="chk">${IC.check}</span>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'map'; b.dataset.m = k; b.setAttribute('aria-label', `Играть: ${MAPS[k]}`);
+    b.innerHTML = `<img class="im" alt="" src="${MAP_PREV[k] || ''}"><span class="mt"><b>${MAPS[k]}</b><small>${MAP_HINT[k] || ''}</small></span><span class="go">${IC.play}Играть</span>`;
     mapBox.appendChild(b);
   }
-  for (const b of mapBox.children) { const on = b.dataset.m === MAP; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', String(on)); }
 }
+// v18: a tap on an arena starts the match. The loaded map starts at once; another map reloads the page on it and starts by itself
+let mapBusy = false;
 mapBox.addEventListener('click', e => {
-  const b = e.target.closest('.map'); if (!b) return; const k = b.dataset.m; if (k === MAP) return;
-  tap(); for (const o of mapBox.children) { o.classList.toggle('sel', o === b); o.setAttribute('aria-pressed', String(o === b)); }
-  b.querySelector('small').textContent = 'загрузка…';
-  saveProg(); try { localStorage.setItem('arenaMap', k); } catch (e) {} location.hash = k; setTimeout(() => location.reload(), 80);
+  const b = e.target.closest('.map'); if (!b || mapBusy || pmMode !== 'start') return; const k = b.dataset.m;
+  restart(b, 'pop');
+  if (k === MAP) { goPlay(true); return; }
+  mapBusy = true; tap(); b.classList.add('ld'); b.querySelector('small').textContent = 'загрузка…'; b.querySelector('.go').lastChild.textContent = 'Секунду';
+  saveProg(); try { localStorage.setItem('arenaMap', k); sessionStorage.setItem('arenaGo', '1'); } catch (e) {} location.hash = k; setTimeout(() => location.reload(), 80);
 });
 function updMode() {
-  document.getElementById('mMode').innerHTML = `Дезматч<i></i>до ${MATCH_GOAL} убийств<i></i>${Math.round(MATCH_TIME / 60)} минут<i></i>боты: ${BOT_WORD[Math.min(4, Math.floor(diff * 4.99))]}`;
+  document.getElementById('mMode').innerHTML = `Дезматч<i></i>до ${MATCH_GOAL} убийств<i></i>${Math.round(MATCH_TIME / 60)} минут<i></i>соперники: ${BOT_WORD[Math.min(4, Math.floor(diff * 4.99))]}`;
 }
 function drawPauseQuests() {
   if (!pmReady || startEl.hidden || pmTab !== 'match') return;
@@ -10611,54 +11064,42 @@ const ARS = {
   sword: { role: 'Вблизи', dmg: .8, rate: .4, rng: .08, mag: 'не нужен' },
 };
 const handW = () => deadT > 0 && pendingW ? WEAPONS.find(w => w.id === pendingW) || W : W;
-function arsCard(w) {
-  const own = owns(w), hand = w === handW(), sel = arsSel === w.id;
-  const chip = own ? (hand ? '<span class="chip ok">В руках</span>' : '<span class="chip">Есть</span>')
-    : !lvlOk(w) ? `<span class="chip lk">${IC.lock}Ур. ${w.lvl}</span>` : `<span class="chip">${priceChip(w.price)}</span>`;
-  return `<button type="button" class="wcd${sel ? ' sel' : ''}${!own && !lvlOk(w) ? ' dim' : ''}" data-w="${w.id}" aria-pressed="${sel}">${wIcon(w.id, 'wi')}<b>${w.name}</b>${chip}`
-    + (own && prog.newW.includes(w.id) ? '<span class="nw">Новое</span>' : '') + '</button>';
+function wTact(w) {
+  const own = owns(w), hand = w === handW();
+  if (own) return hand ? `<button type="button" class="tact on" disabled>${IC.check}В руках</button>` : '<button type="button" class="tact" data-a="take">Взять</button>';
+  if (!lvlOk(w)) return `<button type="button" class="tact lk" data-a="lock" aria-label="Откроется на ${w.lvl} уровне">${IC.lock}Ур. ${w.lvl}</button>`;
+  return `<button type="button" class="tact ${canPay(w.price) ? 'buy' : 'no'}" data-a="buy" aria-label="Купить за ${w.price[1] ? w.price[1] + ' кристаллов' : w.price[0] + ' монет'}">${priceChip(w.price)}</button>`;
 }
-function arsDetail(w) {
-  const a = ARS[w.id] || ARS.rifle, own = owns(w), hand = w === handW();
-  const bar = (n, v, c) => `<span class="sn">${n}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%;background:${c}"></i></span>`;
-  let btn;
-  if (own) btn = hand ? `<button type="button" class="dbtn off" disabled>${IC.check}В руках</button>` : `<button type="button" class="dbtn" data-act="take">Взять в руки</button>`;
-  else if (!lvlOk(w)) btn = `<button type="button" class="dbtn off" disabled>${IC.lock}Откроется на ${w.lvl} уровне</button>`;
-  else if (canPay(w.price)) btn = `<button type="button" class="dbtn buy" data-act="buy">Купить · ${priceChip(w.price)}</button>`;
-  else btn = `<button type="button" class="dbtn no" data-act="buy">Не хватает ${priceChip(w.price[1] ? [0, w.price[1] - gems] : [w.price[0] - coins, 0])}</button>`;
-  return `<div class="dh"><h4>${w.name}</h4><div class="dr"><span class="role">${a.role}</span>${wIcon(w.id, 'dimg')}</div></div>`
-    + `<div class="stats">${bar('Урон', a.dmg, '#ff5d5d')}${bar('Скорострельность', a.rate, '#ffd23f')}${bar('Дальность', a.rng, '#38c6ff')}<span class="sn">Магазин</span><span class="sv">${a.mag}</span></div>` + btn;
+function arsCard(w) {
+  return `<div class="wcd${!owns(w) && !lvlOk(w) ? ' dim' : ''}" data-w="${w.id}" role="button" tabindex="0" aria-label="${w.name}: подробнее">`
+    + `<span class="pic">${wIcon(w.id, 'wi')}</span><span class="nm"><b>${w.name}</b></span>${wTact(w)}`
+    + (owns(w) && prog.newW.includes(w.id) ? '<span class="nw">Новое</span>' : '') + '</div>';
 }
 function skinCard(k, j) {
   const sel = j === skinIdx;
   return `<button type="button" class="skc${sel ? ' sel' : ''}" data-k="${j}" aria-pressed="${sel}" aria-label="Скин ${k.name}"><span class="swt" style="background:${k.prev}"></span><b>${k.name}</b>${sel ? `<span class="chk">${IC.check}</span>` : ''}</button>`;
 }
-function skinDetail() {
-  const k = SKINS[skinIdx] || SKINS[0], m = ICONS.w_rifle ? `-webkit-mask-image:url(${ICONS.w_rifle});mask-image:url(${ICONS.w_rifle});` : '';
-  return `<div class="dh"><h4>${k.name}</h4><div class="dr"><span class="role sk">Скин</span></div></div><div class="skp" style="background:${k.prev};${m}"></div>`
-    + '<p class="dn">Скин сразу виден на оружии в руках. Все скины бесплатные: нажми на любой.</p>';
+function eTact(k) {
+  const own = prog.packs.includes(k.id), on = prog.emoji === k.id;
+  if (on) return `<button type="button" class="tact on" disabled>${IC.check}Летят</button>`;
+  if (own) return '<button type="button" class="tact" data-a="emo">Выбрать</button>';
+  return `<button type="button" class="tact ${coins >= k.price ? 'buy' : 'no'}" data-a="emo" aria-label="Купить за ${k.price} монет">${priceChip([k.price, 0])}</button>`;
 }
 function emoCard(k) {
-  const own = prog.packs.includes(k.id), on = prog.emoji === k.id, sel = emSel === k.id;
-  const chip = on ? '<span class="chip ok">Летят</span>' : own ? '<span class="chip">Есть</span>' : `<span class="chip">${priceChip([k.price, 0])}</span>`;
-  return `<button type="button" class="ecd${sel ? ' sel' : ''}" data-e="${k.id}" aria-pressed="${sel}"><span class="erow">${k.e.slice(0, 3).map(c => emoHTML(c)).join('')}</span><b>${k.name}</b>${chip}</button>`;
-}
-function emoDetail(k) {
-  const own = prog.packs.includes(k.id), on = prog.emoji === k.id;
-  const btn = on ? `<button type="button" class="dbtn off" disabled>${IC.check}Летят из ботов</button>` : own ? '<button type="button" class="dbtn" data-act="emo">Выбрать</button>'
-    : coins >= k.price ? `<button type="button" class="dbtn buy" data-act="emo">Купить · ${priceChip([k.price, 0])}</button>` : `<button type="button" class="dbtn no" data-act="emo">Не хватает ${priceChip([k.price - coins, 0])}</button>`;
-  return `<div class="eh"><h4>${k.name}</h4><button type="button" class="lsn" data-act="listen" aria-label="Послушать звуки пака ${k.name}">${IC.spk}</button></div>`
-    + `<div class="eall">${k.e.map((c, i) => `<i data-i="${i}">${emoHTML(c)}</i>`).join('')}</div><p class="dn">Летят из сломанных ботов, у каждого свой звук.</p>` + btn;
+  return `<div class="ecd" data-e="${k.id}" role="button" tabindex="0" aria-label="${k.name}: подробнее"><span class="pic"><span class="erow">${k.e.slice(0, 4).map(c => emoHTML(c)).join('')}</span></span>`
+    + `<span class="nm"><b>${k.name}</b></span>${eTact(k)}</div>`;
 }
 function renderArsenal() {
   for (const b of arsSeg.children) { const on = b.dataset.s === arsMode; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
-  arsGrid.className = 'g-' + arsMode; arsDet.className = 'lpanel d-' + arsMode;
-  if (arsMode === 'w') { const w = WEAPONS.find(q => q.id === arsSel) || W; arsSel = w.id; arsGrid.innerHTML = WEAPONS.map(arsCard).join(''); arsDet.innerHTML = arsDetail(w); }
-  else if (arsMode === 's') { arsGrid.innerHTML = SKINS.map(skinCard).join(''); arsDet.innerHTML = skinDetail(); }
-  else {
-    if (!EMOJI_PACKS.some(k => k.id === emSel)) emSel = EMOJI_PACKS.some(k => k.id === prog.emoji) ? prog.emoji : EMOJI_PACKS[0].id;
-    arsGrid.innerHTML = EMOJI_PACKS.map(emoCard).join(''); arsDet.innerHTML = emoDetail(EMOJI_PACKS.find(k => k.id === emSel));
-  }
+  arsGrid.className = 'g-' + arsMode;
+  arsStage.hidden = arsMode !== 's';
+  if (arsMode === 'w') arsGrid.innerHTML = WEAPONS.map(arsCard).join('');
+  else if (arsMode === 's') {
+    arsGrid.innerHTML = SKINS.map(skinCard).join('');
+    if (!arsStage.querySelector('.sth')) arsStage.innerHTML = '<b class="sth"></b><small class="stn">Потяни, чтобы повернуть</small>';
+    arsStage.querySelector('.sth').textContent = SKINS[skinIdx].name; pvShow(arsStage, handW().id);
+  } else arsGrid.innerHTML = EMOJI_PACKS.map(emoCard).join('');
+  if (arsMode !== 's' && PV.host === arsStage) pvStop();
   updPmWallet();
 }
 function takeW(w) {
@@ -10666,39 +11107,146 @@ function takeW(w) {
   else switchWeapon(WEAPONS.indexOf(w), true);
   if (prog.newW.includes(w.id)) { prog.newW = prog.newW.filter(x => x !== w.id); saveProg(); updWbar(); }
 }
-let emoDemo = [];
+// ---- live 3D preview of a gun: one small extra renderer, moved between the skins stage and the popup; drag turns the gun
+const PV = { r: null, sc: null, cam: null, piv: null, id: '', host: null, raf: 0, ang: 0, drag: null, t0: 0 };
+function pvEnsure() {
+  if (PV.r) return true;
+  try {
+    const c = document.createElement('canvas'); c.className = 'pv3';
+    PV.r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: true }); PV.r.setClearColor(0x000000, 0);
+    if (renderer.outputEncoding !== undefined) PV.r.outputEncoding = renderer.outputEncoding;
+    PV.sc = new THREE.Scene(); PV.cam = new THREE.PerspectiveCamera(26, 1.4, 0.05, 40); PV.cam.layers.enable(1); PV.cam.position.set(0, 0.55, 4.4); PV.cam.lookAt(0, 0, 0);
+    PV.piv = new THREE.Group(); PV.sc.add(PV.piv);
+    c.addEventListener('pointerdown', e => { PV.drag = { x: e.clientX, a: PV.ang }; try { c.setPointerCapture(e.pointerId); } catch (er) {} e.stopPropagation(); });
+    c.addEventListener('pointermove', e => { if (PV.drag) PV.ang = PV.drag.a + (e.clientX - PV.drag.x) * 0.014; });
+    for (const t of ['pointerup', 'pointercancel']) c.addEventListener(t, () => { PV.drag = null; });
+    return true;
+  } catch (e) { PV.r = null; return false; }
+}
+function pvModel(id) {
+  if (PV.id === id) return; PV.id = id;
+  while (PV.piv.children.length) PV.piv.remove(PV.piv.children[0]);
+  const src = wModels[id] || wModels.rifle; if (!src) return;
+  const o = src.clone(true); o.visible = true; o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1);
+  const box = new THREE.Box3(), holder = new THREE.Group(); holder.add(o); holder.updateMatrixWorld(true); box.setFromObject(o);
+  const sz = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3()), k = 1 / Math.max(sz.x, sz.y, sz.z, 0.01);
+  o.position.copy(ctr).multiplyScalar(-1); PV.base = k; PV.hold = holder; PV.piv.add(holder);
+}
+function pvShow(host, id) {
+  if (!pvEnsure()) { if (!host.querySelector('.pvf')) host.insertAdjacentHTML('beforeend', wIcon(id, 'pvf')); return; }
+  pvModel(id);
+  if (PV.r.domElement.parentNode !== host) { host.insertBefore(PV.r.domElement, host.firstChild); PV.ang = 0; PV.t0 = performance.now(); }
+  PV.host = host; if (!PV.raf) PV.raf = requestAnimationFrame(pvLoop);
+}
+function pvStop() { if (PV.raf) cancelAnimationFrame(PV.raf); PV.raf = 0; PV.host = null; if (PV.r && PV.r.domElement.parentNode) PV.r.domElement.remove(); }
+function pvLoop(now) {
+  PV.raf = 0; const h = PV.host; if (!h || !h.isConnected || h.closest('[hidden]')) { pvStop(); return; }
+  PV.raf = requestAnimationFrame(pvLoop);
+  const kl = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kl')) || 1, w = h.clientWidth, hh = h.clientHeight; if (!w || !hh) return;
+  const pr = Math.min(2.5, (devicePixelRatio || 1) * kl), cv = PV.r.domElement;
+  if (cv.width !== Math.round(w * pr) || cv.height !== Math.round(hh * pr)) { PV.r.setPixelRatio(pr); PV.r.setSize(w, hh, false); PV.cam.aspect = w / hh; PV.cam.updateProjectionMatrix(); }
+  const t = (now - PV.t0) / 1000;
+  if (PV.hold) PV.hold.scale.setScalar(PV.base * Math.min(2.6, 1.62 * PV.cam.aspect));   // the longest side fits the stage width
+  PV.piv.rotation.set(0.1, -Math.PI / 2 + PV.ang + (PV.drag ? 0 : Math.sin(t * 0.9) * 0.45), 0); PV.piv.position.y = Math.sin(t * 1.6) * 0.04;
+  PV.r.render(PV.sc, PV.cam);
+}
+// ---- item popup: a tap on a tile body. Weapons: 3D model, role, stats, one action. Emoji: every emoji large with sounds, listen, one action
+let ipOpen = null, emoDemo = [];
+function wAct(w) {
+  const own = owns(w), hand = w === handW();
+  if (own) return hand ? `<button type="button" class="dbtn off" disabled>${IC.check}В руках</button>` : '<button type="button" class="dbtn" data-a="take">Взять в руки</button>';
+  if (!lvlOk(w)) return `<button type="button" class="dbtn off" disabled>${IC.lock}Откроется на ${w.lvl} уровне</button>`;
+  if (canPay(w.price)) return `<button type="button" class="dbtn buy" data-a="buy">Купить · ${priceChip(w.price)}</button>`;
+  return `<button type="button" class="dbtn no" data-a="buy">Не хватает ${priceChip(w.price[1] ? [0, w.price[1] - gems] : [w.price[0] - coins, 0])}</button>`;
+}
+function eAct(k) {
+  const own = prog.packs.includes(k.id), on = prog.emoji === k.id;
+  if (on) return `<button type="button" class="dbtn off" disabled>${IC.check}Уже летят</button>`;
+  if (own) return '<button type="button" class="dbtn" data-a="emo">Выбрать</button>';
+  return coins >= k.price ? `<button type="button" class="dbtn buy" data-a="emo">Купить · ${priceChip([k.price, 0])}</button>` : `<button type="button" class="dbtn no" data-a="emo">Не хватает ${priceChip([k.price - coins, 0])}</button>`;
+}
+function popInfo() {
+  if (!ipOpen) return '';
+  if (ipOpen.kind === 'w') {
+    const w = WEAPONS.find(q => q.id === ipOpen.id), a = ARS[w.id] || ARS.rifle;
+    const bar = (n, v, c) => `<span class="sn">${n}</span><span class="sbar"><i style="width:${Math.round(v * 100)}%;background:${c}"></i></span>`;
+    return `<span class="role">${a.role}</span><div class="stats">${bar('Урон', a.dmg, '#ff5d5d')}${bar('Скорострельность', a.rate, '#ffd23f')}${bar('Дальность', a.rng, '#38c6ff')}<span class="sn">Магазин</span><span class="sv">${a.mag}</span></div>`
+      + `<p class="dn">Скин: ${SKINS[skinIdx].name}. Сменить можно во вкладке «Скины».</p>` + wAct(w);
+  }
+  const k = EMOJI_PACKS.find(q => q.id === ipOpen.id);
+  return `<p class="dn">Вылетают из поверженных соперников, у каждого эмодзи свой звук.</p><button type="button" class="lsn" data-a="listen">${IC.spk}Послушать</button>` + eAct(k);
+}
+function openPop(kind, id) {
+  ipOpen = { kind, id }; ipop.hidden = false;
+  const nm = kind === 'w' ? WEAPONS.find(q => q.id === id).name : EMOJI_PACKS.find(q => q.id === id).name;
+  ipBox.setAttribute('aria-label', nm);
+  ipBox.innerHTML = `<div class="phd"><div class="ptt"><h4>${nm}</h4></div><button type="button" class="ib" data-a="close" aria-label="Закрыть">${IC.x}</button></div>`
+    + `<div class="ipb"><div id="ipStage"></div><div class="ipi">${popInfo()}</div></div>`;
+  const st = ipBox.querySelector('#ipStage');
+  if (kind === 'w') { st.insertAdjacentHTML('beforeend', '<span class="hint">Потяни, чтобы повернуть</span>'); pvShow(st, id); }
+  else { const k = EMOJI_PACKS.find(q => q.id === id); const n = k.e.length, cols = n <= 4 ? 2 : n <= 6 ? 3 : 5; st.innerHTML = `<div class="eall c${cols}">${k.e.map((c, i) => `<i data-i="${i}">${emoHTML(c)}</i>`).join('')}</div>`; emoPreview(k); }
+  sfx('ui_open', 0.6);
+  if (!isTouch) { const f = ipBox.querySelector('.dbtn:not(:disabled)') || ipBox.querySelector('.ib'); if (f) f.focus({ preventScroll: true }); }
+}
+function refreshPop() { if (!ipOpen) return; const i = ipBox.querySelector('.ipi'); if (i) i.innerHTML = popInfo(); }
+function closePop(quiet) {
+  if (!ipOpen) return; ipOpen = null; ipop.hidden = true; emoDemo.forEach(clearTimeout); emoDemo = [];
+  if (PV.host && PV.host.id === 'ipStage') { pvStop(); if (arsMode === 's' && !arsStage.hidden && pmTab === 'ars') pvShow(arsStage, handW().id); }
+  ipBox.innerHTML = ''; if (!quiet) sfx('ui_close', 0.6);
+}
 function emoPreview(k) {
   if (!actx) initAudio(); if (actx && actx.state === 'suspended') actx.resume();
   emoDemo.forEach(clearTimeout); emoDemo = [];
   const ids = k.e.map((c, i) => i).sort(() => Math.random() - 0.5).slice(0, Math.min(3, k.e.length));
-  ids.forEach((i, j) => emoDemo.push(setTimeout(() => { emoSound(k.e[i], j ? 0.8 : 1); const el = arsDet.querySelector(`.eall [data-i="${i}"]`); if (el) restart(el, 'bop'); }, j * 420)));
+  ids.forEach((i, j) => emoDemo.push(setTimeout(() => { emoSound(k.e[i], j ? 0.8 : 1); const el = ipBox.querySelector(`.eall [data-i="${i}"]`); if (el) restart(el, 'bop'); }, 250 + j * 420)));
 }
-function arsAct(act, btn) {
-  if (arsMode === 'e') {
-    const k = EMOJI_PACKS.find(q => q.id === emSel); if (!k) return;
+// one action, from a tile or from the popup: buy (and take), take, pick an emoji pack
+function doAct(kind, id, act, btn) {
+  if (kind === 'e') {
+    const k = EMOJI_PACKS.find(q => q.id === id); if (!k) return;
     if (act === 'listen') { emoPreview(k); return; }
-    if (prog.packs.includes(k.id)) { prog.emoji = k.id; sfx('equip', 0.7); }
-    else if (coins >= k.price) { coins -= k.price; prog.packs.push(k.id); prog.emoji = k.id; coinN.textContent = coins; sfx('buy', 0.9); }
-    else { nope(btn); return; }
-    saveProg(); renderArsenal(); emoPreview(k); const nc = arsGrid.querySelector(`[data-e="${k.id}"]`); if (nc) restart(nc, 'pop'); return;
+    if (prog.emoji === k.id) return;
+    if (prog.packs.includes(k.id)) { prog.emoji = k.id; sfx('equip', 0.7); vib(10); }
+    else if (coins >= k.price) { coins -= k.price; prog.packs.push(k.id); prog.emoji = k.id; coinN.textContent = coins; sfx('buy', 0.9); vib(20); }
+    else { short(btn, [k.price - coins, 0]); return; }
+    saveProg(); renderArsenal(); refreshPop(); if (!ipOpen) { emoSound(k.e[(Math.random() * k.e.length) | 0], 0.9); }
+    const nc = arsGrid.querySelector(`[data-e="${k.id}"]`); if (nc) restart(nc, 'pop'); return;
   }
-  const w = WEAPONS.find(q => q.id === arsSel); if (!w) return;
+  const w = WEAPONS.find(q => q.id === id); if (!w) return;
+  if (act === 'lock') { nope(btn); if (!ipOpen) openPop('w', w.id); return; }
   if (act === 'take' && owns(w)) { takeW(w); sfx('equip', 0.5); vib(10); }
   else if (act === 'buy' && !owns(w) && lvlOk(w) && w.price) {
-    if (!canPay(w.price)) { nope(btn); return; }
+    if (!canPay(w.price)) { short(btn, w.price[1] ? [0, w.price[1] - gems] : [w.price[0] - coins, 0]); return; }
     coins -= w.price[0]; gems -= w.price[1]; prog.owned.push(w.id); if (!prog.newW.includes(w.id)) prog.newW.push(w.id);
     coinN.textContent = coins; gemN.textContent = gems; saveProg(); sfx('buy', 0.9); vib(20); updWbar(); takeW(w);
-  }
-  renderArsenal(); const c = arsGrid.querySelector(`[data-w="${w.id}"]`); if (c) restart(c, 'pop');
+  } else return;
+  renderArsenal(); refreshPop(); const c = arsGrid.querySelector(`[data-w="${w.id}"]`); if (c) restart(c, 'pop');
+}
+// not enough money: the button shakes and says how much is missing for a moment
+function short(btn, miss) {
+  nope(btn); if (!btn || !btn.classList.contains('tact')) return;
+  btn.classList.add('msg'); btn.innerHTML = 'Ещё ' + priceChip(miss); clearTimeout(btn._t); btn._t = setTimeout(() => { if (btn.isConnected) renderArsenal(); }, 1500);
 }
 arsSeg.addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.s !== arsMode) { arsMode = b.dataset.s; tap(); renderArsenal(); } });
+function tileHit(e) {
+  const t = e.target.closest('.wcd, .ecd'); if (!t) return false;
+  const kind = t.dataset.w ? 'w' : 'e', id = t.dataset.w || t.dataset.e, b = e.target.closest('.tact');
+  if (b) { if (!b.disabled) doAct(kind, id, b.dataset.a, b); return true; }
+  tap(0.6); openPop(kind, id); return true;
+}
 arsGrid.addEventListener('click', e => {
-  const c = e.target.closest('button'); if (!c) return;
-  if (c.dataset.w) { if (arsSel !== c.dataset.w) { arsSel = c.dataset.w; tap(0.6); renderArsenal(); } return; }
-  if (c.dataset.k != null) { const j = +c.dataset.k; if (j !== skinIdx) { setSkin(j, false); sfx('equip', 0.6); vib(10); renderArsenal(); const n = arsGrid.querySelector(`[data-k="${j}"]`); if (n) restart(n, 'pop'); } return; }
-  if (c.dataset.e && emSel !== c.dataset.e) { emSel = c.dataset.e; tap(0.6); renderArsenal(); }
+  if (tileHit(e)) return;
+  const c = e.target.closest('button.skc'); if (!c) return;
+  const j = +c.dataset.k; if (j !== skinIdx) { setSkin(j, false); sfx('equip', 0.6); vib(10); renderArsenal(); const n = arsGrid.querySelector(`[data-k="${j}"]`); if (n) restart(n, 'pop'); }
 });
-arsDet.addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) arsAct(b.dataset.act, b); });
+arsGrid.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.wcd, .ecd')) { e.preventDefault(); tap(0.6); openPop(e.target.dataset.w ? 'w' : 'e', e.target.dataset.w || e.target.dataset.e); } });
+ipop.addEventListener('click', e => {
+  const b = e.target.closest('button[data-a]');
+  if (!b) { if (e.target.classList.contains('shade')) closePop(); return; }
+  if (b.dataset.a === 'close') { closePop(); return; }
+  if (ipOpen) doAct(ipOpen.kind, ipOpen.id, b.dataset.a, b);
+});
+addEventListener('keydown', e => { if (e.code === 'Escape' && ipOpen) { e.stopImmediatePropagation(); closePop(); } }, true);
 setSkin(skinIdx, false);
 // ---- sound switch: one for effects and music (status row, pause header, settings)
 const store = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
@@ -10770,7 +11318,7 @@ function helpHTML(inPause) {
   else rows = [['W A S D', 'ходьба'], ['Мышь', 'обзор'], ['ЛКМ', 'огонь'], ['ПКМ', 'прицел'], ['Shift', 'бег'], ['Пробел', 'прыжок, в воздухе ещё раз: суперпрыжок'], ['E', 'суперпрыжок'],
     ['C', 'подкат, в воздухе рывок'], ['R', 'перезарядка'], ['F', 'граната'], ['1–6, колесо', 'оружие'], ['Q', 'прошлое оружие'], ['T', 'скин'], ['P', 'пауза']].map(([k, t]) => row(`<kbd>${k}</kbd>`, t)).join('');
   return `<div class="hbody"><div class="hgrid${isTouch ? '' : ' k3'}">${rows}</div>`
-    + `<p class="hrule">Дезматч: побеждает тот, кто первым сделает ${MATCH_GOAL} убийств или лидирует через ${Math.round(MATCH_TIME / 60)} минут. Боты дерутся и друг с другом. Сломанный бот роняет аптечку и монеты.</p>`
+    + `<p class="hrule">Дезматч: побеждает тот, кто первым сделает ${MATCH_GOAL} убийств или лидирует через ${Math.round(MATCH_TIME / 60)} минут. Выбитый соперник роняет аптечку и монеты.</p>`
     + (inPause ? '' : '<p class="hcred">3D-модели: Quaternius, Kay Lousberg, gobkit (CC0). Эмодзи: Fluent Emoji © Microsoft (MIT).</p>') + '</div>';
 }
 function openSheet(kind) {
@@ -10826,6 +11374,26 @@ document.getElementById('mLogo').addEventListener('click', () => {
 setGfx(gfx);
 pmReady = true;
 enterStartMode();
+(function autoGo() {
+  let go = false; try { go = sessionStorage.getItem('arenaGo') === '1'; sessionStorage.removeItem('arenaGo'); } catch (e) {}
+  if (!go) return;
+  const start = () => {
+    if (isTouch) {   // no tap yet: start now, sound and full screen come with the first touch
+      goPlay(true);
+      const first = () => { removeEventListener('touchend', first, true); initAudio(); if (actx && actx.state === 'suspended') actx.resume(); startMusic();
+        const de = document.documentElement; try { (de.requestFullscreen || de.webkitRequestFullscreen)?.call(de)?.catch?.(() => {}); } catch (e) {}
+        try { screen.orientation?.lock?.('landscape')?.catch?.(() => {}); } catch (e) {} };
+      addEventListener('touchend', first, true);
+    } else {   // the browser lets a page capture the mouse only inside a click
+      const box = document.createElement('div'); box.id = 'goTap';
+      box.innerHTML = `<button type="button" class="pri">${MAPS[MAP] || ''}<small>Кликни, чтобы начать</small></button>`;
+      startEl.querySelector('.lbox').appendChild(box);
+      box.addEventListener('click', () => { box.remove(); goPlay(true); });
+    }
+  };
+  const t0 = performance.now(), wait = () => (typeof GOB === 'undefined' || GOB.ready || performance.now() - t0 > 3000) ? start() : setTimeout(wait, 100);
+  wait();
+})();
 
 // ---------- loop ----------
 const clock = new THREE.Clock();
@@ -10916,7 +11484,7 @@ function update(dt) {
     const md = rp > 0 ? Math.max(0, 1 - Math.abs(rp - 0.45) / 0.3) * 0.45 : 0, D = WD[W.id];
     if (D && D.mag) { D.mag.position.y = D.magY - md; D.mag.visible = md < 0.42; if (D.magGlow) { D.magGlow.position.y = D.magGlowY - md; D.magGlow.visible = md < 0.42; } }
     if (D && D.shell) { D.shell.visible = rp > 0.1 && rp < 0.85; const f = (rp * 3) % 1; D.shell.position.set(0, -0.24 + 0.16 * Math.min(1, f * 1.6), 0.05 - 0.03 * f); }
-    gunDetail(dt); updateCasings(dt); updateGunFire(dt); updateSparkles(dt); }
+    gunDetail(dt); updateCasings(dt); updateGunFire(dt); updateSparkles(dt); updateFpArms(rp); }
   if (recoil > 0.9) pitch = Math.min(1.5, pitch + 0.0025);
   weaponTick(dt);
   if (!W.melee) aimAssist(dt);
@@ -11015,7 +11583,7 @@ function frame() {
 yawObj.position.set(player.pos.x, player.h - 0.1, player.pos.z);
 [brassMat, shellMat, voxIM.material, flIM.material, ...Object.values(lootMat), ...sparkles.map(s => s.material)].forEach(m => CLEAN_MATS.add(m));
 cleanAlpha(); fxNoAlpha();
-updWbar(); updNade(); ammoMax.textContent = '/' + W.mag; saveDiff(); initBoard();
+updWbar(); updNade(); ammoMax.textContent = '/' + resOf(W); saveDiff(); initBoard();
 // ---------- capture hook for covers and store shots (cover thread): freeze, place, render a still at any size ----------
 window.__arena = {
   THREE, scene, camera, renderer, bots, player, gun,
