@@ -9,7 +9,7 @@ keeps editing it. This step only rewires what Playgama forbids (rule 1.2.5:
 no external resources) and checks the result; it never edits game code.
 
   - three.js r128 from cdnjs  -> vendor/three.min.js (same version, local)
-  - Google Fonts Rubik/Unbounded -> vendor/fonts.css + woff2 files
+  - Google Fonts (Bangers, Nunito, Fira Sans Extra Condensed) -> vendor/fonts.css + woff2 files
   - Playgama Bridge (stage 1): SDK first in <head>, game scripts start only
     after bridge.initialize() and the save load, localStorage -> Bridge
     storage, pause/audio events, game_ready, interstitial after each match
