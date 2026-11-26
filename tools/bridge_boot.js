@@ -1,0 +1,80 @@
+/* Fastrix: Playgama Bridge boot layer, injected by tools/build.py.
+ * Runs right after the Bridge SDK script in <head>. The game's own scripts are
+ * parked as type="text/x-fastrix" and run here only after bridge.initialize()
+ * and the save load finish (Bridge required steps 2 and 4).
+ */
+(function () {
+  var SAVE_KEY = 'fastrix_save';
+
+  // Browser-storage stand-in: the build rewrites the game's browser-storage calls to
+  // window.__fxStore. All settings and progress live in one Bridge storage key,
+  // written at most once a second and when the page is hidden.
+  var store = window.__fxStore = {
+    _d: {}, _t: 0, _dirty: false,
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(this._d, k) ? this._d[k] : null; },
+    setItem: function (k, v) { v = String(v); if (this._d[k] === v) return; this._d[k] = v; this._queue(); },
+    removeItem: function (k) { if (!(k in this._d)) return; delete this._d[k]; this._queue(); },
+    _queue: function () { var s = this; s._dirty = true; clearTimeout(s._t); s._t = setTimeout(function () { s.flush(); }, 1000); },
+    flush: function () {
+      if (!this._dirty) return; this._dirty = false; clearTimeout(this._t);
+      try { window.bridge.storage.set(SAVE_KEY, JSON.stringify(this._d)).catch(function () {}); } catch (e) {}
+    }
+  };
+  addEventListener('pagehide', function () { store.flush(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) store.flush(); });
+
+  // Game hooks (window.__fx) are defined at the end of the game script.
+  var paused = false, audioOn = true;
+  window.__fxPaused = false;
+  function applyAudio() { if (window.__fx) window.__fx.audio(audioOn && !paused); }
+
+  function runGame() {
+    var parked = Array.prototype.slice.call(document.querySelectorAll('script[type="text/x-fastrix"]'));
+    var i = 0;
+    (function next() {
+      if (i >= parked.length) return started();
+      var old = parked[i++], s = document.createElement('script');
+      if (old.dataset.src) { s.src = old.dataset.src; s.onload = next; s.onerror = next; old.parentNode.replaceChild(s, old); }
+      else { s.textContent = old.textContent; old.parentNode.replaceChild(s, old); next(); }
+    })();
+  }
+
+  function started() {
+    applyAudio();
+    var B = window.bridge;
+    try {
+      B.platform.on(B.EVENT_NAME.PAUSE_STATE_CHANGED, function (p) {
+        paused = !!p; window.__fxPaused = paused;
+        if (paused && window.__fx) window.__fx.pause();
+        applyAudio();
+      });
+      B.platform.on(B.EVENT_NAME.AUDIO_STATE_CHANGED, function (on) { audioOn = !!on; applyAudio(); });
+    } catch (e) {}
+    // The menu is drawn and clickable after the first two frames.
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      try { B.platform.sendMessage('game_ready'); window.__fxReady = true; } catch (e) { console.warn('[fastrix] game_ready failed', e); }
+    }); });
+  }
+
+  // Interstitial at natural pauses (end of a match). Bridge decides whether one
+  // is actually shown; no timers of our own.
+  window.__fxAd = function () { try { window.bridge.advertisement.showInterstitial(); } catch (e) {} };
+
+  function boot() {
+    var B = window.bridge;
+    if (!B) return runGame(); // SDK failed to load: still let the game run
+    B.initialize()
+      .then(function () {
+        window.__fxLang = B.platform.language || 'en';
+        audioOn = B.platform.isAudioEnabled !== false;
+        return B.storage.get([SAVE_KEY]);
+      })
+      .then(function (v) {
+        var raw = Array.isArray(v) ? v[0] : v;
+        if (raw) { try { var o = typeof raw === 'string' ? JSON.parse(raw) : raw; if (o && typeof o === 'object') store._d = o; } catch (e) {} }
+      })
+      .catch(function (e) { console.warn('[fastrix] bridge init/storage failed', e); })
+      .then(runGame);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();

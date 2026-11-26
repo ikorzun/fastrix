@@ -12,7 +12,10 @@ Fastrix: FPS Arena Shooter Online, браузерный шутер для тел
 
     python3 -I tools/build.py /mnt/project-files/shooter_builds/<файл>.html builds/<имя>
 
-Что делает: three.js r128 и шрифты Rubik/Unbounded кладёт внутрь архива вместо
+Что делает: подключает Playgama Bridge (SDK первым в `<head>`, игра стартует только после
+`bridge.initialize()` и загрузки сохранения; localStorage игры идёт в `bridge.storage` одним
+ключом `fastrix_save`; пауза и звук платформы; `game_ready`; межстраничная реклама после
+каждого матча; код слоя в `tools/bridge_boot.js`, `--no-bridge` выключает). Затем three.js r128 и шрифты Rubik/Unbounded кладёт внутрь архива вместо
 cdnjs и Google Fonts (требование 1.2.5), добавляет `<!doctype>` и `charset`,
 кладёт `playgama-bridge-config.json`, если он есть, и лицензии; печатает, что
 ещё не проходит модерацию. Код завершения 1, если остались загрузки из сети.
