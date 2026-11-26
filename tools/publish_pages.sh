@@ -6,7 +6,7 @@ SRC=$1; VER=${2:-new}; ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TMP=$(mktemp -d); W=$TMP/wt
 python3 -I "$ROOT/tools/build.py" --no-bridge "$SRC" "$TMP/out"
 rm -f "$TMP/out/playgama-bridge-config.json"; touch "$TMP/out/.nojekyll"
-git -C "$ROOT" fetch -q origin gh-pages
+git -C "$ROOT" fetch -q origin +refs/heads/gh-pages:refs/remotes/origin/gh-pages
 git -C "$ROOT" worktree add -q "$W" origin/gh-pages --detach
 find "$W" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -r "$TMP/out/." "$W/"
