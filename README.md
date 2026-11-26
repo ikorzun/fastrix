@@ -23,3 +23,12 @@ cdnjs и Google Fonts (требование 1.2.5), добавляет `<!doctyp
 - `vendor/` — three.min.js 0.128.0 (MIT), woff2 Rubik и Unbounded (OFL) из @fontsource 5.0.20, латиница и кириллица.
 - `builds/` — готовые архивы и скриншот проверки.
 - План целиком: https://claude.ai/artifact/TYNxgQ7HbewTMGesd9XYZd
+
+## Ссылка для тестеров (GitHub Pages)
+
+Игра без Playgama (без Bridge и рекламы, сохранения в браузере): https://ikorzun.github.io/fastrix/
+Обновить на новую версию (ссылка та же):
+
+    tools/publish_pages.sh /mnt/project-files/shooter_builds/shooter_arena_vNN.html vNN
+
+Скрипт собирает `build.py --no-bridge` и кладёт результат в ветку `gh-pages`.
