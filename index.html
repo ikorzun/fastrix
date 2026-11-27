@@ -17275,6 +17275,433 @@ function diTiles() {   // locks on every item not owned, ★ badges grey while u
     return pvs0(host, id); };
   const cp0 = closePop; closePop = function (quiet) { const was = !!ipOpen; cp0(quiet);
     try { if (was && pmTab === 'ars' && !arsStage.hidden && (arsMode === 's' || arsMode === 'd') && !(PV.r && PV.r.domElement.parentNode === arsStage)) renderArsenal(); } catch (e) {} }; }
+
+// ---------- KFX_PATCH (economy thread, Ivan 2026-11-27 19:51): kill effects — how an opponent the player knocks out leaves the arena ----------
+const KF_EN = !(window.__i18n && window.__i18n.lang === 'ru');
+const KFT = KF_EN ? {
+  tab: 'Kill FX', kind: 'Kill effect', title: 'Kill effects', hint: 'Plays on every opponent you knock out', on: 'Equipped', ok: 'Owned', lk: 'Locked',
+  free: 'Free for everyone', get: 'Get it', src: 'chests, the wheel, the shop', pass: (n, p) => `pass level ${n}${p ? ' premium' : ''}`,
+  craft: (c, h) => `<b>${c} ◆</b> shards (you have ${h})`, lvl: n => `From level ${n}`, eq: 'Equip', off: 'Take off', buy: 'Buy', need: 'Need',
+  make: c => `Make · ${c} ◆`, made: 'Made from shards', rar: ['Starter', 'Common', 'Rare', 'Epic', 'Legendary']
+} : {
+  tab: 'Добивание', kind: 'Добивание', title: 'Добивания', hint: 'Срабатывает на каждом сопернике, которого ты выбил', on: 'Надето', ok: 'Есть', lk: 'Закрыто',
+  free: 'Бесплатно для всех', get: 'Где взять', src: 'сундуки, колесо, магазин', pass: (n, p) => `пропуск, уровень ${n}${p ? ' премиум' : ''}`,
+  craft: (c, h) => `<b>${c} ◆</b> осколков (у тебя ${h})`, lvl: n => `С ${n} уровня`, eq: 'Надеть', off: 'Снять', buy: 'Купить', need: 'Не хватает',
+  make: c => `Создать · ${c} ◆`, made: 'Создано из осколков', rar: ['Стартовый', 'Обычный', 'Редкий', 'Эпический', 'Легендарный']
+};
+const KF_LIST = [
+  { id: 'kf_shatter', r: 0, n: ['Разлёт', 'Shatter'], d: ['Разлетается на блоки', 'Breaks apart into blocks'] },
+  { id: 'kf_dust', r: 1, n: ['Пыль', 'Dust'], d: ['Каменеет и осыпается песком', 'Turns to sandstone and crumbles'] },
+  { id: 'kf_pop', r: 1, n: ['Хлоп', 'Pop'], d: ['Раздувается, как шарик, и лопается', 'Puffs up like a balloon and pops'] },
+  { id: 'kf_ko', r: 2, n: ['Нокаут', 'Knockout'], d: ['Падает плашмя, над головой звёзды', 'Falls flat with stars over the head'] },
+  { id: 'kf_ice', r: 2, n: ['Заморозка', 'Deep Freeze'], d: ['Вмерзает в лёд и разбивается', 'Freezes in a block of ice that shatters'] },
+  { id: 'kf_ghost', r: 2, n: ['Призрак', 'Ghost'], d: ['Улетает вверх привидением', 'Floats away as a ghost'] },
+  { id: 'kf_pixel', r: 3, n: ['Пиксели', 'Pixel Lift'], d: ['Рассыпается на пиксели, они улетают', 'Dissolves into pixels that fly up'] },
+  { id: 'kf_party', r: 3, n: ['Хлопушка', 'Party Popper'], d: ['Взрывается конфетти и салютом', 'Bursts into confetti and fireworks'] },
+  { id: 'kf_erase', r: 4, n: ['Стирание', 'Erased'], d: ['Глючит и стирается из реальности', 'Glitches and is wiped out of reality'] },
+  { id: 'kf_void', r: 4, n: ['Чёрная дыра', 'Black Hole'], d: ['Его затягивает в чёрную дыру', 'Sucked into a black hole'] }];
+const KF_BY = {}; KF_LIST.forEach(o => { o.name = o.n[KF_EN ? 1 : 0]; o.desc = o.d[KF_EN ? 1 : 0]; KF_BY[o.id] = o; });
+const KF_PRICE = [[0, 0], [3000, 0], [8000, 0], [15000, 0], [0, 900]];
+const KF_LV = [0, 0, 0, 0, typeof EMO_LEG !== 'undefined' ? EMO_LEG[2] : 12];   // the showcase gates legendaries by the same level
+const KF_CRAFT = r => (typeof CRAFT_COST !== 'undefined' && CRAFT_COST[r]) || [0, 50, 200, 800, 3000][r] || 0;
+function kfS() { let k = prog.kf; if (!k || typeof k !== 'object') k = prog.kf = {}; if (!Array.isArray(k.own)) k.own = []; if (!KF_BY[k.on]) k.on = 'kf_shatter'; return k; }
+const kfOwn = id => id === 'kf_shatter' || kfS().own.includes(id);
+function kfGive(id) { const k = kfS(); if (KF_BY[id] && !k.own.includes(id)) k.own.push(id); }
+function kfOnId() { const k = kfS(); return kfOwn(k.on) ? k.on : 'kf_shatter'; }
+function kfEquip(id) { if (!kfOwn(id)) return; kfS().on = id; saveProg(); }
+const kfIt = o => ({ kind: 'kf', id: o.id, r: o.r, name: o.name });
+
+// ---- sticker pictures (the season 1 sticker technique: dark shadow, white outline, flat colours with an ink line)
+const KF_INK = '#1b1036';
+const kfStarD = (cx, cy, r) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.45 : r; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * q).toFixed(1) + ' ' + (cy + Math.sin(a) * q).toFixed(1); } return d + 'Z'; };
+const KF_ART = {
+  kf_shatter: [['<rect x="36" y="40" width="30" height="28" rx="4" transform="rotate(12 51 54)"', '#ff5a4a'], ['<rect x="40" y="6" width="22" height="20" rx="5" transform="rotate(-18 51 16)"', '#f5cd30'],
+    ['<rect x="8" y="42" width="12" height="24" rx="3" transform="rotate(-35 14 54)"', '#ff5a4a'], ['<rect x="80" y="34" width="12" height="24" rx="3" transform="rotate(40 86 46)"', '#ff5a4a'],
+    ['<rect x="28" y="74" width="12" height="20" rx="3" transform="rotate(-15 34 84)"', '#3b3f5c'], ['<rect x="62" y="74" width="12" height="20" rx="3" transform="rotate(22 68 84)"', '#3b3f5c']],
+  kf_dust: [['<path d="M6 94 Q50 50 94 94 Z"', '#c9a36b'], ['<rect x="37" y="42" width="26" height="26" rx="4"', '#b08a5a'], ['<rect x="40" y="18" width="20" height="18" rx="4"', '#d9b98a'],
+    ['<rect x="14" y="28" width="10" height="10" rx="2"', '#e0c9a0'], ['<rect x="74" y="20" width="9" height="9" rx="2"', '#a8875a'], ['<rect x="78" y="48" width="8" height="8" rx="2"', '#c9a36b']],
+  kf_pop: [['<path d="' + kfStarD(50, 50, 46) + '"', '#ffd23f'], ['<circle cx="50" cy="50" r="27"', '#ff4d9a'], ['<circle cx="41" cy="40" r="7"', '#ffffff']],
+  kf_ko: [['<rect x="16" y="60" width="44" height="22" rx="4"', '#ff5a4a'], ['<rect x="60" y="58" width="24" height="24" rx="5"', '#f5cd30'], ['<rect x="2" y="61" width="15" height="9" rx="3"', '#3b3f5c'],
+    ['<rect x="2" y="72" width="15" height="9" rx="3"', '#3b3f5c'], ['<path d="' + kfStarD(58, 30, 11) + '"', '#ffd23f'], ['<path d="' + kfStarD(80, 18, 9) + '"', '#ffd23f'], ['<path d="' + kfStarD(90, 40, 8) + '"', '#ffd23f']],
+  kf_ice: [['<rect x="18" y="6" width="64" height="88" rx="9"', '#aeeaff'], ['<rect x="40" y="16" width="20" height="18" rx="4"', '#5fb8f0'], ['<rect x="35" y="36" width="30" height="28" rx="4"', '#3a8fd6'],
+    ['<rect x="37" y="64" width="11" height="22" rx="3"', '#2a6fb0'], ['<rect x="52" y="64" width="11" height="22" rx="3"', '#2a6fb0'], ['<path d="M25 14 L35 14 L25 40 Z"', '#ffffff']],
+  kf_ghost: [['<path d="M20 92 L20 46 Q20 10 50 10 Q80 10 80 46 L80 92 L70 82 L60 92 L50 82 L40 92 L30 82 Z"', '#f4f1ff'], ['<ellipse cx="39" cy="44" rx="5" ry="8"', KF_INK],
+    ['<ellipse cx="61" cy="44" rx="5" ry="8"', KF_INK], ['<ellipse cx="50" cy="63" rx="6" ry="5"', KF_INK]],
+  kf_pixel: [['<rect x="33" y="60" width="34" height="34" rx="3"', '#2a8cff'], ['<rect x="38" y="42" width="12" height="12" rx="2"', '#2fd0ff'], ['<rect x="55" y="36" width="11" height="11" rx="2"', '#7cf7ff'],
+    ['<rect x="44" y="21" width="10" height="10" rx="2"', '#2a8cff'], ['<rect x="62" y="16" width="8" height="8" rx="2"', '#2fd0ff'], ['<rect x="34" y="6" width="7" height="7" rx="1"', '#7cf7ff']],
+  kf_party: [['<path d="M14 94 L38 44 L64 70 Z"', '#ffd23f'], ['<rect x="56" y="10" width="8" height="14" rx="2" transform="rotate(25 60 17)"', '#ff4d6d'], ['<rect x="76" y="26" width="8" height="14" rx="2" transform="rotate(-30 80 33)"', '#3ee08a'],
+    ['<rect x="80" y="54" width="8" height="14" rx="2" transform="rotate(60 84 61)"', '#38bdf8'], ['<rect x="42" y="18" width="7" height="12" rx="2" transform="rotate(-20 45 24)"', '#a78bfa'],
+    ['<circle cx="66" cy="42" r="5"', '#ff8a3d'], ['<path d="' + kfStarD(86, 10, 8) + '"', '#ffd23f']],
+  kf_erase: [['<rect x="44" y="10" width="22" height="11" rx="2"', '#ff3df2'], ['<rect x="36" y="23" width="22" height="10" rx="2"', '#2fe8ff'], ['<rect x="30" y="36" width="34" height="11" rx="2"', '#2fe8ff'],
+    ['<rect x="40" y="49" width="34" height="11" rx="2"', '#ff3df2'], ['<rect x="33" y="62" width="30" height="10" rx="2"', '#2fe8ff'], ['<rect x="40" y="75" width="26" height="12" rx="2"', '#ff3df2'],
+    ['<rect x="8" y="54" width="18" height="5" rx="1"', '#2fe8ff'], ['<rect x="76" y="68" width="16" height="5" rx="1"', '#ff3df2']],
+  kf_void: [['<circle cx="50" cy="50" r="42"', '#9b5cff'], ['<path d="M50 12 A38 38 0 0 1 88 50 L74 50 A24 24 0 0 0 50 26 Z"', '#e0c8ff'], ['<path d="M50 88 A38 38 0 0 1 12 50 L26 50 A24 24 0 0 0 50 74 Z"', '#c7a6ff'],
+    ['<circle cx="50" cy="50" r="20"', '#0b0618']] };
+function kfSvg(id) {
+  const a = KF_ART[id]; if (!a) return '';
+  const sil = a.map(q => q[0] + '/>').join(''), col = a.map(q => q[0] + ` fill="${q[1]}"/>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -8 116 116"><g fill="${KF_INK}" stroke="${KF_INK}" stroke-width="18" stroke-linejoin="round" transform="translate(0 3)">${sil}</g>`
+    + `<g fill="#fff" stroke="#fff" stroke-width="12" stroke-linejoin="round">${sil}</g><g stroke="${KF_INK}" stroke-width="3.5" stroke-linejoin="round">${col}</g></svg>`;
+}
+function kfPic(o) { const k = KF_BY[o.id] || o; return `<span class="kfp" style="--rc:${(RARITY[k.r] || RARITY[1])[1]}">${kfSvg(k.id)}</span>`; }
+
+// ---- the effects. A host is a scene with an emitter: the arena (shared voxels) or the Arsenal preview (its own small voxel set)
+const kfR = (a, b) => a + Math.random() * (b - a), kfPick = L => L[(Math.random() * L.length) | 0], kfTc = new THREE.Color();
+function kfBounce(x) { const n = 7.5625, d = 2.75; if (x < 1 / d) return n * x * x; if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75; if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375; return n * (x -= 2.625 / d) * x + 0.984375; }
+function kfBack(x) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+function kfEm(X, hex, k) { kfTc.setHex(hex).multiplyScalar(k == null ? 1 : k); for (const m of X.mats) if (m && m.emissive) m.emissive.copy(kfTc); }
+function kfBurst(X, x, y, z, col, n, sp, size, grav, life) {
+  for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, e = Math.random() * 2 - 1, r = Math.sqrt(1 - e * e), v = sp * (0.5 + Math.random() * 0.6);
+    X.H.emit(x, y, z, Math.cos(a) * r * v, e * v + 3, Math.sin(a) * r * v, Array.isArray(col) ? col[i % col.length] : col, (life || 0.45) + Math.random() * 0.45, grav == null ? 18 : grav, (size || 0.16) * (0.6 + Math.random() * 0.8)); }
+}
+const KF_GEO = {};
+function kfMesh(X, kind) {
+  const H = X.H, P = H.pool[kind] || (H.pool[kind] = []); let m = P.find(x => !x.visible);
+  if (!m) {
+    const g = kind === 'ice' ? (KF_GEO.box || (KF_GEO.box = new THREE.BoxGeometry(1, 1, 1))) : (KF_GEO.sph || (KF_GEO.sph = new THREE.SphereGeometry(1, 16, 12)));
+    const mat = kind === 'hole' ? new THREE.MeshBasicMaterial({ color: 0x08040f }) : new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+        m = new THREE.Mesh(g, mat); m.renderOrder = 2; H.sc.add(m); P.push(m);
+  }
+  m.visible = true; m.scale.setScalar(1); m.rotation.set(0, 0, 0); if (X.ms) X.ms.push(m); return m;
+}
+function kfRing(X, x, y, z, col, T, max) {
+  const m = kfMesh({ H: X.H }, 'ring'); m.material.color.setHex(col); m.material.opacity = 0.38; m.position.set(x, y, z); m.scale.setScalar(0.5);
+  m.userData.kf = { t: T || 0.3, T: T || 0.3, max: max || 2.6 }; X.H.rings.push(m);
+}
+const KFX = {
+  kf_shatter: { dur: 1.2, rate: 1,   // the preview's copy of the default (the arena keeps the original code)
+    start(X) { const L = X.limbs; X.st.pc = [];
+      if (L) { X.g.updateMatrixWorld(true);
+        for (const o of [L.torso, L.head, L.armL, L.armR, L.legL, L.legR]) { if (!o || !o.parent) continue; const e = { o, par: o.parent, p: o.position.clone(), q: o.quaternion.clone(), s: o.scale.clone() }; X.H.sc.attach(o);
+          const v = 2.5 + Math.random() * 3; e.v = new THREE.Vector3(X.dir[0] * v + kfR(-2, 2), kfR(3, 6), X.dir[1] * v + kfR(-2, 2)); e.w = new THREE.Vector3(kfR(-7, 7), kfR(-5, 5), kfR(-7, 7)); e.sw = o.scale.clone(); X.st.pc.push(e); } }
+      const c = X.c; kfBurst(X, c.x, c.y, c.z, X.col, 22, 8, 0.2); kfBurst(X, c.x, c.y, c.z, 0xffffff, 8, 6, 0.12); kfBurst(X, c.x, c.y, c.z, 0xffd24a, 8, 7, 0.14); kfRing(X, c.x, c.y, c.z, 0xffe08a); },
+    step(X, t, dt) { for (const e of X.st.pc) { const o = e.o; e.v.y -= 22 * dt; o.position.addScaledVector(e.v, dt); o.rotation.x += e.w.x * dt; o.rotation.y += e.w.y * dt; o.rotation.z += e.w.z * dt;
+        if (o.position.y < X.p0.y + 0.2) { o.position.y = X.p0.y + 0.2; e.v.y = Math.abs(e.v.y) * 0.35; e.v.x *= 0.6; e.v.z *= 0.6; e.w.multiplyScalar(0.5); }
+        o.scale.copy(e.sw).multiplyScalar(Math.max(0.01, Math.min(1, (X.D.dur - t) / 0.3))); } },
+    end(X) { for (const e of X.st.pc || []) { e.par.add(e.o); e.o.position.copy(e.p); e.o.quaternion.copy(e.q); e.o.scale.copy(e.s); } } },
+  kf_dust: { dur: 1.0, rate: 0.85,
+    step(X, t) { const g = X.g, sand = [0xc9a36b, 0xa8875a, 0xe0c9a0, 0x8a7a6a];
+      if (t < 0.2) { const k = t / 0.2; kfEm(X, 0x6e5634, k); g.position.x = X.p0.x + Math.sin(t * 90) * 0.03 * k; return; }
+      const k = Math.min(1, (t - 0.2) / 0.7), sy = Math.max(0.02, 1 - k); g.scale.set(1 + 0.18 * k, sy, 1 + 0.18 * k); g.position.x = X.p0.x;
+      const top = X.p0.y + 2.05 * sy;
+      for (let i = 0; i < 3; i++) X.H.emit(X.p0.x + kfR(-0.45, 0.45), top + kfR(-0.15, 0.05), X.p0.z + kfR(-0.45, 0.45), kfR(-1.2, 1.2), kfR(0, 1.2), kfR(-1.2, 1.2), kfPick(sand), kfR(0.5, 0.9), 14, kfR(0.09, 0.16));
+      if (Math.random() < 0.6) { const a = Math.random() * 6.283; X.H.emit(X.p0.x + Math.cos(a) * 0.4, X.p0.y + 0.15, X.p0.z + Math.sin(a) * 0.4, Math.cos(a) * 1.6, 0.35, Math.sin(a) * 1.6, 0xd8d0c4, 0.9, 0.4, kfR(0.16, 0.24)); }
+      if (k >= 1 && !X.st.e) { X.st.e = 1; g.visible = false; kfBurst(X, X.p0.x, X.p0.y + 0.3, X.p0.z, sand, 12, 3, 0.15, 14); } } },
+  kf_pop: { dur: 0.5, rate: 1.35,
+    step(X, t) { const g = X.g;
+      if (t < 0.3) { const k = t / 0.3, e = k * k, s = 1 + 0.55 * e; g.scale.set(s * (1 + 0.07 * Math.sin(t * 70)), 1 + 0.28 * e, s * (1 + 0.07 * Math.cos(t * 70))); kfEm(X, 0xff4d9a, 0.6 * k); return; }
+      if (!X.st.p) { X.st.p = 1; g.visible = false; const c = X.c; kfBurst(X, c.x, c.y + 0.15, c.z, X.col, 24, 10, 0.2); kfBurst(X, c.x, c.y + 0.15, c.z, [0xff4d9a, 0xffffff, 0xffd23f], 16, 8, 0.14, 12); kfRing(X, c.x, c.y + 0.15, c.z, 0xffffff, 0.28, 3.6); } } },
+  kf_ko: { dur: 1.5, rate: 0.9,
+    start(X) { X.st.ax = new THREE.Vector3(X.dir[1], 0, -X.dir[0]); X.st.q = new THREE.Quaternion(); },
+    step(X, t) { const g = X.g, k = Math.min(1, t / 0.42), a = (Math.PI / 2 - 0.06) * kfBounce(k), sa = Math.sin(a);
+      X.st.q.setFromAxisAngle(X.st.ax, a); g.quaternion.copy(X.q0).premultiply(X.st.q);
+      let y = X.p0.y + 0.2 * sa;
+      if (k >= 1 && !X.st.h) { X.st.h = 1; const mx = X.p0.x + X.dir[0], mz = X.p0.z + X.dir[1];
+        for (let i = 0; i < 12; i++) { const b = Math.random() * 6.283; X.H.emit(mx + kfR(-0.6, 0.6), X.p0.y + 0.15, mz + kfR(-0.6, 0.6), Math.cos(b) * 2.2, 0.5, Math.sin(b) * 2.2, 0xd8d0c4, 0.6, 1, kfR(0.14, 0.22)); } }
+      if (t > 0.35 && t < 1.15) { const hx = X.p0.x + X.dir[0] * 1.85 * sa, hz = X.p0.z + X.dir[1] * 1.85 * sa, hy = X.p0.y + 1.85 * Math.cos(a) + 0.55;
+        for (let i = 0; i < 3; i++) { const b = t * 7 + i * 2.094; X.H.emitK(hx + Math.cos(b) * 0.42, hy + Math.sin(b * 2) * 0.06, hz + Math.sin(b) * 0.42, 0, 0, 0, i ? 0xffd23f : 0xffffff, 0.07, 0, 0.15); } }
+      if (t > 1.15) { const s = (t - 1.15) / 0.35; y -= 1.3 * s * s;
+        if (Math.random() < 0.5) X.H.emit(X.p0.x + X.dir[0] * kfR(0, 1.8), X.p0.y + 0.1, X.p0.z + X.dir[1] * kfR(0, 1.8), kfR(-0.5, 0.5), 0.6, kfR(-0.5, 0.5), 0xd8d0c4, 0.5, 0.5, 0.16); }
+      g.position.y = y; } },
+  kf_ice: { dur: 0.66, rate: 1.5,
+    start(X) { const m = X.st.m = kfMesh(X, 'ice'); m.material.color.setHex(0xaeeaff); m.material.opacity = 0.5; m.position.set(X.p0.x, X.p0.y + 1.08, X.p0.z); m.quaternion.copy(X.q0); m.scale.setScalar(0.01); },
+    step(X, t) { const m = X.st.m, g = X.g;
+      if (t < 0.6) { const k = Math.min(1, t / 0.22), b = kfBack(k); m.scale.set(1.2 * b, 2.3 * b, 1.2 * b); kfEm(X, 0x3aa8ff, 0.55 * k);
+        if (t > 0.3) { const j = (t - 0.3) * 0.12; m.position.x = X.p0.x + kfR(-j, j); g.position.x = m.position.x; }
+        if (Math.random() < 0.5) X.H.emit(X.p0.x + kfR(-0.6, 0.6), X.p0.y + kfR(0.1, 2.2), X.p0.z + kfR(-0.6, 0.6), 0, kfR(0.2, 0.6), 0, 0xffffff, 0.35, 0, kfR(0.06, 0.1));
+        return; }
+      if (!X.st.b) { X.st.b = 1; g.visible = false; m.visible = false; const ice = [0xbfefff, 0x8fd8ff, 0xffffff, 0x5fb8f0];
+        for (let i = 0; i < 36; i++) { const x = kfR(-0.6, 0.6), y = kfR(0, 2.3), z = kfR(-0.6, 0.6), v = kfR(3, 7.5), l = Math.hypot(x, y - 1.15, z) || 1;
+          X.H.emit(X.p0.x + x, X.p0.y + y, X.p0.z + z, x / l * v, (y - 1.15) / l * v + 2.5, z / l * v, kfPick(ice), kfR(0.7, 1.1), 20, kfR(0.12, 0.3)); }
+        kfRing(X, X.c.x, X.c.y, X.c.z, 0x9be7ff, 0.3, 3.4); } } },
+  kf_ghost: { dur: 1.3, rate: 0.75,
+    step(X, t) { const g = X.g; kfEm(X, 0xf4f0ff, Math.min(1, t / 0.18) * 0.95);
+      const k = Math.max(0, Math.min(1, (t - 0.12) / 1.1)), e = k * k * (3 - 2 * k), px = -X.dir[1], pz = X.dir[0], sw = Math.sin(t * 7) * 0.18 * k;
+      g.position.set(X.p0.x + px * sw, X.p0.y + 2.4 * e, X.p0.z + pz * sw);
+      const sh = k < 0.75 ? 1 : Math.max(0.01, 1 - (k - 0.75) / 0.25); g.scale.set((1 - 0.35 * k) * sh, (1 + 0.3 * k) * sh, (1 - 0.35 * k) * sh);
+      if (Math.random() < 0.8) X.H.emit(g.position.x + kfR(-0.3, 0.3), g.position.y + 0.25, g.position.z + kfR(-0.3, 0.3), kfR(-0.3, 0.3), -0.5, kfR(-0.3, 0.3), kfPick([0xffffff, 0xe4ecff, 0xcfc2ff]), kfR(0.4, 0.7), -1.5, kfR(0.1, 0.18));
+      if (t > 1.22 && !X.st.e) { X.st.e = 1; g.visible = false; kfBurst(X, g.position.x, g.position.y + 1.1, g.position.z, [0xffffff, 0xcfc2ff], 10, 4, 0.14, 4); } } },
+  kf_pixel: { dur: 1.0, rate: 1.2,
+    step(X, t) { const g = X.g, k = Math.min(1, t / 0.92), s = Math.max(0.01, 1 - Math.pow(k, 1.4)); kfEm(X, 0x2fd0ff, 0.5 * Math.min(1, t / 0.15));
+      g.scale.setScalar(s); g.position.y = X.p0.y + 1.1 * (1 - s);
+      const pal = [X.col, 0x2fd0ff, 0x7cf7ff, 0xffffff];
+      for (let i = 0; i < 4; i++) X.H.emit(X.p0.x + kfR(-0.45, 0.45) * s, X.p0.y + 1.1 + kfR(-1.05, 1.05) * s, X.p0.z + kfR(-0.45, 0.45) * s, kfR(-0.25, 0.25), kfR(1.2, 3), kfR(-0.25, 0.25), kfPick(pal), kfR(0.6, 1.0), -5, kfR(0.12, 0.2));
+      if (k >= 1 && !X.st.e) { X.st.e = 1; g.visible = false; kfRing(X, X.c.x, X.c.y, X.c.z, 0x2fd0ff, 0.25, 2.2); } } },
+  kf_party: { dur: 0.62, rate: 1.2,
+    step(X, t) { const g = X.g, c = X.c, P = [0xff4d6d, 0xffd23f, 0x3ee08a, 0x38bdf8, 0xa78bfa, 0xff8a3d, 0xffffff];
+      if (t < 0.12) { const k = t / 0.12; g.scale.set(1 + 0.18 * k, 1 - 0.2 * k, 1 + 0.18 * k); return; }
+      if (!X.st.a) { X.st.a = 1; g.visible = false;
+        for (let i = 0; i < 50; i++) X.H.emit(c.x + kfR(-0.3, 0.3), c.y + kfR(-0.3, 0.5), c.z + kfR(-0.3, 0.3), kfR(-3.5, 3.5), kfR(6, 11), kfR(-3.5, 3.5), P[i % P.length], kfR(1.2, 1.8), 9, kfR(0.1, 0.16));
+        kfRing(X, c.x, c.y, c.z, 0xffd23f, 0.3, 3.2); }
+      for (const [tt, j] of [[0.3, 0], [0.46, 1]]) if (t >= tt && !X.st['f' + j]) { X.st['f' + j] = 1; const fc = P[(Math.random() * 6) | 0], fx = c.x + kfR(-1.2, 1.2), fy = c.y + kfR(2, 2.8), fz = c.z + kfR(-1.2, 1.2);
+        for (let i = 0; i < 16; i++) { const a = Math.random() * 6.283, e = Math.random() * 2 - 1, r = Math.sqrt(1 - e * e); X.H.emit(fx, fy, fz, Math.cos(a) * r * 5, e * 5, Math.sin(a) * r * 5, i % 3 ? fc : 0xffffff, kfR(0.5, 0.75), 6, 0.12); } } } },
+  kf_erase: { dur: 0.98, rate: 0.6,
+    step(X, t) { const g = X.g, px = -X.dir[1], pz = X.dir[0];
+      if (t < 0.6) { const s = (t / 0.045) | 0;
+        if (s !== X.st.s) { X.st.s = s; const o = kfR(-0.24, 0.24);
+          g.position.set(X.p0.x + px * o, X.p0.y + kfR(-0.04, 0.04), X.p0.z + pz * o); g.scale.set(kfR(0.55, 1.4), kfR(0.9, 1.06), kfR(0.7, 1.2));
+          const c = Math.random(); kfEm(X, c < 0.35 ? 0x00f0ff : c < 0.7 ? 0xff2bd6 : c < 0.85 ? 0xffffff : 0, 0.75); g.visible = Math.random() > 0.14;
+          for (let i = 0; i < 3; i++) { const sd = Math.random() < 0.5 ? -1 : 1, v = kfR(2.5, 5) * sd; X.H.emitK(g.position.x + px * 0.4 * sd, X.p0.y + kfR(0.1, 2.1), g.position.z + pz * 0.4 * sd, px * v, 0, pz * v, Math.random() < 0.5 ? 0x00f0ff : 0xff2bd6, 0.22, 0, kfR(0.08, 0.16)); } }
+        return; }
+      if (X.st.e) return;
+      g.visible = true; g.position.set(X.p0.x, X.p0.y, X.p0.z); kfEm(X, 0xffffff, 0.9);
+      if (t < 0.78) { const k = (t - 0.6) / 0.18, sy = Math.max(0.025, 1 - k * k); g.scale.set(1 + 0.4 * k, sy, 1 + 0.4 * k); g.position.y = X.p0.y + 1.1 * (1 - sy); return; }
+      const k = Math.min(1, (t - 0.78) / 0.14), sx = Math.max(0.01, 1.4 * (1 - k)); g.scale.set(sx, 0.025, sx); g.position.y = X.p0.y + 1.1 * 0.975;
+      if (k >= 1) { X.st.e = 1; g.visible = false; kfBurst(X, X.c.x, X.c.y, X.c.z, [0xffffff, 0x00f0ff, 0xff2bd6], 8, 3, 0.1, 0); kfRing(X, X.c.x, X.c.y, X.c.z, 0xff2bd6, 0.2, 1.4); } } },
+  kf_void: { dur: 1.18, rate: 0.55,
+    start(X) { const h = X.st.h = kfMesh(X, 'hole'), a = X.st.a = kfMesh(X, 'halo'); a.material.color.setHex(0x6a3dff); a.material.opacity = 0.3; h.position.copy(X.c); a.position.copy(X.c);
+      h.scale.setScalar(0.01); a.scale.setScalar(0.01); X.st.q = new THREE.Quaternion(); X.st.up = new THREE.Vector3(0, 1, 0); },
+    step(X, t) { const g = X.g, c = X.c, H = X.st.h, A = X.st.a;
+      const hs = t < 0.22 ? 0.5 * kfBack(t / 0.22) : t < 0.98 ? 0.5 + 0.04 * Math.sin(t * 40) : Math.max(0.01, 0.5 * (1 - (t - 0.98) / 0.1));
+      H.scale.setScalar(hs); A.scale.setScalar(hs * (1.4 + 0.12 * Math.sin(t * 25)));
+      const k = Math.max(0, Math.min(1, (t - 0.15) / 0.8)), s = Math.max(0.01, Math.pow(1 - k, 1.3));
+      X.st.q.setFromAxisAngle(X.st.up, k * k * 14); g.quaternion.copy(X.q0).multiply(X.st.q);
+      g.scale.set(s * (1 - 0.3 * k), s * (1 + 0.5 * k), s * (1 - 0.3 * k)); g.position.set(X.p0.x, c.y - 1.1 * s * (1 + 0.5 * k), X.p0.z);
+      if (t < 0.98) for (let i = 0; i < 3; i++) { const a = Math.random() * 6.283, e = kfR(-0.6, 0.6), r = Math.sqrt(1 - e * e), R = kfR(1.6, 2.6), v = kfR(4.5, 6.5), dx = Math.cos(a) * r, dz = Math.sin(a) * r;
+        X.H.emit(c.x + dx * R, c.y + e * R, c.z + dz * R, -dx * v, -e * v, -dz * v, kfPick([0xb07cff, 0x6a3dff, 0xffffff, 0xd7b8ff]), R / v * 0.92, 0, kfR(0.09, 0.15)); }
+      if (k >= 1) g.visible = false;
+      if (t >= 1.06 && !X.st.f) { X.st.f = 1; H.visible = false; A.visible = false; kfBurst(X, c.x, c.y, c.z, [0xffffff, 0xb07cff, 0x6a3dff], 22, 9, 0.16, 6); kfRing(X, c.x, c.y, c.z, 0x9b5cff, 0.3, 3.6); } } } };
+function kfStart(H, id, o) {
+  const D = KFX[id]; if (!D || !o.g) return null;
+  const X = { H, id, D, g: o.g, mats: o.mats || [], col: o.col == null ? 0xff5a4a : o.col, dir: o.dir || [0, -1], b: o.b || null, limbs: o.limbs || null, t: 0, st: {}, ms: [] };
+  X.p0 = X.g.position.clone(); X.q0 = X.g.quaternion.clone(); X.g.visible = true; X.c = new THREE.Vector3(X.p0.x, X.p0.y + 1.15, X.p0.z);
+  if (D.start) D.start(X); H.live.push(X); return X;
+}
+function kfEnd(X) {
+  if (X.done) return; X.done = true;
+  try { if (X.D.end) X.D.end(X); } catch (e) {}
+  const g = X.g; g.scale.set(1, 1, 1); g.position.copy(X.p0); g.quaternion.copy(X.q0); g.visible = false; kfEm(X, 0, 0);
+  for (const m of X.ms) m.visible = false;
+  const i = X.H.live.indexOf(X); if (i >= 0) X.H.live.splice(i, 1);
+}
+function kfTick(H, dt) {
+  for (let i = H.live.length - 1; i >= 0; i--) { const X = H.live[i]; if (!X) continue; X.t += dt;
+    try { X.D.step(X, Math.min(X.t, X.D.dur), dt); } catch (e) { X.t = 99; }
+    if (X.t >= X.D.dur) kfEnd(X); }
+  for (let i = H.rings.length - 1; i >= 0; i--) { const m = H.rings[i], u = m.userData.kf; u.t -= dt; const k = 1 - u.t / u.T;
+    m.scale.setScalar(0.5 + k * u.max); m.material.opacity = Math.max(0, 1 - k) * 0.38; if (u.t <= 0) { m.visible = false; H.rings.splice(i, 1); } }
+}
+// the arena host: the shared voxels (thinned by TQ.pk), stars and glitch slices always drawn
+const KF_G = { sc: scene, live: [], pool: {}, rings: [],
+  emit: (x, y, z, vx, vy, vz, c, l, g, s) => emit(vox, x, y, z, vx, vy, vz, c, l, g, s),
+  emitK: (x, y, z, vx, vy, vz, c, l, g, s) => { const k = TQ.pk; TQ.pk = 1; try { emit(vox, x, y, z, vx, vy, vz, c, l, g, s); } finally { TQ.pk = k; } } };
+function kfKill(b, id) {
+  const D = KFX[id], dP = Math.hypot(b.pos.x - player.pos.x, b.pos.z - player.pos.z), att = Math.max(0.18, 1 - dP / 50);
+  if (sfxBuf.botpop) sfx('botpop', 0.9 * att, D.rate || 1, { pos: b.pos }); else popSound();
+  if (navigator.vibrate && dP < 20) try { vib([20, 30, 40]); } catch (e) {}
+  kfStop(b);
+  let dx = b.pos.x - player.pos.x, dz = b.pos.z - player.pos.z; const l = Math.hypot(dx, dz) || 1;
+  kfStart(KF_G, id, { g: b.g, mats: b.mats, col: b.color ? b.color.getHex() : 0xff5a4a, dir: [dx / l, dz / l], b });
+}
+function kfStop(b) { for (const X of KF_G.live.slice()) if (X.b === b) kfEnd(X); }
+{ const bb0 = burstBot; burstBot = function (b, kind, from) {
+    let id = ''; try { id = from === player.pos && b && b.g ? kfOnId() : ''; } catch (e) {}
+    if (!id || id === 'kf_shatter' || !KFX[id]) return bb0(b, kind, from);
+    try { kfKill(b, id); } catch (e) { try { kfStop(b); } catch (er) {} return bb0(b, kind, from); } }; }
+{ const sb0 = spawnBot; spawnBot = function (b) { try { kfStop(b); if (b && b.g) b.g.scale.set(1, 1, 1); } catch (e) {} return sb0(b); }; }
+{ const uf0 = updateFx; updateFx = function (dt) { uf0(dt); try { kfTick(KF_G, dt); } catch (e) {} }; }
+
+// ---- economy: one more item kind through meta 1's plumbing (chests, the wheel, the showcase, cards, shards), the pass, crafting
+try { if (typeof chPool === 'function') { const cp = chPool; chPool = function () { const L = cp(); KF_LIST.forEach(o => { if (o.r && !L.some(x => x.kind === 'kf' && x.id === o.id)) L.push(kfIt(o)); }); return L; }; } } catch (e) {}
+try { const io = itOwned; itOwned = o => o && o.kind === 'kf' ? kfOwn(o.id) : io(o); } catch (e) {}
+try { const ig = itGrant; itGrant = function (o) { if (o && o.kind === 'kf') kfGive(o.id); else ig(o); }; } catch (e) {}
+try { const ep = emItPic; emItPic = function (o) { return o && o.kind === 'kf' ? kfPic(o) : ep(o); }; } catch (e) {}
+try { const cc = chCard; chCard = function (r, small) { const h = cc(r, small); return r && r.o && r.o.kind === 'kf' && typeof MT !== 'undefined' ? h.replace(` · ${MT.emo}</span>`, ` · ${KFT.kind}</span>`) : h; }; } catch (e) {}
+try { if (typeof s4Price === 'function') { const sp = s4Price; s4Price = function (o, gem) { if (!o || o.kind !== 'kf') return sp(o, gem); const p = KF_PRICE[o.r] || [0, 0];
+    if (!gem) return p[1] ? [0, p[1]] : [p[0], 0]; return p[1] ? [0, p[1]] : [0, Math.max(10, Math.round(p[0] / (typeof SH4_RATE !== 'undefined' ? SH4_RATE : 25) / 10) * 10)]; }; } } catch (e) {}
+try { if (typeof s6Obj === 'function') { const so = s6Obj; s6Obj = function (id) { const o = KF_BY[id]; return o && o.r ? kfIt(o) : so(id); }; } } catch (e) {}
+try { if (typeof S6_PASS !== 'undefined' && typeof S5_F !== 'undefined' && s5Now() === 0) {   // season 1: free 30 and premium 22 hold kill effects
+    S5_F[30] = ['it', 3]; S6_PASS.f30 = 'kf_party'; S6_PASS.p22 = 'kf_ghost';
+    const sp5 = s5P; s5P = function (l) { return l === 22 && s5Now() === 0 ? ['it', 2] : sp5(l); };
+    const m = m5(); if (m.s === 0 && (!m.it || !m.it.f30 || !m.it.p22)) { m5Pick(m); saveProg(); } } } catch (e) {}
+function kfPassLv(id) { try { if (typeof S6_PASS === 'undefined' || s5Now() !== 0) return null; for (const [k, v] of Object.entries(S6_PASS)) if (v === id) return { n: +k.slice(1), p: k[0] === 'p' }; } catch (e) {} return null; }
+try { if (typeof fx6Row === 'function') { const fr = fx6Row; fx6Row = function () { let h = fr(); try {   // Collections tab: a row to make any missing kill effect from shards
+      const L = KF_LIST.filter(o => o.r), have = L.filter(o => kfOwn(o.id)).length;
+      h += `<div class="c6r fx kf"><span class="nm"><b>${KFT.title}</b><small>${have} / ${L.length}</small></span><span class="pcs">${L.map(o => { const own = kfOwn(o.id), R = RARITY[o.r] || RARITY[1];
+        return `<button type="button" class="pc${own ? ' own' : ''}" data-a="w6craft" data-id="${o.id}" style="--rc:${R[1]}" aria-label="${o.name}">${kfPic(o)}` + (own ? `<span class="ok">${IC.check}</span>` : `<small>${fmtN(KF_CRAFT(o.r))}◆</small>`) + '</button>'; }).join('')}</span></div>`; } catch (e) {} return h; }; } } catch (e) {}
+
+// ---- Arsenal tab «Kill FX»: tiles in the Decor look, a mannequin on the stage plays the effect, a card with one action
+arsSeg.insertAdjacentHTML('beforeend', `<button type="button" data-s="k" role="tab">${KFT.tab}</button>`);
+let kfSel = '';
+const KFP = { sc: null, cam: null, man: null, mats: null, H: null, raf: 0, last: 0, ph: 'idle', t: 0, wait: 0.6, id: '', X: null, snd: false };
+function kfVox(sc, N) {
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshToonMaterial({ gradientMap: gradTex }), N);
+  im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.frustumCulled = false; im.setColorAt(0, new THREE.Color(1, 1, 1)); im.instanceColor.setUsage(THREE.DynamicDrawUsage); im.count = 0; sc.add(im);
+  const V = { N, i: 0, pos: new Float32Array(N * 3), vel: new Float32Array(N * 3), col: new Float32Array(N * 3), life: new Float32Array(N), max: new Float32Array(N), grav: new Float32Array(N), size: new Float32Array(N), rot: new Float32Array(N * 2), spin: new Float32Array(N * 2) };
+  V.emit = (x, y, z, vx, vy, vz, color, life, grav = 0, size = 0.12) => { const i = V.i++ % N, i3 = i * 3; V.pos[i3] = x; V.pos[i3 + 1] = y; V.pos[i3 + 2] = z; V.vel[i3] = vx; V.vel[i3 + 1] = vy; V.vel[i3 + 2] = vz;
+    V.life[i] = V.max[i] = life; V.grav[i] = grav; V.size[i] = size; kfTc.setHex(color); V.col[i3] = kfTc.r; V.col[i3 + 1] = kfTc.g; V.col[i3 + 2] = kfTc.b;
+    V.rot[i * 2] = Math.random() * 6.28; V.rot[i * 2 + 1] = Math.random() * 6.28; V.spin[i * 2] = (Math.random() - 0.5) * 16; V.spin[i * 2 + 1] = (Math.random() - 0.5) * 16; };
+  V.tick = dt => { const M = im.instanceMatrix.array, C = im.instanceColor.array; let n = 0;
+    for (let i = 0; i < N; i++) { if (V.life[i] <= 0) continue; V.life[i] -= dt; if (V.life[i] <= 0) continue;
+      const i3 = i * 3; V.vel[i3 + 1] -= V.grav[i] * dt; const x = (V.pos[i3] += V.vel[i3] * dt), z = (V.pos[i3 + 2] += V.vel[i3 + 2] * dt); let y = (V.pos[i3 + 1] += V.vel[i3 + 1] * dt);
+      if (y < 0.05 && V.vel[i3 + 1] < 0) { V.pos[i3 + 1] = y = 0.05; V.vel[i3 + 1] *= -0.4; V.vel[i3] *= 0.6; V.vel[i3 + 2] *= 0.6; }
+      const a = (V.rot[i * 2] += V.spin[i * 2] * dt), b = (V.rot[i * 2 + 1] += V.spin[i * 2 + 1] * dt), k = V.life[i] / V.max[i], s = V.size[i] * (k < 0.35 ? k / 0.35 : 1);
+      const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), o = n * 16;
+      M[o] = cb * s; M[o + 1] = 0; M[o + 2] = -sb * s; M[o + 3] = 0; M[o + 4] = sb * sa * s; M[o + 5] = ca * s; M[o + 6] = cb * sa * s; M[o + 7] = 0;
+      M[o + 8] = sb * ca * s; M[o + 9] = -sa * s; M[o + 10] = cb * ca * s; M[o + 11] = 0; M[o + 12] = x; M[o + 13] = y; M[o + 14] = z; M[o + 15] = 1;
+      C[n * 3] = V.col[i3]; C[n * 3 + 1] = V.col[i3 + 1]; C[n * 3 + 2] = V.col[i3 + 2]; n++; }
+    im.count = n; if (n) { im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; } };
+  return V;
+}
+function kfPvInit() {
+  if (KFP.sc) return true; if (!pvEnsure()) return false;
+  const sc = KFP.sc = new THREE.Scene();
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.0)); const dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(2, 4, 5); sc.add(dl);
+  KFP.cam = new THREE.PerspectiveCamera(30, 2, 0.1, 60); KFP.cam.position.set(0, 1.6, 8.6); KFP.cam.lookAt(0, 1.3, 0);
+  const fl = new THREE.Mesh(new THREE.CircleGeometry(1.3, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false })); fl.rotation.x = -Math.PI / 2; fl.position.y = 0.01; sc.add(fl);
+  const mk = c => new THREE.MeshToonMaterial({ color: c, gradientMap: gradTex }), shirt = mk(0xff5a4a), skin = mk(0xf5cd30), pants = mk(0x2a2d44), mats = [shirt, skin, pants];
+  const man = new THREE.Group(), box = (m, w, h, d, x, y, z, p) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); p.add(o); return o; };
+  const torso = box(shirt, 0.8, 0.8, 0.42, 0, 1.2, 0, man), head = new THREE.Group(); head.position.y = 1.88; man.add(head);
+  head.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.55, 18), skin));
+  try { if (typeof faceTex === 'function') { const face = new THREE.MeshToonMaterial({ map: faceTex('cool'), transparent: true, alphaTest: 0.3, gradientMap: gradTex });
+    head.add(new THREE.Mesh(new THREE.CylinderGeometry(0.303, 0.303, 0.5, 12, 1, true, Math.PI * 2 / 3, Math.PI * 2 / 3), face)); mats.push(face); } } catch (e) {}
+  const limb = (m, x, y) => { const p = new THREE.Group(); p.position.set(x, y, 0); box(m, 0.4, 0.8, 0.4, 0, -0.4, 0, p); man.add(p); return p; };
+  const armL = limb(shirt, -0.6, 1.6), armR = limb(shirt, 0.6, 1.6), legL = limb(pants, -0.2, 0.8), legR = limb(pants, 0.2, 0.8);
+  box(skin, 0.38, 0.16, 0.38, 0, -0.72, 0, armL); box(skin, 0.38, 0.16, 0.38, 0, -0.72, 0, armR);
+  man.limbs = { head, armL, armR, legL, legR, torso }; man.rotation.y = Math.PI - 0.45; sc.add(man); KFP.man = man; KFP.mats = mats;
+  const V = kfVox(sc, 420); KFP.H = { sc, live: [], pool: {}, rings: [], emit: V.emit, emitK: V.emit, vox: V };
+  return true;
+}
+function kfPvReset() {
+  if (KFP.X) { kfEnd(KFP.X); KFP.X = null; }
+  const M = KFP.man; if (!M) return; M.visible = true; M.position.set(0, 0, 0); M.rotation.set(0, Math.PI - 0.45, 0); M.scale.set(1, 1, 1);
+  for (const k in M.limbs) M.limbs[k].rotation.set(0, 0, 0); KFP.mats.forEach(m => m.emissive && m.emissive.setHex(0));
+}
+function kfPvPlay(id, wait) { kfPvReset(); KFP.id = id; KFP.ph = 'idle'; KFP.t = 0; KFP.wait = wait; }
+function kfPvHalt() { if (KFP.raf) cancelAnimationFrame(KFP.raf); KFP.raf = 0; KFP.last = 0; }
+function kfPvLoop(now) {
+  KFP.raf = 0; const h = arsStage, cv = PV.r && PV.r.domElement;
+  if (arsMode !== 'k' || !cv || cv.parentNode !== h || PV.host || !h.isConnected || h.hidden || h.closest('[hidden]')) { kfPvHalt(); return; }
+  KFP.raf = requestAnimationFrame(kfPvLoop);
+  const dt = Math.min(0.05, KFP.last ? (now - KFP.last) / 1000 : 0.016); KFP.last = now;
+  const w = h.clientWidth, hh = h.clientHeight; if (!w || !hh) return;
+  if (!KFP.kl || (KFP.n = (KFP.n || 0) + 1) % 30 === 0) KFP.kl = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kl')) || 1;
+  const pr = Math.min(2.5, (devicePixelRatio || 1) * KFP.kl);
+  if (cv.width !== Math.round(w * pr) || cv.height !== Math.round(hh * pr)) { PV.r.setPixelRatio(pr); PV.r.setSize(w, hh, false); }
+  if (Math.abs(KFP.cam.aspect - w / hh) > 1e-3) { KFP.cam.aspect = w / hh; KFP.cam.updateProjectionMatrix(); }
+  const M = KFP.man; KFP.t += dt;
+  if (KFP.ph === 'idle') { const T = KFP.t; M.limbs.armL.rotation.x = Math.sin(T * 3) * 0.25; M.limbs.armR.rotation.x = -Math.sin(T * 3) * 0.25; M.position.y = Math.abs(Math.sin(T * 3)) * 0.03;
+    if (T > KFP.wait) { kfPvReset(); KFP.X = kfStart(KFP.H, KFP.id, { g: M, mats: KFP.mats, col: 0xff5a4a, dir: [0.8, -0.6], limbs: M.limbs }); KFP.ph = 'fx'; KFP.t = 0;
+      if (KFP.snd) { KFP.snd = false; try { sfx('botpop', 0.45, (KFX[KFP.id] || {}).rate || 1); } catch (e) {} } } }
+  else if (KFP.ph === 'fx') { if (!KFP.X || KFP.X.done) { KFP.X = null; KFP.ph = 'gap'; KFP.t = 0; } }
+  else if (KFP.ph === 'gap') { if (KFP.t > 0.75) { kfPvReset(); M.scale.setScalar(0.01); KFP.ph = 'in'; KFP.t = 0; } }
+  else if (KFP.ph === 'in') { const k = Math.min(1, KFP.t / 0.25); M.scale.setScalar(Math.max(0.01, kfBack(k))); if (k >= 1) { M.scale.setScalar(1); KFP.ph = 'idle'; KFP.t = 0; KFP.wait = 0.9; } }
+  kfTick(KFP.H, dt); KFP.H.vox.tick(dt);
+  PV.r.render(KFP.sc, KFP.cam);
+}
+function kfPvStart() {
+  if (!kfPvInit()) return; const cv = PV.r.domElement;
+  if (PV.raf) { cancelAnimationFrame(PV.raf); PV.raf = 0; } PV.host = null;   // the gun preview rests while this tab is open
+  if (cv.parentNode !== arsStage) arsStage.insertBefore(cv, arsStage.firstChild);
+  if (KFP.id !== kfSel) kfPvPlay(kfSel, KFP.id ? 0.2 : 0.5);
+  if (!KFP.raf) { KFP.last = 0; KFP.raf = requestAnimationFrame(kfPvLoop); }
+}
+function kfLeave() {
+  kfPvHalt(); if (KFP.id) { kfPvReset(); KFP.id = ''; }
+  try { const b = arsStage.querySelector('#kfInfo'); if (b) b.remove(); arsStage.classList.remove('kfl');
+    if (!PV.host && PV.r && PV.r.domElement.parentNode === arsStage) PV.r.domElement.remove(); } catch (e) {}
+}
+const KF_OK = '<svg viewBox="0 0 12 12" width="11" height="11"><path d="M2 6.4l2.6 2.6L10 3.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  KF_NO = '<svg viewBox="0 0 12 12" width="10" height="10"><path d="M3 3l6 6M9 3L3 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+function kfTile(o) {
+  const own = kfOwn(o.id), on = kfOnId() === o.id, R = RARITY[o.r] || RARITY[1];
+  return `<button type="button" class="dcc kft${own ? '' : ' lk'}${on ? ' on' : ''}${kfSel === o.id ? ' disel' : ''}" data-kf="${o.id}" style="--rc:${R[1]}" aria-pressed="${on}" aria-label="${o.name}" title="${o.name}">`
+    + kfPic(o) + (!own ? `<span class="slk">${IC.lock}</span>` : on ? `<span class="ck">${IC.check}</span>` : '') + '</button>';
+}
+function kfInfo() {
+  let box = arsStage.querySelector('#kfInfo'); if (!box) { box = document.createElement('div'); box.id = 'kfInfo'; arsStage.appendChild(box); }
+  const o = KF_BY[kfSel] || KF_LIST[0], R = RARITY[o.r] || RARITY[1], own = kfOwn(o.id), on = kfOnId() === o.id;
+  const stt = on ? `<span class="dis on">${IC.check || ''}${KFT.on}</span>` : own ? `<span class="dis ok">${KFT.ok}</span>` : `<span class="dis lk">${IC.lock || ''}${KFT.lk}</span>`;
+  const li = (c, i, t) => `<li class="${c}"><i>${i}</i><span>${t}</span></li>`;
+  let rows = li('inf', '›', o.desc), act = '';
+  if (!o.r) rows += li('ok', KF_OK, KFT.free);
+  else if (own) rows += li('inf', '›', KFT.hint);
+  else {
+    const src = [KFT.src], pl = kfPassLv(o.id), cc = KF_CRAFT(o.r), sh = (typeof META !== 'undefined' && META.shards) | 0, p = KF_PRICE[o.r], lvOk = prog.lvl >= KF_LV[o.r];
+    if (pl) src.push(KFT.pass(pl.n, pl.p)); src.push(KFT.craft(fmtN(cc), fmtN(sh)));
+    rows += li('', KF_NO, `${KFT.get}: ${src.join(', ')}`);
+    act = (!lvOk ? `<button type="button" class="dib off" data-kfa="lvl">${IC.lock || ''}${KFT.lvl(KF_LV[o.r])}</button>`
+      : canPay(p) ? `<button type="button" class="dib go" data-kfa="buy">${KFT.buy} · ${priceChip(p)}</button>`
+      : `<button type="button" class="dib no" data-kfa="buy">${KFT.need} · ${priceChip([Math.max(0, p[0] - coins), Math.max(0, p[1] - gems)])}</button>`)
+      + (cc && sh >= cc ? `<button type="button" class="dib go" data-kfa="make">${KFT.make(fmtN(cc))}</button>` : '');
+  }
+  if (own && !on) act = `<button type="button" class="dib go" data-kfa="eq">${KFT.eq}</button>`;
+  else if (on && o.r) act = `<button type="button" class="dib" data-kfa="off">${KFT.off}</button>`;
+  box.innerHTML = `<span class="din"><b>${o.name}</b></span><div class="dih"><small class="dik" style="color:${R[1]}">${KFT.rar[o.r] || ''} · ${KFT.kind}</small>${stt}</div><ul>${rows}</ul>${act ? `<div class="dibs">${act}</div>` : ''}`;
+}
+function kfDraw() {
+  arsGrid.className = 'g-d g-k'; arsSeg.parentNode.dataset.m = 'd'; arsStage.hidden = false;   // the Decor layout
+  arsStage.classList.remove('dl', 'disel'); arsStage.classList.add('kfl');
+  arsStage.querySelectorAll('#decInfo, .stbuy').forEach(e => e.remove());
+  if (!KF_BY[kfSel]) kfSel = kfOnId();
+  arsGrid.innerHTML = `<span class="dlb">${KFT.kind}</span>` + KF_LIST.map(kfTile).join('');
+  kfInfo(); kfPvStart();
+}
+{ const ra = renderArsenal; renderArsenal = function () {
+    if (arsMode !== 'k') { try { kfLeave(); } catch (e) {} return ra(); }
+    ra(); try { kfDraw(); } catch (e) {} }; }
+{ const cp = closePop; closePop = function (quiet) { const r = cp(quiet); try { if (arsMode === 'k' && pmTab === 'ars' && !arsStage.hidden) kfDraw(); } catch (e) {} return r; }; }
+arsGrid.addEventListener('click', e => {
+  const b = e.target.closest('button[data-kf]'); if (!b || arsMode !== 'k') return; e.stopPropagation();
+  const id = b.dataset.kf; if (!KF_BY[id]) return;
+  kfSel = id; KFP.snd = true;
+  if (kfOwn(id) && kfOnId() !== id) { kfEquip(id); sfx('equip', 0.6); vib(10); } else tap(0.6);
+  kfPvPlay(id, 0.15); kfDraw(); const n = arsGrid.querySelector(`[data-kf="${id}"]`); if (n) restart(n, 'pop');
+});
+arsStage.addEventListener('click', e => {
+  const b = e.target.closest('#kfInfo [data-kfa]'); if (!b || arsMode !== 'k') return; e.stopPropagation();
+  const a = b.dataset.kfa, o = KF_BY[kfSel]; if (!o) return;
+  try {
+    if (a === 'eq') { kfEquip(o.id); sfx('equip', 0.6); vib(10); }
+    else if (a === 'off') { kfEquip('kf_shatter'); tap(0.6); }
+    else if (a === 'lvl') { nope(b); return; }
+    else if (a === 'buy') { const p = KF_PRICE[o.r]; if (kfOwn(o.id) || prog.lvl < KF_LV[o.r] || !canPay(p)) { nope(b); return; }
+      if (typeof s4Pay === 'function') s4Pay(p); else { coins -= p[0]; gems -= p[1]; }
+      kfGive(o.id); kfEquip(o.id); saveProg(); kfDraw(); try { if (typeof mWin === 'function') mWin({ k: 'item', o: kfIt(o), isNew: true }, KFT.title); } catch (er) {} return; }
+    else if (a === 'make') { const c = KF_CRAFT(o.r); if (kfOwn(o.id) || !c || META.shards < c) { nope(b); return; }
+      META.shards -= c; try { chSave(); } catch (er) {} kfGive(o.id); kfEquip(o.id); saveProg(); kfDraw(); try { if (typeof mWin === 'function') mWin({ k: 'item', o: kfIt(o), isNew: true }, KFT.made); } catch (er) {} return; }
+  } catch (er) {}
+  kfDraw();
+});
+(function () {
+  const st = document.createElement('style'); st.id = 'kfx-css';
+  st.textContent = `
+  html:root body #lobby #arsSeg { width: 588px; }
+  html:root body #lobby #arsSeg button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 900px), (max-height: 500px) { html:root body #lobby #arsSeg { width: 560px; } html:root body #lobby #arsSeg button { font-size: 14px; } }
+  .kfp { display: inline-grid; place-items: center; width: 30px; height: 30px; vertical-align: middle; }
+  .kfp svg { width: 100%; height: 100%; display: block; }
+  #arsGrid.g-k .dcc .kfp { width: 44px; height: 44px; }
+  #arsGrid.g-k .dcc.lk .kfp { opacity: .5; filter: saturate(.55); }
+  #arsGrid.g-k .dcc { box-shadow: inset 0 -3px 0 var(--rc); }
+  #arsGrid.g-k .dcc.disel { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
+  #chOpen .chc .kfp { width: 84px; height: 84px; } #chOpen .chs2 .kfp { width: 40px; height: 40px; flex: none; } #chOpen .chc.sm .kfp { width: 46px; height: 46px; }
+  #q4Pop .sc .kfp { width: 28px; height: 28px; } #s4Pop .pc .kfp { width: 26px; height: 26px; } #s4Pop .it .kfp { width: 52px; height: 52px; }
+  #whPop .kfp { width: 56px; height: 56px; }
+  #arsStage.kfl :is(.sth, .stw, .stn, .stbuy) { display: none; }
+  #arsStage.kfl canvas.pv3 { transform: translateX(-22%); cursor: default; }
+  #kfInfo { position: absolute; right: 8px; top: 6px; bottom: 6px; width: 44%; z-index: 2; box-sizing: border-box; padding: 7px 9px; display: flex; flex-direction: column; gap: 4px;
+    background: rgba(27,16,54,.82); border-radius: 14px; color: #fff; font: 700 13px/1.25 var(--font); overflow: hidden; }
+  #kfInfo .dih { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #kfInfo .dik { font: 800 11px/1.2 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #kfInfo .din { min-width: 0; display: grid; } #kfInfo .din b { font: 900 14px/1.1 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #kfInfo .dis { margin-left: auto; flex: none; font: 900 11px/1 var(--font); padding: 3px 7px; border-radius: 999px; display: inline-flex; gap: 4px; align-items: center; }
+  #kfInfo .dis.on { background: #3fbf6a; color: #fff; } #kfInfo .dis.ok { background: #ffd23f; color: #1b1036; } #kfInfo .dis.lk { background: rgba(255,255,255,.14); color: #fff; }
+  #kfInfo .dis svg, #kfInfo .dis img { width: 12px !important; height: 12px !important; position: static !important; }
+  #kfInfo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; min-height: 0; overflow: hidden; }
+  #kfInfo li { display: grid; grid-template-columns: 12px 1fr; gap: 4px; font: 700 11px/1.2 var(--font); color: rgba(255,255,255,.78); }
+  #kfInfo li i { font-style: normal; font-weight: 900; color: #ff7a7a; text-align: center; } #kfInfo li.ok i { color: #6be08f; } #kfInfo li.inf i { color: #ffd23f; } #kfInfo li b { color: #fff; font-weight: 900; }
+  #kfInfo .dibs { margin-top: auto; flex: none; display: flex; gap: 6px; min-width: 0; }
+  #kfInfo .dib { flex: 1 1 0; min-width: 0; height: 30px; border: 0; border-radius: 10px; background: #fff; color: #1b1036; font: 900 13px/1 var(--stk, var(--font)); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #kfInfo .dib.go { background: #3fbf6a; color: #fff; } #kfInfo .dib.no, #kfInfo .dib.off { background: rgba(255,255,255,.16); color: #fff; }
+  #kfInfo .dib img { width: 16px; height: 16px; } #kfInfo .dib svg { width: 14px; height: 14px; }
+  @media (max-width: 900px), (max-height: 500px) { #arsGrid.g-k .dcc .kfp { width: 38px; height: 38px; } }
+  `;
+  document.head.appendChild(st);
+})();
+window.__kf = { list: () => KF_LIST.map(o => o.id), own: kfOwn, give: kfGive, on: kfOnId, equip: kfEquip, live: () => KF_G.live.length, fx: KFX, start: kfStart, G: KF_G };
+
 // ---------- v20: arena switch in place (Ivan 21:19, coordinator 21:31) ----------
 const __mine = [...document.body.children].filter(e => !__bodyKids.has(e)).concat([...document.head.children].filter(e => !__headKids.has(e)));
 window.__fxKill = function () {   // retire this instance: nothing of it runs, listens or holds the GPU after this
