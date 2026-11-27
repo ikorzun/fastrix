@@ -18,13 +18,18 @@
 
   // ----- status chip -----
   const chip = document.createElement('div');
-  chip.id = 'netChip';
+  chip.id = 'netChip'; chip.setAttribute('translate', 'no'); chip.className = 'notranslate';
   chip.style.cssText = 'position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:99999;pointer-events:none;' +
     'font:700 12px/1.2 Nunito,system-ui,sans-serif;color:#fff;background:rgba(22,19,31,.72);padding:4px 10px;border-radius:999px;white-space:nowrap';
   document.body.appendChild(chip);
+  const EN = { 'подключение…': 'connecting…', 'в комнате (локально)': 'in a room (local)', 'онлайн недоступен на этой платформе': 'online is not available on this platform',
+    'ищу комнату…': 'looking for a room…', 'в комнате': 'in a room', 'в комнате (хост)': 'in a room (host)', 'вне комнаты': 'out of the room' };
   function drawChip() {
-    const n = NET.peers.size + 1;
-    chip.textContent = 'Онлайн: ' + NET.state + ' · игроков ' + n + (NET.rtt != null ? ' · пинг ' + NET.rtt + ' мс' : '');
+    const n = NET.peers.size + 1, en = /^en/.test(document.documentElement.lang || '');
+    const st = en ? (EN[NET.state] || NET.state.replace('связь: ', 'link: ').replace('ошибка: ', 'error: ')) : NET.state;
+    const txt = en ? 'Online: ' + st + ' · players ' + n + (NET.rtt != null ? ' · ping ' + NET.rtt + ' ms' : '')
+                   : 'Онлайн: ' + st + ' · игроков ' + n + (NET.rtt != null ? ' · пинг ' + NET.rtt + ' мс' : '');
+    if (chip.textContent !== txt) chip.textContent = txt;
   }
   setInterval(drawChip, 500);
 
