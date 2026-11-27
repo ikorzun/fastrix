@@ -22,11 +22,13 @@
   try { q = (location.search.match(/[?&]lang=(ru|en)\b/) || [])[1] || null; } catch (e) {}
   var plat = window.__fxLang || '', nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
   var isRu = function (l) { return /^(ru|be|kk)\b/i.test(l || ''); };
-  if (saved === 'ru' || saved === 'en') lang = saved; else if (q) lang = q; else if (plat) lang = isRu(plat) ? 'ru' : 'en'; else lang = isRu(nav) ? 'ru' : 'en';
+  var I18N_FORCE = 'en';   // v32 (Ivan 12:28): English only for now, Russian hidden; '' brings back the saved choice, platform and browser language
+  if (I18N_FORCE) lang = q || I18N_FORCE;
+  else if (saved === 'ru' || saved === 'en') lang = saved; else if (q) lang = q; else if (plat) lang = isRu(plat) ? 'ru' : 'en'; else lang = isRu(nav) ? 'ru' : 'en';
   if (window.__fxBridge) window.__fxLang = lang;   // the Playgama pause hook titles the pause in the game's language
   var root = document.documentElement; root.lang = lang; root.setAttribute('data-l', lang);
   var api = window.__i18n = {
-    lang: lang,
+    lang: lang, forced: !!I18N_FORCE,
     tr: function (s) { return s; },
     set: function (l) {
       if (l !== 'ru' && l !== 'en') return;
@@ -13332,7 +13334,8 @@ for (const b of [sndBtn, pSnd]) b.addEventListener('click', () => { setSnd(!sndO
 updSndBtn();
 // ---- Настройки: two columns (lobby) or two flat columns in the pause window
 // v31 (Ivan 12:10): language row, the same in both languages
-const LANG_ROW = () => { const L = (window.__i18n && window.__i18n.lang) || 'ru';
+const LANG_ROW = () => { if (window.__i18n && window.__i18n.forced) return '';   // v32: hidden while the game is English only
+  const L = (window.__i18n && window.__i18n.lang) || 'ru';
   return `<div class="trow lng" translate="no"><span>Язык · Language</span><div class="tseg" data-k="lang" role="group" aria-label="Язык · Language">`
     + [['ru', 'Русский'], ['en', 'English']].map(([v, n]) => `<button type="button" data-v="${v}" class="${v === L ? 'on' : ''}" aria-pressed="${v === L}">${n}</button>`).join('') + '</div></div>'; };
 function settingsHTML(inPause) {
