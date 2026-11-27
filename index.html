@@ -6048,25 +6048,38 @@ function tqDpr(cap) { return Math.max(0.75, Math.min(devicePixelRatio, cap, isTo
 function tqRowsK() { return isTouch ? TQ.rowsK : 1; }
 function tqSet(v) { TSET.q = v; tSave(); TQ.ds = 1; tqApply(); try { resize(); } catch (e) {} }
 // 60 fps cap while playing (a 120 Hz screen otherwise doubles the GPU work and the heat), 30 fps under the menus
-var tqLast = 0;
-function tqSkip() {
-  if (!isTouch) return false;
-  const now = performance.now(), gap = playing ? 1000 / 62 : 1000 / 31;
-  if (now - tqLast < gap - 1) return true;
-  tqLast = now; return false;
+// frame pacing (stutter fix 2026-11-27, Ivan's iPhone 17): the cap used performance.now() at the start of the callback, which jitters by
+// a millisecond or two, so on a 60 Hz screen ~1 frame a second was skipped (59 fps, a 33 ms hitch). Now: the refresh interval is measured
+// from the rAF timestamps; touch renders every frame up to 75 Hz, every 2nd on 120 Hz (every 2nd / 4th in menus); dt comes from the
+// same timestamps, rounded to whole refresh intervals, so motion advances evenly.
+var tqIv = 16.67, tqTs = 0, tqCnt = 0, tqRts = 0, tqRaw = 0;
+function tqSkip(ts) {
+  if (!(ts > 0)) { tqRts = 0; return false; }
+  if (tqTs) { const d = ts - tqTs; if (d > 4 && d < 50) tqIv += (d - tqIv) * 0.05; }
+  tqTs = ts;
+  if (!isTouch) { tqRaw = ts; return false; }
+  const hz = 1000 / tqIv, k = playing ? (hz > 90 ? 2 : 1) : (hz > 90 ? 4 : 2);
+  if (++tqCnt % k) return true;
+  tqRaw = ts; return false;
+}
+function tqDt(dt) {   // dt in seconds from the display timestamps; falls back to the clock when there are none
+  const ts = tqRaw; if (!(ts > 0) || !tqRts) { tqRts = ts > 0 ? ts : 0; return dt; }
+  const d = ts - tqRts; tqRts = ts; if (!(d > 0) || d > 250) return dt;
+  const n = Math.max(1, Math.round(d / tqIv)); return Math.min(0.05, n * tqIv / 1000);
 }
 // dynamic resolution (Авто only): every 2 s of play, many slow frames -> 10 % lower pixel ratio (down to 70 %, never under 0.75); a calm 6 s -> 5 % back
-var tqWin = 0, tqSlow = 0, tqN = 0, tqCalm = 0, tqPrev = 0;
+var tqWin = 0, tqSlow = 0, tqN = 0, tqCalm = 0, tqPrev = 0, tqUp = false;
 function tqWatch() {
   if (!isTouch) return;
   const now = performance.now(), ft = tqPrev ? now - tqPrev : 16.7; tqPrev = now;
-  if (!playing || TSET.q !== 'auto' || document.hidden || ft > 250) { tqWin = 0; tqSlow = tqN = 0; return; }
+  if (tqUp && (deadT > 0 || !playing)) { tqUp = false; TQ.ds = Math.min(1, +(TQ.ds + 0.05).toFixed(2)); try { resize(); } catch (e) {} }
+  if (!playing || TSET.q !== 'auto' || document.hidden || ft > 250 || deadT > 0) { tqWin = 0; tqSlow = tqN = 0; return; }
   tqN++; if (ft > 22) tqSlow++; tqWin += ft;
   if (tqWin < 2000) return;
   const slow = tqSlow / tqN; tqWin = 0; tqSlow = tqN = 0;
   let ds = TQ.ds;
-  if (slow > 0.25 && ds > 0.7) { ds = Math.max(0.7, ds - 0.1); tqCalm = 0; }
-  else if (slow < 0.03 && ds < 1 && ++tqCalm >= 3) { ds = Math.min(1, ds + 0.05); tqCalm = 0; }
+  if (slow > 0.25 && ds > 0.7) { ds = Math.max(0.7, ds - 0.1); tqCalm = 0; tqUp = false; }
+  else if (slow < 0.03 && ds < 1 && ++tqCalm >= 3) { tqUp = true; tqCalm = 0; }
   else if (slow >= 0.03) tqCalm = 0;
   if (ds !== TQ.ds) { TQ.ds = +ds.toFixed(2); try { resize(); } catch (e) {} }
 }
@@ -6260,9 +6273,34 @@ function tWarm() {
       twStep = 2; return; }
     const prev = renderer.getRenderTarget(); renderer.setRenderTarget(typeof hiMix !== 'undefined' && hiMix ? cleanRT : null);
     renderer.compile(scene, camera); renderer.setRenderTarget(prev);
+    twUpload();
     TW.p1 = renderer.info.programs.length; TW.ms = Math.round(performance.now() - twT); twStep = 3;
   } catch (e) { twStep = 3; }
 }
+// upload pass (stutter fix 2026-11-27): objects outside the view were uploaded to the GPU only when first seen (new buffers and textures
+// mid-match, on a turn or a snap). One render of everything into a 16x16 target, culling off, all layers; three pooled meshes per loot type.
+function twUpload() {
+  try {
+    for (const t of ['gem', 'bonus', 'health', 'magnet', 'ammo']) while (loot.filter(l => l.type === t).length < 3) { const o = { type: t, p: new THREE.Vector3(), v: new THREE.Vector3(), t: 0, live: false, mesh: makeMesh(t) }; o.mesh.visible = false; loot.push(o); }
+  } catch (e) {}
+  const rt = new THREE.WebGLRenderTarget(16, 16), cam = camera.clone(), fc = [], hid = [], prev = renderer.getRenderTarget(), ac = renderer.autoClear, tmp = new THREE.Group();
+  try {
+    for (const b of bots) { const bt = b.blkBuilt; if (bt && bt.jointGeo) for (const jn in bt.jointGeo) tmp.add(new THREE.Mesh(bt.jointGeo[jn], bt.rigid)); }   // death pieces
+    try { const pk = EMOJI_PACKS.find(k => k.id === prog.emoji) || EMOJI_PACKS[0]; for (const ch of pk.e.concat(['\u{1f921}'])) { const sp = new THREE.Sprite(emojiMat(ch)); sp.layers.set(3); tmp.add(sp); } } catch (e) {}   // kill emoji
+    try { tmp.add(new THREE.Mesh(nadeGeo, nadeMat), new THREE.Mesh(nadeBandGeo, nadeBand)); } catch (e) {}   // the first grenade
+    scene.add(tmp);
+    cam.layers.enableAll(); cam.position.set(0, -500, 0);
+    scene.traverse(o => { if (o.isMesh || o.isPoints || o.isLine || o.isSprite) { if (o.frustumCulled) { o.frustumCulled = false; fc.push(o); } } if (!o.visible && o !== scene) { o.visible = true; hid.push(o); } });
+    renderer.setRenderTarget(rt); renderer.autoClear = true; renderer.render(scene, cam);
+    TW.up = renderer.info.memory.geometries + '/' + renderer.info.memory.textures;
+  } catch (e) { TW.upErr = String(e); }
+  scene.remove(tmp);
+  for (const o of fc) o.frustumCulled = true; for (const o of hid) o.visible = false;
+  renderer.autoClear = ac; renderer.setRenderTarget(prev); rt.dispose();
+}
+// and once more when a countdown starts: the opponents' new looks (and their death pieces) are uploaded during the 3-2-1, not at the first kill
+var twM = false;
+function twMatch() { if (!playing) { twM = false; return; } if (!twM && twStep >= 3 && typeof cdLeft !== 'undefined' && cdLeft > 0) { twM = true; twUpload(); } }
 // ===== TOUCH_KIT end =====
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xffe2bd, 60, 190);
@@ -13404,8 +13442,8 @@ function roulette(force) {
 window.__v19 = { slowGo, roulette, finalKill, state: () => ({ slowT, slowCd, worldK, finalT, leadBot: leadBot && leadBot.name, killer, slowQ: slowQ.length }) };   // test hook
 function frame() {
   requestAnimationFrame(frame);
-  if (tqSkip()) return;
-  const dt = Math.min(clock.getDelta(), 0.05);
+  if (tqSkip(arguments[0])) return;
+  const dt = tqDt(Math.min(clock.getDelta(), 0.05));
   const cdOk = !playing || cdTick(dt);
   if (playing && cdOk) updateMatch(dt);
   if (playing && cdOk && matchOver <= 0) slowTick(dt); else if (slowSnd) slowAudio(false);
@@ -13413,7 +13451,7 @@ function frame() {
   else if (playing && !cdOk && matchOver <= 0 && deadT <= 0) { yawObj.rotation.y = yaw; camera.rotation.x = pitch; }   // v21: 3-2-1, look around and aim, no moving
   crtT = Math.max(0, crtT - dt); const crtK = Math.min(1, crtT / 0.4);
   renderer.info.reset();
-  renderScene(crtK); tqWatch(); pqTick(); fxlTick();
+  renderScene(crtK); tqWatch(); pqTick(); fxlTick(); twMatch();
   drawKp(playing && matchOver <= 0 && hitStop <= 0 ? dt * GAME_SPEED : 0);
   fpsAcc += dt; fpsN++;
   if (fpsAcc > 0.5) {
