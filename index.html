@@ -12823,7 +12823,7 @@ const FP_GRIP = {
   rifle:   { R: [0.01, -0.17, -0.04], L: [-0.01, -0.115, -0.64] },
   pistol:  { R: [0, -0.15, 0.0],   L: [-0.07, -0.2, -0.02] },
   shotgun: { R: [0.01, -0.09, 0.06], L: [-0.01, -0.13, -0.8], Lpart: 'pump' },
-  sniper:  { R: [0.01, -0.21, -0.04], L: [-0.01, -0.125, -0.55] },
+  sniper:  { R: [0.01, -0.175, -0.1], L: [-0.01, -0.125, -0.55] },
   laser:   { R: [0.01, -0.14, -0.27], L: [-0.01, -0.1, -0.64] },
   sword:   { R: [0, -0.1, 0], Rin: true } };
 const FP_SH_R = new THREE.Vector3(0.7, -0.6, 0.75), FP_SH_L = new THREE.Vector3(-1.05, -0.55, 0.65);
@@ -12865,7 +12865,7 @@ function fpPose(a, h, s, side) {
   fpSeg(a.fore, _fpV.copy(h).addScaledVector(_fpD, 0.05), a.e); fpSeg(a.upper, a.e, s);
 }
 const fpArms = {};
-const FP_ARMS_ON = { pistol: 'R', rifle: 'R' };   /* v26 (Ivan 10:04): the rifle too is held by the right hand on the grip only, no hand at the magazine */   // Ivan: one hand on the pistol grip, one hand on the rifle by the magazine
+const FP_ARMS_ON = { pistol: 'R', rifle: 'R', shotgun: 'R', sniper: 'R', laser: 'R', sword: 'R' };   /* HANDS_ALL (Ivan 17:54): every weapon held by the right hand */   /* v26 (Ivan 10:04): the rifle too is held by the right hand on the grip only, no hand at the magazine */   // Ivan: one hand on the pistol grip, one hand on the rifle by the magazine
 const FP_GRIP_ONE = { rifle: { L: [-0.02, -0.14, -0.67] } };   // rifle: right in front of the magazine (mag spans z -0.61..-0.23), so the hand is seen holding it
 (function buildFpArms() {
   fpArmsLook();
@@ -12883,6 +12883,7 @@ const FP_GRIP_ONE = { rifle: { L: [-0.02, -0.14, -0.67] } };   // rifle: right i
   }
   markClean(gun);
 })();
+if (wModels.sword && wModels.sword.children[0]) wModels.sword.children[0].position.add(new THREE.Vector3(-0.04, 0.16, 0.04));   // HANDS_ALL: lift the blade group (the swing resets the model, not this) so the hand on the hilt is in view
 const _fpM = new THREE.Vector3(), _fpT = new THREE.Vector3(), _fpS = new THREE.Vector3();
 // reload: the left hand goes down to the magazine (or the shotgun shell), follows it out and pushes it back in
 function updateFpArms(rp) {
@@ -16486,6 +16487,155 @@ s4Pop.addEventListener('click', e => {
 m4Dots();
 window.__m6 = { M6, FX6, SH6, obj: s6Obj, have: s6Have, ready: s6Ready, roll: w6Roll, wk: w6Wk, set: w6Set, piece: s6Piece, tab: t => { s6Tab = t; }, PASS: S6_PASS, SETS: S6_SETS };   // test hook
 
+
+
+// ---- DECINFO_PATCH (weapons thread): the Decor tab explains every item: state, what it needs, where it comes from, one action
+(function () {
+  const st = document.createElement('style'); st.id = 'wdi-css';
+  st.textContent = `
+  #decInfo { position: absolute; right: 8px; top: 8px; bottom: 8px; width: min(38%, 360px); z-index: 2; box-sizing: border-box; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 6px; background: rgba(27,16,54,.82); border-radius: 14px; color: #fff; font: 700 13px/1.25 var(--font); overflow: hidden; }
+  #decInfo .dih { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #decInfo .dik { font: 800 12px/1.2 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #decInfo .dip { flex: none; width: 34px; height: 34px; display: grid; place-items: center; position: relative; }
+  #decInfo .dip > * { width: 34px !important; height: 34px !important; }
+  #decInfo .dip svg { width: 34px; height: 34px; }
+  #decInfo .din { min-width: 0; display: grid; }
+  #decInfo .din b { font: 900 16px/1.1 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #decInfo .din small { font: 800 12px/1.2 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #decInfo .dis { align-self: flex-start; font: 900 12px/1 var(--font); padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.14); display: inline-flex; gap: 4px; align-items: center; }
+  #decInfo .dis.on { background: #3fbf6a; color: #fff; } #decInfo .dis.ok { background: #ffd23f; color: #1b1036; } #decInfo .dis.lk { background: rgba(255,255,255,.14); color: #fff; }
+  #decInfo .dis svg, #decInfo .dis img { width: 13px !important; height: 13px !important; position: static !important; }
+  #decInfo .dih .dis { margin-left: auto; flex: none; }
+  #arsStage.dl.disel .stw { display: none; }
+  #arsStage.dl.disel canvas.pv3 { transform: translateX(-17%); }
+  #decInfo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; min-height: 0; overflow: hidden; }
+  #decInfo li { display: grid; grid-template-columns: 14px 1fr; gap: 5px; font: 700 12px/1.22 var(--font); color: rgba(255,255,255,.78); }
+  #decInfo li i { font-style: normal; font-weight: 900; color: #ff7a7a; text-align: center; } #decInfo li.ok i { color: #6be08f; } #decInfo li.inf i { color: #ffd23f; }
+  #decInfo li b { color: #fff; font-weight: 900; }
+  #decInfo .dib { margin-top: auto; flex: none; height: 38px; border: 0; border-radius: 14px; background: #fff; color: #1b1036; font: 900 15px/1 var(--stk, var(--font)); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #decInfo .dib.go { background: #3fbf6a; color: #fff; } #decInfo .dib img { width: 16px; height: 16px; }
+  #arsStage.dl .stn { display: none; }
+  #arsStage.dl .stw { max-width: 24%; }
+  #arsGrid.g-d .dcc .slk.dil { right: auto; left: -6px; top: -8px; }
+  #arsGrid.g-d .fxst.dmet { background: #ffd23f; } #arsGrid.g-d .fxst.dun { background: #8c8fae; color: #fff; }
+  #arsGrid.g-d .shc.lk .fxs { opacity: .5; filter: saturate(.6); }
+  #arsGrid.g-d .dcc.disel { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
+  @media (max-height: 460px) {
+    #decInfo { padding: 7px 9px; gap: 4px; top: 6px; bottom: 6px; width: min(33%, 300px); }
+    #decInfo { width: 44%; }
+    #arsStage.dl.disel canvas.pv3 { transform: translateX(-22%); }
+    #decInfo .din b { font-size: 14px; } #decInfo .dik, #decInfo .dis { font-size: 11px; }
+    #decInfo .dis { padding: 3px 7px; }
+    #decInfo li { font-size: 11px; line-height: 1.2; gap: 4px; grid-template-columns: 12px 1fr; }
+    #decInfo .dib { height: 30px; font-size: 13px; border-radius: 10px; }
+  }`;
+  document.head.appendChild(st);
+})();
+// core v42: check and cross as inline SVG, the Playgama builder counts the glyphs U+2713/U+2717 as emoji
+const DI_OK = '<svg viewBox="0 0 12 12" width="11" height="11" style="vertical-align:-1px"><path d="M2 6.4l2.6 2.6L10 3.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  DI_NO = '<svg viewBox="0 0 12 12" width="10" height="10" style="vertical-align:-1px"><path d="M3 3l6 6M9 3L3 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const DI_EN = !(window.__i18n && window.__i18n.lang === 'ru');
+const DIT = DI_EN ? {
+  rar: ['Starter', 'Common', 'Rare', 'Epic', 'Legendary'], fx: 'Effect', sh: 'Shot', st: 'Sticker', kc: 'Keychain',
+  on: 'Equipped', ok: 'Ready to equip', lk: 'Locked', star: (w, n) => `${w} ★${n} needed`, have: n => `you have ★${n}`,
+  get: 'Get it', fxCh: 'gold or magic chests', shCh: 'silver, gold or magic chests', decCh: set => `chests (${set})`,
+  pass: (n, p) => `pass level ${n}${p ? ' premium' : ''}`, craft: (c, h) => `<b>${c} ◆</b> shards (you have ${h})`,
+  master: 'Reward for ★10 on this weapon', owned: 'You own it',
+  equip: 'Equip', uneq: 'Take off', up: w => `Upgrade ${w}`, make: c => `Make · ${c} ◆`, passB: 'Season pass', shop: 'Shop',
+  gT: 'How decor works', g1: 'Tap any item below to see how to get it.', g2: n => `<b>★${n}</b> on an item: this weapon needs ${n} stars.`,
+  g3: (w, n) => `${w} is <b>★${n}</b>. Stars are upgraded in Weapons.`, g4: 'Locked items can be tried on: tap to preview.', noMore: 'Top star reached'
+} : {
+  rar: ['Стартовый', 'Обычный', 'Редкий', 'Эпический', 'Легендарный'], fx: 'Эффект', sh: 'Выстрел', st: 'Наклейка', kc: 'Брелок',
+  on: 'Надето', ok: 'Можно надеть', lk: 'Закрыто', star: (w, n) => `Нужно ★${n} у ${w}`, have: n => `сейчас ★${n}`,
+  get: 'Где взять', fxCh: 'золотые и магические сундуки', shCh: 'серебряные, золотые и магические сундуки', decCh: set => `сундуки (${set})`,
+  pass: (n, p) => `пропуск, уровень ${n}${p ? ' премиум' : ''}`, craft: (c, h) => `<b>${c} ◆</b> осколков (у тебя ${h})`,
+  master: 'Награда за ★10 у этого оружия', owned: 'Уже твоё',
+  equip: 'Надеть', uneq: 'Снять', up: w => `Улучшить: ${w}`, make: c => `Создать · ${c} ◆`, passB: 'Пропуск', shop: 'Магазин',
+  gT: 'Как устроен декор', g1: 'Нажми на любой предмет ниже: покажу, как его получить.', g2: n => `<b>★${n}</b> на предмете: у оружия должно быть ${n} звёзд.`,
+  g3: (w, n) => `${w}: <b>★${n}</b>. Звёзды улучшаются во вкладке «Оружие».`, g4: 'Закрытые предметы можно примерить: просто нажми.', noMore: 'Максимум звёзд'
+};
+let diSel = null;   // { k: 'fx' | 'sh' | 'd', id, wid } — the item last tapped in the Decor tab
+__on(document, 'click', e => {   // capture on document runs before the tiles' own handlers redraw the tab
+  try { if (arsMode !== 'd') return; const b = e.target.closest && e.target.closest('#arsGrid button.dcc'); if (!b) return;
+    const wid = handW().id; diSel = b.dataset.fx ? { k: 'fx', id: b.dataset.fx, wid } : b.dataset.sh ? { k: 'sh', id: b.dataset.sh, wid } : b.dataset.d ? { k: 'd', id: b.dataset.d, wid } : null; } catch (er) {}
+}, true);
+function diPassLv(id) {
+  try { if (typeof S6_PASS === 'undefined' || s5Now() !== 0) return null; for (const [k, v] of Object.entries(S6_PASS)) if (v === id) return { n: +k.slice(1), p: k[0] === 'p' }; } catch (e) {} return null;
+}
+function diCraft(id) {   // shard price when the Collections tab can make it now, else 0
+  try { if (!s6On()) return 0; const o = s6Obj(id); if (!o) return 0;
+    if (o.kind === 'st' || o.kind === 'kc') { if (!['A', 'B'].some(k => S6_SETS[k].ids.includes(id))) return 0; }
+    return s6Cost(o) || 0; } catch (e) { return 0; }
+}
+function diSet(id) { try { for (const k of ['A', 'B']) if (S6_SETS[k].ids.includes(id)) return S6_SETS[k].name; } catch (e) {} return ''; }
+function diItem(sel, wid) {
+  const star = fxStar(wid);
+  if (sel.k === 'fx') { const e = WFX.BY[sel.id], f = FX_ITEMS.find(o => o.id === sel.id); if (!e || !f) return null;
+    const need = f.star || 3, own = e.star ? true : prog.fx.includes(sel.id);
+    return { name: f.name, r: f.r, kind: DIT.fx, need, star, own, master: !!e.star, on: prog.fxOn[wid] === sel.id && fxOk(sel.id, wid), ch: DIT.fxCh }; }
+  if (sel.k === 'sh') { const o = SHOT[sel.id]; if (!o) return null;
+    return { name: o.name, r: o.r, kind: DIT.sh, need: 5, star, own: shotOwn(sel.id), on: prog.shotOn[wid] === sel.id && shotOk(sel.id, wid), ch: DIT.shCh }; }
+  const o = DEC[sel.id]; if (!o) return null; const set = diSet(sel.id);
+  return { name: o.name, r: o.r, kind: o.kind === 'st' ? DIT.st : DIT.kc, need: 0, star, own: decOwn(o), on: (o.kind === 'st' ? prog.stkOn : prog.kcOn)[wid] === sel.id, ch: set ? DIT.decCh(set) : '' };
+}
+function diDraw() {
+  let box = arsStage.querySelector('#decInfo'); const w = handW(), wid = w.id;
+  if (arsMode !== 'd' || !wModels[wid]) { if (box) box.remove(); arsStage.classList.remove('disel'); return; }
+  if (!box) { box = document.createElement('div'); box.id = 'decInfo'; arsStage.appendChild(box); }
+  if (diSel && diSel.wid !== wid) diSel = null;
+  arsGrid.querySelectorAll('.dcc.disel').forEach(b => b.classList.remove('disel'));
+  const it = diSel && diItem(diSel, wid), star = fxStar(wid), wn = w.name || ''; arsStage.classList.toggle('disel', !!it);
+  if (!it) {   // the guide
+    box.innerHTML = `<div class="dih"><span class="din"><b>${DIT.gT}</b></span></div><ul><li class="inf"><i>›</i><span>${DIT.g1}</span></li>`
+      + `<li class="inf"><i>★</i><span>${DIT.g2(3)}</span></li><li class="${star >= 3 ? 'ok' : ''}"><i>${star >= 3 ? DI_OK : DI_NO}</i><span>${DIT.g3(wn, star)}</span></li></ul>`
+      + (star < 10 ? `<button type="button" class="dib" data-di="up">${DIT.up(wn)}</button>` : '');
+    return;
+  }
+  const tile = arsGrid.querySelector(diSel.k === 'fx' ? `[data-fx="${diSel.id}"]` : diSel.k === 'sh' ? `[data-sh="${diSel.id}"]` : `[data-d="${diSel.id}"]`);
+  if (tile) tile.classList.add('disel');
+  const rc = (RARITY[it.r] || RARITY[1])[1], starOk = it.star >= it.need, ready = it.own && starOk;
+  const stt = it.on ? `<span class="dis on">${IC.check || ''}${DIT.on}</span>` : ready ? `<span class="dis ok">${DIT.ok}</span>` : `<span class="dis lk">${IC.lock || ''}${DIT.lk}</span>`;
+  const li = (ok, t) => `<li class="${ok ? 'ok' : ''}"><i>${ok ? DI_OK : DI_NO}</i><span>${t}</span></li>`;
+  let rows = '';
+  if (it.need) rows += li(starOk, `${DIT.star(wn, it.need)} · ${DIT.have(it.star)}`);
+  let act = null;
+  if (!it.master) {
+    if (it.own) rows += li(true, DIT.owned);
+    else {
+      const src = [], pl = diPassLv(diSel.id), cc = diCraft(diSel.id), sh = (typeof META !== 'undefined' && META.shards) | 0;
+      if (it.ch) src.push(it.ch); if (pl) src.push(DIT.pass(pl.n, pl.p)); if (cc) src.push(DIT.craft(fmtN(cc), fmtN(sh)));
+      rows += li(false, `${DIT.get}: ` + (src.length ? src.join(', ') : DIT.lk));
+      act = cc && sh >= cc ? { a: 'make', t: DIT.make(fmtN(cc)), go: 1 } : pl ? { a: 'pass', t: DIT.passB } : { a: 'shop', t: DIT.shop };
+    }
+  } else rows += `<li class="inf"><i>★</i><span>${DIT.master}</span></li>`;
+  if (!act) act = it.on ? { a: 'tog', t: DIT.uneq } : ready ? { a: 'tog', t: DIT.equip, go: 1 } : !starOk ? { a: 'up', t: DIT.up(wn) } : null;
+  box.innerHTML = `<span class="din"><b>${it.name}</b></span><div class="dih"><small class="dik" style="color:${rc}">${DIT.rar[it.r] || ''} · ${it.kind}</small>${stt}</div>`
+    + `<ul>${rows}</ul>` + (act ? `<button type="button" class="dib${act.go ? ' go' : ''}" data-di="${act.a}">${act.t}</button>` : '');
+}
+function diTiles() {   // locks on every item not owned, ★ badges grey while unmet
+  const wid = handW().id, star = fxStar(wid);
+  arsGrid.querySelectorAll('button.fxc, button.shc').forEach(b => {
+    const fx = b.dataset.fx, own = fx ? (WFX.BY[fx] && WFX.BY[fx].star ? true : prog.fx.includes(fx)) : shotOwn(b.dataset.sh);
+    const need = fx ? ((FX_ITEMS.find(o => o.id === fx) || {}).star || 3) : 5, badge = b.querySelector('.fxst');
+    if (badge) badge.classList.add(star >= need ? 'dmet' : 'dun');
+    if (!own && !b.querySelector('.slk')) b.insertAdjacentHTML('beforeend', `<span class="slk dil">${IC.lock}</span>`);
+  });
+}
+{ const dd0 = decDrawTab; decDrawTab = function () { dd0(); try { diTiles(); diDraw(); } catch (e) {} };
+  const ra0 = renderArsenal; renderArsenal = function () { ra0(); try { if (arsMode !== 'd') { diSel = null; const b = arsStage.querySelector('#decInfo'); if (b) b.remove(); arsStage.classList.remove('disel'); } } catch (e) {} };
+  arsStage.addEventListener('click', e => {
+    const b = e.target.closest('#decInfo [data-di]'); if (!b) return; e.stopPropagation(); const a = b.dataset.di, wid = handW().id;
+    try {
+      if (a === 'tog' && diSel) { const t = arsGrid.querySelector(diSel.k === 'fx' ? `[data-fx="${diSel.id}"]` : diSel.k === 'sh' ? `[data-sh="${diSel.id}"]` : `[data-d="${diSel.id}"]`); if (t) t.click(); }
+      else if (a === 'up') { tap(0.6); openPop('w', wid); }
+      else if (a === 'make' && diSel) { s6Craft(diSel.id, b); renderArsenal(); }
+      else if (a === 'pass') { tap(0.6); q4Open('s'); }
+      else if (a === 'shop') { tap(0.6); s4Open(); try { if (s6On()) { s6Tab = 'w'; s4Draw(); } } catch (er) {} }
+    } catch (er) {}
+  });
+}
 // ---------- v20: arena switch in place (Ivan 21:19, coordinator 21:31) ----------
 const __mine = [...document.body.children].filter(e => !__bodyKids.has(e)).concat([...document.head.children].filter(e => !__headKids.has(e)));
 window.__fxKill = function () {   // retire this instance: nothing of it runs, listens or holds the GPU after this
