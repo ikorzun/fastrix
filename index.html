@@ -15781,6 +15781,24 @@ function shotTile(o, wid) {
   const gp0 = goPlay; goPlay = function (fresh) { shotTry = null; return gp0(fresh); };
 }
 
+// ---- DECLBL_PATCH (weapons thread): Decor stage label as a column, one slot per line
+(function () {
+  const st = document.createElement('style'); st.id = 'declbl';
+  st.textContent = `#arsStage.dl .stw { display: grid; gap: 1px; max-width: 27%; white-space: nowrap; overflow: hidden; }
+  #arsStage.dl .stw i { font-style: normal; overflow: hidden; text-overflow: ellipsis; } #arsStage.dl .stw i b { color: #1b1036; font-weight: 800; }`;
+  document.head.appendChild(st);
+})();
+{ const dd0 = decDrawTab; decDrawTab = function () {
+    dd0(); try {
+      arsStage.classList.add('dl'); const wid = handW().id, w = arsStage.querySelector('.stw'); if (!w || !wModels[wid]) return;
+      const tryName = fxTry && fxTry.wid === wid ? (WFX.BY[fxTry.id] || {}).name : shotTry && shotTry.wid === wid ? (SHOT[shotTry.id] || {}).name : decNote;
+      const fo = WFX.BY[prog.fxOn[wid]], so = shotOf(wid), sO = DEC[prog.stkOn[wid]], kO = DEC[prog.kcOn[wid]];
+      const rows = tryName ? [[tryName, '']] : [[FXT.row, fo && fxOk(fo.id, wid) ? fo.name : DT.none], [SHT.row, so ? so.name : DT.none], [DT.st, sO ? sO.name : DT.none], [DT.kc, kO ? kO.name : DT.none]];
+      w.textContent = ''; for (const [a, b] of rows) { const i = document.createElement('i'); if (b) { i.append(a + ': '); const bb = document.createElement('b'); bb.textContent = b; i.append(bb); } else { const bb = document.createElement('b'); bb.textContent = a; i.append(bb); } w.append(i); }
+    } catch (e) {} };
+  const ra0 = renderArsenal; renderArsenal = function () { ra0(); if (arsMode !== 'd') arsStage.classList.remove('dl'); };
+}
+
 { const uw0 = updPmWallet; updPmWallet = function () { uw0(); try {
     if (EMO1.some(o => !emOwn(o.id) && emLvlOk(o) && canPay(emPrice(o)))) { const t = pmTabs.querySelector('[data-t="ars"]'); if (t) t.classList.add('dot'); }
   } catch (e) {} }; }
