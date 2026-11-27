@@ -69,6 +69,7 @@ html:root {
   --ds-ctrl-gap: 12px;
   --ds-badge-size: 50px;
   --ds-badge-gap: 10px;
+  --ds-btn-pad-min: 8px;
 }
 /* FASTRIX design system binding (interface thread). Static: maps game selectors to --ds-* values.
    Values live in ds_values.css, generated from Figma by gen_ds.py. Defaults equal the v36 look exactly. */
@@ -2017,6 +2018,33 @@ html:root body.touch #results #resBox :is(#resMenu, #resAgain) { align-self: end
 html:root #fxLoad .fl-bg { inset: auto; left: 50%; top: 50%; width: min(70vw, 124.4vh, 1600px); height: auto; aspect-ratio: 16 / 9; translate: -50% -50%;
   transform: none; animation: none; will-change: auto; background-size: cover; background-position: 50% 50%; border-radius: 22px; box-shadow: 0 18px 60px rgba(14, 12, 80, .35); }
 html:root #fxLoad .fl-c { bottom: calc(50vh - min(19.69vw, 34.99vh, 450px) + 2vh); width: min(600px, 56vw, 99.5vh); }
+</style>
+<style id="v44p">
+/* pause: one button size, one icon style (Ivan 19:09) */
+html:root body #pauseL #pV:is(.vmain, .vquit) { display: flex; flex-direction: column; gap: 10px; }
+html:root body #pauseL #pV:is(.vmain, .vquit) > button { width: 100%; height: var(--ds-btn-l-h, 54px); min-height: var(--ds-btn-l-h, 54px); margin: 0; padding: 0 18px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; gap: 10px; border: 0 !important; box-shadow: none !important; border-radius: var(--ds-btn-l-radius, 18px);
+  transform: none; font: 900 19px/1 var(--ds-font-text, var(--font)); letter-spacing: 0; cursor: pointer; }
+html:root body #pauseL #pV:is(.vmain, .vquit) > button:active { transform: scale(.96); }
+html:root body #pauseL #pV:is(.vmain, .vquit) > .pri { background: var(--ds-color-mint, var(--ds-color-mint)); color: var(--ds-color-ink, var(--ds-color-ink)); }
+html:root body #pauseL #pV.vmain > .pln { background: #ffffff1f; color: #fff; }
+html:root body #pauseL #pV.vmain > .pln:hover { background: #ffffff2b; }
+html:root body :is(#pauseL #pV, #lobby #lsBox) .sec.danger { background: var(--ds-color-coral, var(--ds-color-coral)) !important; color: #fff !important; border: 0 !important; box-shadow: none !important; }
+html:root body #pauseL #pV.vmain > button.snd.off .pic { opacity: .9; }
+html:root body #pauseL #pV.vmain .pic, html:root body #pauseL #pV.vquit .pic { width: 30px; height: 30px; flex: none; display: block; }
+@media (max-height: 500px) { html:root body #pauseL #pV:is(.vmain, .vquit) { gap: 8px; }
+  html:root body #pauseL #pV:is(.vmain, .vquit) > button { height: 44px; min-height: 44px; font-size: 17px; }
+  html:root body #pauseL #pV:is(.vmain, .vquit) .pic { width: 26px; height: 26px; } }
+/* settings: «How to play · Open» */
+html:root body :is(#lobby, #pauseL) .trow.hlp .sec2 { background: #ffffff1f; color: #fff; border: 0; padding: 0 14px 0 5px; }
+html:root body :is(#lobby, #pauseL) .trow.hlp .sec2 .pic { width: 26px; height: 26px; flex: none; display: block; }
+</style>
+<style id="v44b">
+/* weapon card actions: the upgrade button takes the free room, the other one only what its label needs */
+html:root body #ipBox.m3 .m3act .dbtn { padding: 0 12px; }
+html:root body #ipBox.m3 .m3act .dbtn.m3up ~ .dbtn, html:root body #ipBox.m3 .m3act .dbtn:has(~ .dbtn.m3up) { flex: 0 1 auto; }
+html:root body #ipBox.m3 .m3act .dbtn.m3up { flex: 1 1 auto; }
+html:root body #ipBox.m3 .m3act .dbtn .ic29, html:root body #ipBox.m3 .m3act .dbtn img { flex: none; }
 </style>
 <script>window.__fxL && __fxL.set(0.08, 'Загружаю движок…')</script>
 <script src="three.min.js"></script>
@@ -13811,6 +13839,16 @@ const IC = {
 { const im = k => ICONS[k] ? `<img class="ic29" alt="" src="${ICONS[k]}">` : '';   // v29u: sticker icons for the menu glyphs
   if (ICONS.ui_battle) IC.cross = im('ui_battle'); if (ICONS.ui_gear) IC.gear = im('ui_gear'); if (ICONS.ui_lock) IC.lock = im('ui_lock');
   if (ICONS.ui_snd_on) IC.spk = im('ui_snd_on'); IC.help = im('ui_help'); }
+
+const PI = (() => { const b = (c, g) => `<svg class="pic" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="${c}"/>${g}</svg>`, W = '#fff', K = '#1b1036';
+  return {
+    play: b(K, '<path d="M12.5 9.5v13l10.5-6.5z" fill="#3ee08a"/>'),
+    gear: b('#38c6ff', `<path fill="${W}" d="M14.3 6.5h3.4l.6 2.7 1.9.8 2.3-1.5 2.4 2.4-1.5 2.3.8 1.9 2.7.6v3.4l-2.7.6-.8 1.9 1.5 2.3-2.4 2.4-2.3-1.5-1.9.8-.6 2.7h-3.4l-.6-2.7-1.9-.8-2.3 1.5-2.4-2.4 1.5-2.3-.8-1.9-2.7-.6v-3.4l2.7-.6.8-1.9-1.5-2.3 2.4-2.4 2.3 1.5 1.9-.8z"/><circle cx="16" cy="16" r="3.6" fill="#38c6ff"/>`),
+    sndOn: b('#ffd23f', `<path d="M8.5 13h3.3l4.7-4v14l-4.7-4H8.5z" fill="${K}"/><path d="M19.6 12.4a5 5 0 0 1 0 7.2M22.4 9.8a8.8 8.8 0 0 1 0 12.4" fill="none" stroke="${K}" stroke-width="2.2" stroke-linecap="round"/>`),
+    sndOff: b('#8a80a6', `<path d="M8.5 13h3.3l4.7-4v14l-4.7-4H8.5z" fill="${W}"/><path d="M19.5 12.5l6 7M25.5 12.5l-6 7" stroke="${W}" stroke-width="2.4" stroke-linecap="round"/>`),
+    help: b('#b691ff', `<path d="M12.6 12.6a3.6 3.6 0 1 1 5.2 3.2c-1.2.6-1.8 1.3-1.8 2.6v.6" fill="none" stroke="${W}" stroke-width="2.6" stroke-linecap="round"/><circle cx="16" cy="22.6" r="1.7" fill="${W}"/>`),
+    exit: b(W, '<path d="M9 8.5h8v15H9z" fill="#ff5d5d"/><path d="M15.5 16h9M21.2 12.4 24.8 16l-3.6 3.6" fill="none" stroke="#ff5d5d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>')
+  }; })();
 const fmtN = n => { n = Math.round(n); return Math.abs(n) >= 10000 ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : String(n); };
 const coinSrc = () => ICONS.coin_hud || ICONS.coin || '', gemSrc = () => ICONS.gem_hud || ICONS.gem || '';
 const priceChip = pr => pr[1] ? `<img alt="кристаллы" src="${gemSrc()}">${fmtN(pr[1])}` : `<img alt="монеты" src="${coinSrc()}">${fmtN(pr[0])}`;
@@ -14163,7 +14201,7 @@ function settingsHTML(inPause) {
   const seg = (k, opts, cur, label) => `<div class="trow"><span>${label}</span><div class="tseg" data-k="${k}" role="group" aria-label="${label}">${opts.map(([v, n]) => `<button type="button" data-v="${v}" class="${v === cur ? 'on' : ''}" aria-pressed="${v === cur}">${n}</button>`).join('')}</div></div>`;
   const ctrl = `<div class="tgrp"><h5>Управление</h5><div class="trow"><span>Чувствительность</span><input class="tsl" type="range" min="0.3" max="2.5" step="0.05" value="${sens}" style="--p:${((sens - 0.3) / 2.2 * 100).toFixed(0)}%" aria-label="Чувствительность"></div>`
     + (isTouch ? seg('btn', [['s', 'Малые'], ['m', 'Средние'], ['l', 'Большие']], btnSize, 'Кнопки') + sw('vib', vibOn, 'Вибрация') : '')
-    + `<div class="trow hlp"><span>Как играть</span><button type="button" class="sec2" ${inPause ? 'data-p' : 'data-act'}="help">${IC.help || ''}Открыть</button></div>` + '</div>'
+    + `<div class="trow hlp"><span>Как играть</span><button type="button" class="sec2" ${inPause ? 'data-p' : 'data-act'}="help">${PI.help}Открыть</button></div>` + '</div>'
     + (isTouch ? '<div class="tgrp"><h5>Помощь</h5>' + seg('aim', [['2', 'Сильно'], ['1', 'Мягко'], ['0', 'Выкл']], !TSET.aa ? '0' : TSET.ak < 1 ? '1' : '2', 'Прицеливание') + sw('mh', TSET.mh, 'Движение') + '</div>' : '');
   const right = `<div class="tgrp"><h5>Звук</h5>${sw('snd', sndOn, 'Звуки')}${sw('music', musicOn, 'Музыка')}<h5 class="g2">Графика</h5>`
     + seg('gfx', [['mix', 'Микс'], ['ink', 'Пиксели'], ['plain', 'Обычная']], gfx, 'Стиль')
@@ -14249,12 +14287,13 @@ function setPView(v) {
   pBox.classList.toggle('dk', v === 'main' || v === 'quit'); pSnd.hidden = v !== 'main'; if (pSnd.closest('#pV')) pX.before(pSnd);
   if (v === 'main') {
     pT.textContent = pTitle0; pS.textContent = `${MAPS[MAP] || 'Арена'} · дезматч · бой стоит`;
-    pV.innerHTML = `<button type="button" class="pri" data-p="go">${IC.play}Продолжить</button><div class="prow"><button type="button" class="sec" data-p="set">${IC.gear}Настройки</button></div>`
-      + '<button type="button" class="sec danger" data-p="quit">Выйти из матча</button>';
-    pV.querySelector('.prow').appendChild(pSnd);
+    pV.innerHTML = `<button type="button" class="pri" data-p="go">${PI.play}Продолжить</button><button type="button" class="pln" data-p="set">${PI.gear}Настройки</button>`
+      + `<button type="button" class="pln snd${sndOn ? '' : ' off'}" data-p="snd" aria-pressed="${sndOn}">${sndOn ? PI.sndOn : PI.sndOff}Звук</button>`
+      + `<button type="button" class="sec danger" data-p="quit">${PI.exit}Выйти из матча</button>`;
+    pSnd.hidden = true;
   } else if (v === 'quit') {
     pT.textContent = 'Выйти из матча?'; pS.textContent = 'Награда за матч сгорит.';
-    pV.innerHTML = '<button type="button" class="pri" data-p="main">Остаться</button><button type="button" class="sec danger" data-p="exit">Выйти</button>';
+    pV.innerHTML = `<button type="button" class="pri" data-p="main">${PI.play}Остаться</button><button type="button" class="sec danger" data-p="exit">${PI.exit}Выйти</button>`;
   } else if (v === 'set') { pT.textContent = 'Настройки'; pS.textContent = 'Бой стоит, пока ты здесь'; pV.innerHTML = settingsHTML(true); bindRange(pV); }
   else { pT.textContent = 'Как играть'; pS.textContent = 'Управление и правила'; pV.innerHTML = helpHTML(true); }
   if (!isTouch) { const f = pV.querySelector('.pri') || pX; if (f) f.focus({ preventScroll: true }); }
@@ -14267,6 +14306,8 @@ pV.addEventListener('click', e => {
   const b = e.target.closest('button[data-p]'); if (!b) { settingsClick(e); return; }
   const a = b.dataset.p;
   if (a === 'go') { resumeGame(); return; }
+  if (a === 'snd') { setSnd(!sndOn); if (sndOn) sfx('ui_tap', 0.8); vib(10); b.classList.toggle('off', !sndOn); b.setAttribute('aria-pressed', String(sndOn));
+    const ic = b.querySelector('.pic'); if (ic) ic.outerHTML = sndOn ? PI.sndOn : PI.sndOff; return; }
   if (a === 'exit') { sfx('ui_tap', 0.8); fxlStage('В меню…', () => { newMatch(); enterStartMode(); }); return; }
   tap(); setPView(a);
 });
@@ -16617,6 +16658,55 @@ window.__m6 = { M6, FX6, SH6, obj: s6Obj, have: s6Have, ready: s6Ready, roll: w6
   const soon = () => { requestAnimationFrame(tick); setTimeout(tick, 40); };
   for (const ev of ['click', 'pointerup', 'keyup']) __on(window, ev, soon, true);
   __on(window, 'resize', () => { for (const b of document.querySelectorAll('.box, #ipBox, #lsBox, #pBox, #resBox')) b._pf = 0; soon(); });
+})();
+
+/* v44b: a button label never comes closer than 8 px to the button edge (Ivan 18:47) */
+(function () {
+  let PAD = 8; const MINF = 0.72, SEL = 'button, [role=button], .pri, .sec, .dbtn, .take',
+    SKIP = '.map, .dcc, .emt, .pc, .sc, .dwc, .chs, .chx, .lnk, .skc, .sw, .x, .ib, .em, .wsl, .wcell, .hb, .tsw';
+  const vis = e => !e.closest('[hidden]') && e.getClientRects().length > 0;
+  const gap = e => { const r = e.getBoundingClientRect(), k = r.width / (e.offsetWidth || 1) || 1, rg = document.createRange(); rg.selectNodeContents(e);
+    let L = 1e9, R = -1e9; for (const q of rg.getClientRects()) { if (q.width < 1) continue; if (q.left < L) L = q.left; if (q.right > R) R = q.right; }
+    return L > R ? null : Math.min((L - r.left) / k, (r.right - R) / k); };
+  const reset = e => { const s = e._bf && e._bf.st; if (s) for (const [n, k, v] of s) n.style.setProperty(k, v); if (e._bf) e._bf.st = null; };
+  const setS = (e, n, k, v) => { e._bf.st.push([n, k, n.style.getPropertyValue(k)]); n.style.setProperty(k, v); };
+  const fix = e => {
+    e._bf.st = [];
+    const cs = getComputedStyle(e);
+    if (parseFloat(cs.paddingLeft) < PAD) setS(e, e, 'padding-left', PAD + 'px');
+    if (parseFloat(cs.paddingRight) < PAD) setS(e, e, 'padding-right', PAD + 'px');
+    let g = gap(e); if (g == null || g >= PAD - 0.5) return;
+    const els = [e, ...e.querySelectorAll('*')].filter(n => !/^(IMG|SVG|CANVAS|PATH|USE)$/i.test(n.tagName) && !(n instanceof SVGElement));
+    const base = els.map(n => parseFloat(getComputedStyle(n).fontSize) || 14);
+    els.forEach(n => e._bf.st.push([n, 'font-size', n.style.getPropertyValue('font-size')]));
+    for (let f = 0.94; f >= MINF - 0.001; f -= 0.06) {
+      els.forEach((n, i) => n.style.setProperty('font-size', (base[i] * f).toFixed(2) + 'px'));
+      g = gap(e); if (g != null && g >= PAD - 0.5) break;
+    }
+    if (g != null && g < PAD - 0.5) {   // still too long: two lines
+      setS(e, e, 'white-space', 'normal'); setS(e, e, 'line-height', '1.05'); setS(e, e, 'text-wrap', 'balance');
+      if (cs.height !== 'auto') { setS(e, e, 'min-height', cs.height); setS(e, e, 'height', 'auto'); }
+      for (const n of e.querySelectorAll('*')) if (getComputedStyle(n).whiteSpace === 'nowrap') setS(e, n, 'white-space', 'normal');
+    }
+  };
+  const tick = () => {
+    if (playing && !pauseOpen && !(deadT > 0)) return;   // core v45: no layout reads 3x a second during live play (phone frame budget); menus, pause and death screen still checked
+    try {
+      PAD = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ds-btn-pad-min')) || 8;   // Figma space/btn-pad-min
+      for (const e of document.querySelectorAll(SEL)) {
+        if (e.matches(SKIP) || !vis(e)) continue;
+        const t = e.innerText; if (!t || !t.trim()) continue;
+        const key = t + '|' + e.className, w = e.offsetWidth, b = e._bf;
+        if (b && b.key === key && b.w === w) continue;
+        if (b) reset(e);
+        e._bf = { key, w: e.offsetWidth, st: null };
+        fix(e); e._bf.w = e.offsetWidth;
+      }
+    } catch (er) {}
+  };
+  setInterval(tick, 300);
+  for (const ev of ['click', 'pointerup', 'keyup']) __on(window, ev, () => setTimeout(tick, 60), true);
+  __on(window, 'resize', () => setTimeout(tick, 60));
 })();
 
 // ---- DECINFO_PATCH (weapons thread): the Decor tab explains every item: state, what it needs, where it comes from, one action
