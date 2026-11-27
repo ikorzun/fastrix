@@ -221,6 +221,75 @@ html:root body.touch.hudm #hudv #aimBtn { left: calc(50% - 38px - 2 * (var(--ds-
   });
 })();
 </script>
+<style id="touchRotCss">html.rot90, html.rot90 body { overflow: hidden; overscroll-behavior: none; }
+html.rot90 body { position: fixed; left: 0; top: 0; margin: 0; width: var(--rotW); height: var(--rotH); transform-origin: 0 0; transform: translateX(var(--rotX)) rotate(90deg); }
+html.rot90 #rotate { display: none !important; }
+</style>
+<script id="touchRot">
+// ===== touch: always landscape (Ivan 2026-11-27 09:53 «сразу грузить игру в горизонтальном режиме, без просьб перевернуть телефон») =====
+// iOS cannot lock the orientation, so a phone held upright gets the whole page drawn turned by 90° (turn the phone left to play).
+// The game keeps seeing a landscape screen: innerWidth/innerHeight, touch and mouse coordinates, elementFromPoint and
+// getBoundingClientRect are mapped into the turned frame; CSS viewport units, safe-area insets and width/height media queries are
+// swapped in the stylesheets. Turning the phone to landscape removes all of it. Where the browser can lock (Android, full screen) it does.
+(function () {
+  const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; if (!coarse) return;
+  const D = n => Object.getOwnPropertyDescriptor(window, n) || Object.getOwnPropertyDescriptor(Window.prototype, n);
+  const dW = D('innerWidth'), dH = D('innerHeight'), RW = () => dW.get.call(window), RH = () => dH.get.call(window);
+  let on = false; window.__rot = { get on() { return on; } };
+  const map = (o, k) => { const d = Object.getOwnPropertyDescriptor(o, k); return d && d.get ? d.get : null; };
+  const tX = map(Touch.prototype, 'clientX'), tY = map(Touch.prototype, 'clientY'), tpX = map(Touch.prototype, 'pageX'), tpY = map(Touch.prototype, 'pageY');
+  const mX = map(MouseEvent.prototype, 'clientX'), mY = map(MouseEvent.prototype, 'clientY'), mpX = map(MouseEvent.prototype, 'pageX'), mpY = map(MouseEvent.prototype, 'pageY');
+  const def = (o, k, f) => { try { Object.defineProperty(o, k, { get: f, configurable: true }); } catch (e) {} };
+  // content (x, y) <-> screen: screen = (W - y, x); content = (sy, W - sx)
+  if (tX && tY) { def(Touch.prototype, 'clientX', function () { return on ? tY.call(this) : tX.call(this); }); def(Touch.prototype, 'clientY', function () { return on ? RW() - tX.call(this) : tY.call(this); }); }
+  if (tpX && tpY) { def(Touch.prototype, 'pageX', function () { return on ? tpY.call(this) : tpX.call(this); }); def(Touch.prototype, 'pageY', function () { return on ? RW() - tpX.call(this) : tpY.call(this); }); }
+  if (mX && mY) { def(MouseEvent.prototype, 'clientX', function () { return on ? mY.call(this) : mX.call(this); }); def(MouseEvent.prototype, 'clientY', function () { return on ? RW() - mX.call(this) : mY.call(this); }); }
+  if (mpX && mpY) { def(MouseEvent.prototype, 'pageX', function () { return on ? mpY.call(this) : mpX.call(this); }); def(MouseEvent.prototype, 'pageY', function () { return on ? RW() - mpX.call(this) : mpY.call(this); }); }
+  Object.defineProperty(window, 'innerWidth', { get: () => on ? RH() : RW(), configurable: true });
+  Object.defineProperty(window, 'innerHeight', { get: () => on ? RW() : RH(), configurable: true });
+  const efp = Document.prototype.elementFromPoint; Document.prototype.elementFromPoint = function (x, y) { return on ? efp.call(this, RW() - y, x) : efp.call(this, x, y); };
+  const gbr = Element.prototype.getBoundingClientRect; Element.prototype.getBoundingClientRect = function () { const r = gbr.call(this); if (!on) return r; return new DOMRect(r.top, RW() - r.right, r.height, r.width); };
+  // stylesheets: vh <-> vw, safe-area sides follow the turn, width <-> height and portrait <-> landscape in media queries
+  const orig = new Map(), SIDE = { left: 'top', right: 'bottom', top: 'right', bottom: 'left' };
+  // never inside url(...): an inlined image's base64 can hold "1vw" (it did: the v29 loading cover broke on upright phones, Ivan 16:10)
+  const NOURL = /url\((?:"[^"]*"|'[^']*'|[^)]*)\)/g, noUrl = v => v.replace(NOURL, '');
+  const swapV = v => v.split(/(url\((?:"[^"]*"|'[^']*'|[^)]*)\))/).map((t, i) => i % 2 ? t : swapV1(t)).join('');
+  const swapV1 = v => v.replace(/(\d|\.)(s|d|l)?v(h|w)\b/g, (m, a, b, c) => a + (b || '') + 'v' + (c === 'h' ? 'w' : 'h')).replace(/safe-area-inset-(left|right|top|bottom)/g, (m, a) => 'safe-area-inset-' + SIDE[a]);
+  const swapM = t => t.replace(/(min|max)-(width|height)/g, (m, a, b) => a + '-' + (b === 'width' ? 'height' : 'width')).replace(/portrait|landscape/g, m => m === 'portrait' ? 'landscape' : 'portrait')
+    .replace(/(min|max)-aspect-ratio\s*:\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g, (m, a, x, y) => (a === 'min' ? 'max' : 'min') + '-aspect-ratio: ' + y + ' / ' + x);
+  function walk(rules, turn) {
+    for (const r of rules) {
+      if (r.media && r.cssRules) { if (!orig.has(r)) orig.set(r, r.media.mediaText); try { r.media.mediaText = turn ? swapM(orig.get(r)) : orig.get(r); } catch (e) {} walk(r.cssRules, turn); }
+      else if (r.style) {
+        let o = orig.get(r); if (!o) { o = []; for (let i = 0; i < r.style.length; i++) { const k = r.style[i], v = r.style.getPropertyValue(k); if (/\dv[hw]|\d[sdl]v[hw]|safe-area-inset/.test(noUrl(v))) o.push([k, v, r.style.getPropertyPriority(k)]); } orig.set(r, o); }
+        for (const [k, v, pr] of o) r.style.setProperty(k, turn ? swapV(v) : v, pr);
+      } else if (r.cssRules) walk(r.cssRules, turn);
+    }
+  }
+  const seen = new WeakSet();
+  function css(turn) { for (const sh of document.styleSheets) { let rs = null; try { rs = sh.cssRules; } catch (e) {} if (rs) { seen.add(sh); walk(rs, turn); } } }
+  // while the page is still parsing, every new stylesheet is turned before the next frame is drawn (the loading screen's among them)
+  function cssNew() { if (!on) return; for (const sh of document.styleSheets) { if (seen.has(sh)) continue; let rs = null; try { rs = sh.cssRules; } catch (e) {} if (rs) { seen.add(sh); walk(rs, true); } } }
+  (function tick() { cssNew(); if (document.readyState === 'loading') requestAnimationFrame(tick); })();
+  if (document.readyState === 'loading' && window.MutationObserver) { const mo = new MutationObserver(cssNew); mo.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', () => mo.disconnect()); }
+  function apply() {
+    const want = RH() > RW() * 1.05, de = document.documentElement;
+    if (want) { de.style.setProperty('--rotW', RH() + 'px'); de.style.setProperty('--rotH', RW() + 'px'); de.style.setProperty('--rotX', RW() + 'px'); }
+    if (want === on) return;
+    on = want; de.classList.toggle('rot90', on); if (cssDone) css(on);
+    setTimeout(() => dispatchEvent(new Event('resize')), 0);   // the game resizes to the turned frame
+  }
+  let cssDone = true;   // sheets parsed so far (the loading screen's among them) turn at once; the rest at DOMContentLoaded
+  addEventListener('resize', apply); addEventListener('orientationchange', () => setTimeout(apply, 60));
+  apply();   // at once, so the game's first layout already sees landscape
+  const done = () => { if (on) { css(true); dispatchEvent(new Event('resize')); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', done); else done();
+  // Android and other browsers that allow it: full screen + landscape lock on the first tap
+  addEventListener('touchend', function lock() { removeEventListener('touchend', lock, true);
+    try { const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; if (screen.orientation && screen.orientation.lock && rq && !document.fullscreenElement) { const pr = rq.call(el); pr && pr.then && pr.then(() => screen.orientation.lock('landscape')).catch(() => {}); } } catch (e) {} }, true);
+})();
+</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: full-screen canvas, HUD pinned to safe-area edges. Single dark look by choice. */
@@ -1858,66 +1927,8 @@ body.touch.afire:not(.hudm) #hudv #slowBtn { width: 52px; height: 52px; right: c
 body.touch.afire:not(.hudm) #hudv #nade { width: 56px; height: 56px; right: calc(var(--sr) + 14px); bottom: calc(var(--sb) + 96px); }
 html body.touch.hudm #hudv #slide { right: calc(var(--sr) + 13px); bottom: calc(var(--sb) + 128px); }
 html body.touch.hudm #hudv #swapBtn { right: calc(var(--sr) + 20px); bottom: calc(var(--sb) + 204px); }
-html.rot90, html.rot90 body { overflow: hidden; overscroll-behavior: none; }
-html.rot90 body { position: fixed; left: 0; top: 0; margin: 0; width: var(--rotW); height: var(--rotH); transform-origin: 0 0; transform: translateX(var(--rotX)) rotate(90deg); }
-html.rot90 #rotate { display: none !important; }
 body.touch :is(#setGrid, #pV).fadeB { -webkit-mask-image: linear-gradient(#000 calc(100% - 34px), #0000); mask-image: linear-gradient(#000 calc(100% - 34px), #0000); }
 </style>
-<script id="touchRot">
-// ===== touch: always landscape (Ivan 2026-11-27 09:53 «сразу грузить игру в горизонтальном режиме, без просьб перевернуть телефон») =====
-// iOS cannot lock the orientation, so a phone held upright gets the whole page drawn turned by 90° (turn the phone left to play).
-// The game keeps seeing a landscape screen: innerWidth/innerHeight, touch and mouse coordinates, elementFromPoint and
-// getBoundingClientRect are mapped into the turned frame; CSS viewport units, safe-area insets and width/height media queries are
-// swapped in the stylesheets. Turning the phone to landscape removes all of it. Where the browser can lock (Android, full screen) it does.
-(function () {
-  const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; if (!coarse) return;
-  const D = n => Object.getOwnPropertyDescriptor(window, n) || Object.getOwnPropertyDescriptor(Window.prototype, n);
-  const dW = D('innerWidth'), dH = D('innerHeight'), RW = () => dW.get.call(window), RH = () => dH.get.call(window);
-  let on = false; window.__rot = { get on() { return on; } };
-  const map = (o, k) => { const d = Object.getOwnPropertyDescriptor(o, k); return d && d.get ? d.get : null; };
-  const tX = map(Touch.prototype, 'clientX'), tY = map(Touch.prototype, 'clientY'), tpX = map(Touch.prototype, 'pageX'), tpY = map(Touch.prototype, 'pageY');
-  const mX = map(MouseEvent.prototype, 'clientX'), mY = map(MouseEvent.prototype, 'clientY'), mpX = map(MouseEvent.prototype, 'pageX'), mpY = map(MouseEvent.prototype, 'pageY');
-  const def = (o, k, f) => { try { Object.defineProperty(o, k, { get: f, configurable: true }); } catch (e) {} };
-  // content (x, y) <-> screen: screen = (W - y, x); content = (sy, W - sx)
-  if (tX && tY) { def(Touch.prototype, 'clientX', function () { return on ? tY.call(this) : tX.call(this); }); def(Touch.prototype, 'clientY', function () { return on ? RW() - tX.call(this) : tY.call(this); }); }
-  if (tpX && tpY) { def(Touch.prototype, 'pageX', function () { return on ? tpY.call(this) : tpX.call(this); }); def(Touch.prototype, 'pageY', function () { return on ? RW() - tpX.call(this) : tpY.call(this); }); }
-  if (mX && mY) { def(MouseEvent.prototype, 'clientX', function () { return on ? mY.call(this) : mX.call(this); }); def(MouseEvent.prototype, 'clientY', function () { return on ? RW() - mX.call(this) : mY.call(this); }); }
-  if (mpX && mpY) { def(MouseEvent.prototype, 'pageX', function () { return on ? mpY.call(this) : mpX.call(this); }); def(MouseEvent.prototype, 'pageY', function () { return on ? RW() - mpX.call(this) : mpY.call(this); }); }
-  Object.defineProperty(window, 'innerWidth', { get: () => on ? RH() : RW(), configurable: true });
-  Object.defineProperty(window, 'innerHeight', { get: () => on ? RW() : RH(), configurable: true });
-  const efp = Document.prototype.elementFromPoint; Document.prototype.elementFromPoint = function (x, y) { return on ? efp.call(this, RW() - y, x) : efp.call(this, x, y); };
-  const gbr = Element.prototype.getBoundingClientRect; Element.prototype.getBoundingClientRect = function () { const r = gbr.call(this); if (!on) return r; return new DOMRect(r.top, RW() - r.right, r.height, r.width); };
-  // stylesheets: vh <-> vw, safe-area sides follow the turn, width <-> height and portrait <-> landscape in media queries
-  const orig = new Map(), SIDE = { left: 'top', right: 'bottom', top: 'right', bottom: 'left' };
-  const swapV = v => v.replace(/(\d|\.)(s|d|l)?v(h|w)\b/g, (m, a, b, c) => a + (b || '') + 'v' + (c === 'h' ? 'w' : 'h')).replace(/safe-area-inset-(left|right|top|bottom)/g, (m, a) => 'safe-area-inset-' + SIDE[a]);
-  const swapM = t => t.replace(/(min|max)-(width|height)/g, (m, a, b) => a + '-' + (b === 'width' ? 'height' : 'width')).replace(/portrait|landscape/g, m => m === 'portrait' ? 'landscape' : 'portrait');
-  function walk(rules, turn) {
-    for (const r of rules) {
-      if (r.media && r.cssRules) { if (!orig.has(r)) orig.set(r, r.media.mediaText); try { r.media.mediaText = turn ? swapM(orig.get(r)) : orig.get(r); } catch (e) {} walk(r.cssRules, turn); }
-      else if (r.style) {
-        let o = orig.get(r); if (!o) { o = []; for (let i = 0; i < r.style.length; i++) { const k = r.style[i], v = r.style.getPropertyValue(k); if (/\dv[hw]|\d[sdl]v[hw]|safe-area-inset/.test(v)) o.push([k, v, r.style.getPropertyPriority(k)]); } orig.set(r, o); }
-        for (const [k, v, pr] of o) r.style.setProperty(k, turn ? swapV(v) : v, pr);
-      } else if (r.cssRules) walk(r.cssRules, turn);
-    }
-  }
-  function css(turn) { for (const sh of document.styleSheets) { let rs = null; try { rs = sh.cssRules; } catch (e) {} if (rs) walk(rs, turn); } }
-  function apply() {
-    const want = RH() > RW() * 1.05, de = document.documentElement;
-    if (want) { de.style.setProperty('--rotW', RH() + 'px'); de.style.setProperty('--rotH', RW() + 'px'); de.style.setProperty('--rotX', RW() + 'px'); }
-    if (want === on) return;
-    on = want; de.classList.toggle('rot90', on); if (cssDone) css(on);
-    setTimeout(() => dispatchEvent(new Event('resize')), 0);   // the game resizes to the turned frame
-  }
-  let cssDone = false;
-  addEventListener('resize', apply); addEventListener('orientationchange', () => setTimeout(apply, 60));
-  apply();   // at once, so the game's first layout already sees landscape
-  const done = () => { cssDone = true; if (on) { css(true); dispatchEvent(new Event('resize')); } };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', done); else done();
-  // Android and other browsers that allow it: full screen + landscape lock on the first tap
-  addEventListener('touchend', function lock() { removeEventListener('touchend', lock, true);
-    try { const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; if (screen.orientation && screen.orientation.lock && rq && !document.fullscreenElement) { const pr = rq.call(el); pr && pr.then && pr.then(() => screen.orientation.lock('landscape')).catch(() => {}); } } catch (e) {} }, true);
-})();
-</script>
 <script>window.__fxL && __fxL.set(0.08, 'Загружаю движок…')</script>
 <script src="three.min.js"></script>
 <script>/* three.js r128 GLTFLoader + SkeletonUtils (MIT) */
