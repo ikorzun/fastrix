@@ -54,10 +54,17 @@
       });
       B.platform.on(B.EVENT_NAME.AUDIO_STATE_CHANGED, function (on) { audioOn = !!on; applyAudio(); });
     } catch (e) {}
-    // The menu is drawn and clickable after the first two frames.
-    requestAnimationFrame(function () { requestAnimationFrame(function () {
+    // game_ready once the menu is usable: two frames after the loading screen (window.__fxL, v22+) is gone,
+    // or after 12 s at most, so Playgama's load time matches when a player can really press «Играть».
+    var t0 = Date.now(), sent = false;
+    var ready = function () {
+      if (sent) return; sent = true;
       try { B.platform.sendMessage('game_ready'); window.__fxReady = true; } catch (e) { console.warn('[fastrix] game_ready failed', e); }
-    }); });
+    };
+    (function wait() {
+      if ((window.__fxL && window.__fxL.on) && Date.now() - t0 < 12000) { setTimeout(wait, 100); return; }
+      requestAnimationFrame(function () { requestAnimationFrame(ready); });
+    })();
   }
 
   // Interstitial at natural pauses (end of a match). Bridge decides whether one
