@@ -47,6 +47,16 @@
     drawBoard();
   }
   rebuildBoard();
+  // core v48 match modes: online is deathmatch only, and the bots list belongs to the network
+  // (mdApply would refill it from MD.all). Force 'dm', keep the puppets, ignore the Teams switch.
+  if (typeof mdApply === 'function') {
+    mdApply = function () { try { mdInit(); MD.mode = 'dm'; MD.cur = 'dm'; MD.win = null; MD.sc.A = 0; MD.sc.B = 0;
+      for (const b of bots) { b.team = null; b.rv = null; b.foe = null; }
+      if (MD.boardMode !== 'dm') { MD.boardMode = 'dm'; rebuildBoard(); } } catch (e) {} };
+  }
+  if (typeof mdSetMode === 'function') { const _ms = mdSetMode; mdSetMode = function (m) { if (m === 'dm') return _ms.apply(this, arguments); }; }
+  try { mdInit(); MD.mode = 'dm'; } catch (e) {}
+  if (typeof nickAll === 'function') nickAll = function () {};   // puppet names come from their owners
 
   function takePuppet(p) {
     const b = pool.find(x => !x.net); if (!b) return null;
