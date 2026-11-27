@@ -1368,6 +1368,16 @@
 <div id="hitring" class="hud"></div>
 <div id="killicon" class="hud"><svg viewBox="0 0 64 64" width="64" height="64"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="3"/><path d="M32 12c-10 0-17 7-17 16 0 6 3 10 7 12v6h20v-6c4-2 7-6 7-12 0-9-7-16-17-16z" fill="currentColor"/><circle cx="25" cy="29" r="5" fill="#12161c"/><circle cx="39" cy="29" r="5" fill="#12161c"/><path d="M28 48h3v5h-3zM33 48h3v5h-3z" fill="currentColor"/></svg></div>
 <div id="pops" class="hud"></div>
+<style id="v26r">
+  /* v26: the roulette over the game, no card under it: faded strip edges, white labels with a thin ink edge, a thin gold frame */
+  #hudv #roul { gap: 1px; }
+  #hudv #roul .rt { background: none; padding: 0; font: 900 13px var(--stk); color: #ffd23f; -webkit-text-stroke: 3px #1b1036; paint-order: stroke fill; }
+  #hudv #roul .rwin { background: transparent; border: 0; border-radius: 0; height: 58px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%, #000 76%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 24%, #000 76%, transparent 100%); }
+  #hudv #roul .rc { color: #fff; -webkit-text-stroke: 3px #1b1036; paint-order: stroke fill; }
+  #hudv #roul .rp { background: none; border: 2px solid #ffd23f; border-radius: 10px; }
+  #hudv #roul.win .rp { background: none; border-color: #3ee08a; }
+</style>
 <div id="hudv" class="kbox"><div id="slowFx"></div><div id="shieldFx"></div>
 <div id="hp" class="hud"><i class="trk"></i><div id="hpFill"></div><img id="hpIc" alt="" src=""><span id="hpN">100</span></div>
 <div id="stam" class="hud"><div id="stamFill"></div></div>
@@ -1619,8 +1629,68 @@ body.touch.afire:not(.hudm) #hudv #jump { width: 76px; height: 76px; right: calc
 body.touch.afire:not(.hudm) #hudv #slide { width: 56px; height: 56px; right: calc(var(--sr) + 96px); bottom: calc(var(--sb) + 10px); }
 body.touch.afire:not(.hudm) #hudv #slowBtn { width: 52px; height: 52px; right: calc(var(--sr) + 88px); bottom: calc(var(--sb) + 82px); }
 body.touch.afire:not(.hudm) #hudv #nade { width: 56px; height: 56px; right: calc(var(--sr) + 14px); bottom: calc(var(--sb) + 96px); }
+html body.touch.hudm #hudv #slide { right: calc(var(--sr) + 13px); bottom: calc(var(--sb) + 128px); }
+html body.touch.hudm #hudv #swapBtn { right: calc(var(--sr) + 20px); bottom: calc(var(--sb) + 204px); }
+html.rot90, html.rot90 body { overflow: hidden; overscroll-behavior: none; }
+html.rot90 body { position: fixed; left: 0; top: 0; margin: 0; width: var(--rotW); height: var(--rotH); transform-origin: 0 0; transform: translateX(var(--rotX)) rotate(90deg); }
+html.rot90 #rotate { display: none !important; }
 body.touch :is(#setGrid, #pV).fadeB { -webkit-mask-image: linear-gradient(#000 calc(100% - 34px), #0000); mask-image: linear-gradient(#000 calc(100% - 34px), #0000); }
 </style>
+<script id="touchRot">
+// ===== touch: always landscape (Ivan 2026-11-27 09:53 «сразу грузить игру в горизонтальном режиме, без просьб перевернуть телефон») =====
+// iOS cannot lock the orientation, so a phone held upright gets the whole page drawn turned by 90° (turn the phone left to play).
+// The game keeps seeing a landscape screen: innerWidth/innerHeight, touch and mouse coordinates, elementFromPoint and
+// getBoundingClientRect are mapped into the turned frame; CSS viewport units, safe-area insets and width/height media queries are
+// swapped in the stylesheets. Turning the phone to landscape removes all of it. Where the browser can lock (Android, full screen) it does.
+(function () {
+  const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window; if (!coarse) return;
+  const D = n => Object.getOwnPropertyDescriptor(window, n) || Object.getOwnPropertyDescriptor(Window.prototype, n);
+  const dW = D('innerWidth'), dH = D('innerHeight'), RW = () => dW.get.call(window), RH = () => dH.get.call(window);
+  let on = false; window.__rot = { get on() { return on; } };
+  const map = (o, k) => { const d = Object.getOwnPropertyDescriptor(o, k); return d && d.get ? d.get : null; };
+  const tX = map(Touch.prototype, 'clientX'), tY = map(Touch.prototype, 'clientY'), tpX = map(Touch.prototype, 'pageX'), tpY = map(Touch.prototype, 'pageY');
+  const mX = map(MouseEvent.prototype, 'clientX'), mY = map(MouseEvent.prototype, 'clientY'), mpX = map(MouseEvent.prototype, 'pageX'), mpY = map(MouseEvent.prototype, 'pageY');
+  const def = (o, k, f) => { try { Object.defineProperty(o, k, { get: f, configurable: true }); } catch (e) {} };
+  // content (x, y) <-> screen: screen = (W - y, x); content = (sy, W - sx)
+  if (tX && tY) { def(Touch.prototype, 'clientX', function () { return on ? tY.call(this) : tX.call(this); }); def(Touch.prototype, 'clientY', function () { return on ? RW() - tX.call(this) : tY.call(this); }); }
+  if (tpX && tpY) { def(Touch.prototype, 'pageX', function () { return on ? tpY.call(this) : tpX.call(this); }); def(Touch.prototype, 'pageY', function () { return on ? RW() - tpX.call(this) : tpY.call(this); }); }
+  if (mX && mY) { def(MouseEvent.prototype, 'clientX', function () { return on ? mY.call(this) : mX.call(this); }); def(MouseEvent.prototype, 'clientY', function () { return on ? RW() - mX.call(this) : mY.call(this); }); }
+  if (mpX && mpY) { def(MouseEvent.prototype, 'pageX', function () { return on ? mpY.call(this) : mpX.call(this); }); def(MouseEvent.prototype, 'pageY', function () { return on ? RW() - mpX.call(this) : mpY.call(this); }); }
+  Object.defineProperty(window, 'innerWidth', { get: () => on ? RH() : RW(), configurable: true });
+  Object.defineProperty(window, 'innerHeight', { get: () => on ? RW() : RH(), configurable: true });
+  const efp = Document.prototype.elementFromPoint; Document.prototype.elementFromPoint = function (x, y) { return on ? efp.call(this, RW() - y, x) : efp.call(this, x, y); };
+  const gbr = Element.prototype.getBoundingClientRect; Element.prototype.getBoundingClientRect = function () { const r = gbr.call(this); if (!on) return r; return new DOMRect(r.top, RW() - r.right, r.height, r.width); };
+  // stylesheets: vh <-> vw, safe-area sides follow the turn, width <-> height and portrait <-> landscape in media queries
+  const orig = new Map(), SIDE = { left: 'top', right: 'bottom', top: 'right', bottom: 'left' };
+  const swapV = v => v.replace(/(\d|\.)(s|d|l)?v(h|w)\b/g, (m, a, b, c) => a + (b || '') + 'v' + (c === 'h' ? 'w' : 'h')).replace(/safe-area-inset-(left|right|top|bottom)/g, (m, a) => 'safe-area-inset-' + SIDE[a]);
+  const swapM = t => t.replace(/(min|max)-(width|height)/g, (m, a, b) => a + '-' + (b === 'width' ? 'height' : 'width')).replace(/portrait|landscape/g, m => m === 'portrait' ? 'landscape' : 'portrait');
+  function walk(rules, turn) {
+    for (const r of rules) {
+      if (r.media && r.cssRules) { if (!orig.has(r)) orig.set(r, r.media.mediaText); try { r.media.mediaText = turn ? swapM(orig.get(r)) : orig.get(r); } catch (e) {} walk(r.cssRules, turn); }
+      else if (r.style) {
+        let o = orig.get(r); if (!o) { o = []; for (let i = 0; i < r.style.length; i++) { const k = r.style[i], v = r.style.getPropertyValue(k); if (/\dv[hw]|\d[sdl]v[hw]|safe-area-inset/.test(v)) o.push([k, v, r.style.getPropertyPriority(k)]); } orig.set(r, o); }
+        for (const [k, v, pr] of o) r.style.setProperty(k, turn ? swapV(v) : v, pr);
+      } else if (r.cssRules) walk(r.cssRules, turn);
+    }
+  }
+  function css(turn) { for (const sh of document.styleSheets) { let rs = null; try { rs = sh.cssRules; } catch (e) {} if (rs) walk(rs, turn); } }
+  function apply() {
+    const want = RH() > RW() * 1.05, de = document.documentElement;
+    if (want) { de.style.setProperty('--rotW', RH() + 'px'); de.style.setProperty('--rotH', RW() + 'px'); de.style.setProperty('--rotX', RW() + 'px'); }
+    if (want === on) return;
+    on = want; de.classList.toggle('rot90', on); if (cssDone) css(on);
+    setTimeout(() => dispatchEvent(new Event('resize')), 0);   // the game resizes to the turned frame
+  }
+  let cssDone = false;
+  addEventListener('resize', apply); addEventListener('orientationchange', () => setTimeout(apply, 60));
+  apply();   // at once, so the game's first layout already sees landscape
+  const done = () => { cssDone = true; if (on) { css(true); dispatchEvent(new Event('resize')); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', done); else done();
+  // Android and other browsers that allow it: full screen + landscape lock on the first tap
+  addEventListener('touchend', function lock() { removeEventListener('touchend', lock, true);
+    try { const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; if (screen.orientation && screen.orientation.lock && rq && !document.fullscreenElement) { const pr = rq.call(el); pr && pr.then && pr.then(() => screen.orientation.lock('landscape')).catch(() => {}); } } catch (e) {} }, true);
+})();
+</script>
 <script>window.__fxL && __fxL.set(0.08, 'Загружаю движок…')</script>
 <script src="three.min.js"></script>
 <script>/* three.js r128 GLTFLoader + SkeletonUtils (MIT) */
@@ -6301,6 +6371,36 @@ function twUpload() {
 // and once more when a countdown starts: the opponents' new looks (and their death pieces) are uploaded during the 3-2-1, not at the first kill
 var twM = false;
 function twMatch() { if (!playing) { twM = false; return; } if (!twM && twStep >= 3 && typeof cdLeft !== 'undefined' && cdLeft > 0) { twM = true; twUpload(); } }
+// ---- sound that always starts (Ivan 2026-11-27 09:53 «звук не всегда срабатывает»), all devices:
+//  1. iOS plays Web Audio through the ringer channel, so the silent switch mutes the whole game. navigator.audioSession 'playback'
+//     (iOS 16.4+) makes it play like a video does; older iOS gets a silent looping <audio> element, which switches the same channel.
+//  2. The context was unlocked only on pointerdown and resumed only from 'suspended'. iOS counts touchend/click as the gesture and
+//     leaves the context 'interrupted' after a call, Siri, the app switcher or a messenger's in-app browser losing focus. Now every
+//     touchend/click/key resumes it while it is not running, and coming back to the page tries at once.
+var sndKickN = 0, sndSilent = window.__fxSndSilent || null;
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+function sndKick() {
+  try {
+    if (!actx) initAudio();
+    if (actx && actx.state !== 'running' && actx.state !== 'closed') { sndKickN++; const r = actx.resume(); r && r.catch && r.catch(() => {}); }
+    if (!navigator.audioSession && /iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) && isTouch && !sndSilent) {
+      const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      sndSilent = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); sndSilent.loop = true; sndSilent.setAttribute('playsinline', '');
+      window.__fxSndSilent = sndSilent; const pr = sndSilent.play(); pr && pr.catch && pr.catch(() => { sndSilent = window.__fxSndSilent = null; });
+    }
+  } catch (e) {}
+}
+const __onK = (typeof __on === 'function') ? __on : (t, y, f, o) => t.addEventListener(y, f, o);
+for (const t of ['touchend', 'click', 'keydown']) __onK(document, t, sndKick, { capture: true, passive: true });
+__onK(document, 'visibilitychange', () => { if (!document.hidden && actx) sndKick(); });
+__onK(window, 'pageshow', () => { if (actx) sndKick(); }); __onK(window, 'focus', () => { if (actx) sndKick(); });
+//  3. An arena switch closed the AudioContext and the new arena opened a fresh one only on the next touch, outside any gesture,
+//     so on iPhone the new arena (and its 3-2-1) was silent. Now one context lives through every switch: the retiring arena only
+//     unplugs its own mixer from it (sndDetach, called from the kill's actx.close()), and the next arena plugs a new mixer in.
+function sndDetach() { try { if (masterG) masterG.gain.value = 0; } catch (e) {} for (const n of [masterG, duckG]) { try { n && n.disconnect(); } catch (e) {} } }
+window.__fxSndDetach = sndDetach;
 // ===== TOUCH_KIT end =====
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xffe2bd, 60, 190);
@@ -6489,22 +6589,50 @@ const compMat = new THREE.ShaderMaterial({ uniforms: { tInk: { value: inkOutRT.t
       }
       gl_FragColor = vec4(col, 1.0); }` });
 const compScene = quadScene(compMat);
+// v26 (Ivan 10:06): a spotted opponent keeps its colours and gets a red frame around it, through cover too, while it stays marked.
+// The x-ray stand-ins (layer 2) go into a mask at about CSS-pixel size, an edge pass rings it, one overlay puts the ring on screen.
+const spotRT = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false }),
+  spotRT2 = new THREE.WebGLRenderTarget(4, 4, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false });
+const spotMaskMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, depthWrite: false, fog: false });
+const spotEdgeMat = new THREE.ShaderMaterial({ uniforms: { tMask: { value: spotRT.texture }, px: { value: new THREE.Vector2(1, 1) }, rad: { value: 2 } },
+  depthTest: false, depthWrite: false, vertexShader: quadV,
+  fragmentShader: `uniform sampler2D tMask; uniform vec2 px; uniform float rad; varying vec2 vUv;
+    void main(){ float m = texture2D(tMask, vUv).r, n = 0.0;
+      for (int i = 0; i < 12; i++) { float a = float(i) * 0.5236; vec2 d = vec2(cos(a), sin(a)) * px * rad;
+        n = max(n, texture2D(tMask, vUv + d).r); n = max(n, texture2D(tMask, vUv + d * 0.5).r); }
+      gl_FragColor = vec4(1.0, 0.13, 0.19, smoothstep(0.08, 0.4, n) * (1.0 - smoothstep(0.12, 0.5, m))); }` });
+const spotEdgeScene = quadScene(spotEdgeMat);
+const spotShowScene = quadScene(new THREE.ShaderMaterial({ uniforms: { tEdge: { value: spotRT2.texture } }, transparent: true, depthTest: false, depthWrite: false, vertexShader: quadV,
+  fragmentShader: `uniform sampler2D tEdge; varying vec2 vUv; void main(){ vec4 e = texture2D(tEdge, vUv); if (e.a < 0.03) discard; gl_FragColor = vec4(e.rgb, min(1.0, e.a * 1.15)); }` }));
+const _spSz = new THREE.Vector2(), _spCC = new THREE.Color();
+function spotOutline() {
+  if (!anySpotted) return;
+  renderer.getDrawingBufferSize(_spSz);
+  const cssH = shotSize ? shotSize[1] : innerHeight, k = Math.min(1, Math.max(1, cssH) / Math.max(1, _spSz.y));
+  const h = Math.max(90, Math.round(_spSz.y * k)), w = Math.max(90, Math.round(_spSz.x * k));
+  if (spotRT.width !== w || spotRT.height !== h) { spotRT.setSize(w, h); spotRT2.setSize(w, h); }
+  renderer.getClearColor(_spCC); const ca = renderer.getClearAlpha(), bg = scene.background;
+  renderer.setRenderTarget(spotRT); renderer.setClearColor(0x000000, 0); renderer.clear(true, false, false);
+  scene.background = null; camera.layers.set(2); scene.overrideMaterial = spotMaskMat; renderer.render(scene, camera);
+  scene.overrideMaterial = null; scene.background = bg; camera.layers.set(0); renderer.setClearColor(_spCC, ca);
+  spotEdgeMat.uniforms.px.value.set(1 / w, 1 / h); spotEdgeMat.uniforms.rad.value = Math.max(1.2, Math.min(3.5, 2.6 * h / Math.max(1, cssH)));
+  renderer.setRenderTarget(spotRT2); renderer.render(spotEdgeScene, inkCam);
+  renderer.setRenderTarget(null); renderer.render(spotShowScene, inkCam);
+}
 const hiCC = new THREE.Color();
 function renderHi(crtK) {
   if (!lutReady) { lutReady = true; renderer.setRenderTarget(lutRT); renderer.render(lutScene, inkCam); }
   renderer.setRenderTarget(hiRT); renderer.clear();
   camera.layers.set(0); renderer.render(scene, camera);
-  if (anySpotted) { camera.layers.set(2); scene.overrideMaterial = xrayHidden; renderer.render(scene, camera); scene.overrideMaterial = null; }
   renderer.setRenderTarget(inkOutRT); renderer.render(inkHiScene, inkCam);
   renderer.setRenderTarget(cleanRT); renderer.getClearColor(hiCC); const ca = renderer.getClearAlpha();
   renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.setClearColor(hiCC, ca);
   depthCopyMat.uniforms.invVP.value.multiplyMatrices(camera.matrixWorld, camera.projectionMatrixInverse);
   renderer.render(depthScene, inkCam);
   camera.layers.set(3); renderer.render(scene, camera);
-  if (anySpotted) { camera.layers.set(2); scene.overrideMaterial = xrayShown; renderer.render(scene, camera); scene.overrideMaterial = null; }
   renderer.clearDepth(); camera.layers.set(1); renderer.render(scene, camera); camera.layers.set(0);
   compMat.uniforms.crt.value = crtK; compMat.uniforms.time.value = clock.elapsedTime;
-  renderer.setRenderTarget(null); renderer.render(compScene, inkCam);
+  renderer.setRenderTarget(null); renderer.render(compScene, inkCam); spotOutline();
   if (!hiChecked) {   // first frame: if a shader failed or the depth target is not usable here, fall back to the old mix
     hiChecked = true; const gl = renderer.getContext();
     renderer.setRenderTarget(hiRT); const fbOk = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE; renderer.setRenderTarget(null);
@@ -6518,12 +6646,10 @@ function renderScene(crtK) {
   inkMat.uniforms.crt.value = crtK; inkMat.uniforms.time.value = clock.elapsedTime;
   renderer.setRenderTarget(inkOn ? inkRT : useCrt ? crtRT : null); renderer.clear();
   camera.layers.set(0); camera.layers.enable(3); renderer.render(scene, camera);
-  if (anySpotted) { camera.layers.set(2); const bg = scene.background; scene.background = null;
-    scene.overrideMaterial = xrayHidden; renderer.render(scene, camera); scene.overrideMaterial = xrayShown; renderer.render(scene, camera);
-    scene.overrideMaterial = null; scene.background = bg; }
   renderer.clearDepth(); camera.layers.set(1); renderer.render(scene, camera); camera.layers.set(0);
   if (inkOn) { renderer.setRenderTarget(null); renderer.render(inkScene, inkCam); }
   else if (useCrt) { crtMat.uniforms.crt.value = crtK; crtMat.uniforms.time.value = clock.elapsedTime; renderer.setRenderTarget(null); renderer.render(crtScene, inkCam); }
+  spotOutline();
 }
 // additive first-person effects (muzzle flash, flames, glow) add light to the clean layer without writing alpha, so they get no outline
 function fxNoAlpha() {
@@ -7683,6 +7809,7 @@ let sparkIdx = 0;
 
 // ---------- audio (tiny synth, started on first tap) ----------
 let actx = null, masterG = null;
+if (window.__fxActx && window.__fxActx.state !== 'closed') queueMicrotask(() => { try { initAudio(); } catch (e) {} });   // touch kit: an arena switch keeps the running sound
 // every sound goes through one master gain and a gentle compressor, so stacked shots stay punchy without clipping
 // OUT() lives in the sound v2 block below
 function beep() {} // v17: no live synthesis (Playgama 3.3.2), every sound plays from sfxData
@@ -8025,8 +8152,7 @@ const bx = A(-25), bz = A(-29), dx = A(25), dz = A(-31), kx = S - 3.8, kz = A(8)
 [[kx - 0.2, 13.2, kz], [dx - 1, 8.6, dz + 4], [bx - 9, 7, bz], [0, 8, 0], [tx, 6, tz], [kx - 4.6, 5.2, kz + 14], [kx - 4.6, 9.2, kz - 12]].forEach(([x, y, z]) => mapLoot('gem', x, y, z));
 for (let x = bx - 5; x <= bx + 11; x += 4) mapLoot('coin', x, 6, bz + 5);
 } }
-(MAP === 'arena' ? [[0, 30], [30, 0], [-30, 0], [0, -30], [24, -40], [-24, 40], [40, 24], [-40, -24]]
-  : MAP === 'bunker' ? [[0, -16], [0, 16], [-16, 0], [16, 0]] : [[0, 18], [-18, -6], [14, -14], [-8, 30]]).map(([x, z]) => [x * MK, z * MK]).filter(([x, z]) => isFree(x, z, 1.2)).slice(0, 4).forEach(([x, z]) => mapLoot('magnet', x, 0.95, z));
+/* v26 (Ivan 10:03): no magnets lying on the field; the magnet comes only from kill streaks and the roulette */
 function updateMapLoot(dt) {
   for (const m of MAP_LOOT) {
     if (m.o && m.o.live && m.o.placed === m) continue;
@@ -11480,7 +11606,7 @@ function dropLoot(b) {
   if (W && !W.melee && resOf(W) < (W.energy ? 100 : W.mag || 30)) spawnLoot('ammo', b.pos, 0.6);
   if (hp < 50) spawnLoot('health', b.pos, 0.6);           // and a second one when you're hurt
   if (Math.random() < 0.2) spawnLoot('gem', b.pos, 0.7);   // v19e: was 0.4
-  if (Math.random() < 0.2) spawnLoot('bonus', b.pos, 0.6);
+  /* v26: no random power-up drop on a kill; power-ups come from streak chests, the golden chest and the roulette */
   burstAt(tmpV.set(b.pos.x, b.pos.y + 1.2, b.pos.z), 0xffd24a, 16, 7);
 }
 let coins = prog.coins | 0, gems = prog.gems | 0, coinChain = 0, coinChainT = 0, coinSum = 0;
@@ -11768,7 +11894,7 @@ function fpPose(a, h, s, side) {
   fpSeg(a.fore, _fpV.copy(h).addScaledVector(_fpD, 0.05), a.e); fpSeg(a.upper, a.e, s);
 }
 const fpArms = {};
-const FP_ARMS_ON = { pistol: 'R', rifle: 'L' };   // Ivan: one hand on the pistol grip, one hand on the rifle by the magazine
+const FP_ARMS_ON = { pistol: 'R', rifle: 'R' };   /* v26 (Ivan 10:04): the rifle too is held by the right hand on the grip only, no hand at the magazine */   // Ivan: one hand on the pistol grip, one hand on the rifle by the magazine
 const FP_GRIP_ONE = { rifle: { L: [-0.02, -0.14, -0.67] } };   // rifle: right in front of the magazine (mag spans z -0.61..-0.23), so the hand is seen holding it
 (function buildFpArms() {
   fpArmsLook();
@@ -12512,7 +12638,11 @@ __on(document, 'touchcancel', e => { if (playing && !uiTouch(e)) onTouchEnd(e); 
 // ---------- start / pause ----------
 let playing = false;
 const startEl = document.getElementById('lobby');
-function initAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); loadSfx(); } catch (e) {} }
+function initAudio() { try {   // touch kit: one AudioContext for the whole page, kept through arena switches
+  if (!actx) { const k = window.__fxActx; actx = (k && k.state !== 'closed') ? k : new (window.AudioContext || window.webkitAudioContext)();
+    if (!actx.__fxKeep) { actx.__fxKeep = true; actx.close = function () { try { window.__fxSndDetach && window.__fxSndDetach(); } catch (e) {} return Promise.resolve(); }; }
+    window.__fxActx = actx; window.__fxSndDetach = sndDetach; if (actx.state !== 'running') { const r = actx.resume(); r && r.catch && r.catch(() => {}); } }
+  loadSfx(); } catch (e) {} }
 // ---------- v17 menu (HIG spec §2, §6): a lobby with three tabs (Бой, Арсенал, Настройки) and a pause window over the frozen match
 const pauseL = document.getElementById('pauseL'), pmTabs = document.getElementById('pmTabs'), pmQuests = document.getElementById('pmQuests');
 const arsGrid = document.getElementById('arsGrid'), arsStage = document.getElementById('arsStage'), ipop = document.getElementById('ipop'), ipBox = document.getElementById('ipBox'), arsSeg = document.getElementById('arsSeg'), setGrid = document.getElementById('setGrid');
@@ -13504,6 +13634,23 @@ const ROUL = [
   { k: 'jumps', t: 'Прыжки', ic: 'b_jump', b: 'ПРЫЖКИ БЕЗ КОНЦА 10 СЕКУНД!' },
   { k: 'rapid', t: 'Очередь', ic: 's_ammo', b: 'СКОРОСТРЕЛЬНОСТЬ НА 10 СЕКУНД!' } ];
 const roulEl = document.getElementById('roul'); let roulBusy = false;
+// v26 (Ivan 10:03): it spins low, just above the grenade button row (touch) or the weapon bar and grenade (desktop)
+function roulPlace() {
+  try {
+    roulEl.style.left = roulEl.style.top = '';
+    const hv = document.getElementById('hudv'), hr = hv.getBoundingClientRect(), k = hr.width / (hv.offsetWidth || 1) || 1;
+    const ids = document.body.classList.contains('touch') ? ['aimBtn', 'nade', 'slowBtn'] : ['wbar', 'nadeHud'];
+    let L = 1e9, R = -1e9, T = 1e9;
+    for (const id of ids) { const e = document.getElementById(id); if (!e || getComputedStyle(e).display === 'none') continue;
+      const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue; L = Math.min(L, r.left); R = Math.max(R, r.right); T = Math.min(T, r.top); }
+    if (T > 1e8) return;
+    { const e = document.querySelector('#tips:not([hidden]) .tipS'), r = e ? e.getBoundingClientRect() : null;   /* a first-match tip sticker above the bar: go above it too */
+      if (r && r.height && r.top > innerHeight / 2 && r.right > L && r.left < R) T = Math.min(T, r.top); }
+    const w = roulEl.offsetWidth, h = roulEl.offsetHeight, W = hv.offsetWidth;
+    roulEl.style.left = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, ((L + R) / 2 - hr.left) / k)) + 'px';
+    roulEl.style.top = Math.max(8, (T - hr.top) / k - h - 8) + 'px';
+  } catch (e) {}
+}
 function roulette(force) {
   if (roulBusy || !roulEl || matchOver > 0 || (!playing && !force)) return; roulBusy = true;
   const pick = typeof force === 'number' ? force : Math.random() * ROUL.length | 0, N = 24, j = N - 3, CW = 84, seq = [];
@@ -13511,15 +13658,16 @@ function roulette(force) {
   roulEl.innerHTML = '<div class="rt">РУЛЕТКА ЗА 10 УБИЙСТВ</div><div class="rwin"><div class="rs">'
     + seq.map(o => `<div class="rc"><img alt="" src="${ICONS[o.ic] || ''}"><span>${o.t}</span></div>`).join('') + '</div><i class="rp"></i></div>';
   if (cmulEl) { cmulT = 0; cmulEl.classList.remove('on'); }
-  roulEl.classList.remove('win'); roulEl.hidden = false; laneEl.textContent = ''; laneUntil = performance.now() + 3500; sfx('ui_open', 0.7);   // the sticker on screen gives way (its coins are still paid)
+  roulEl.classList.remove('win'); roulEl.hidden = false; roulPlace(); laneEl.textContent = ''; laneUntil = performance.now() + 2200; sfx('ui_open', 0.7);   // the sticker on screen gives way (its coins are still paid)
   const rs = roulEl.querySelector('.rs'), x1 = -(j - 1) * CW;
   const done = () => {
     const o = ROUL[pick]; roulEl.classList.add('win'); sfx('chest', 0.85); vib([20, 40, 20]);
-    if (o.k === 'magnet') giveMagnet(10); else { power[o.k] = Math.max(power[o.k] || 0, 10); banner(o.b, 'bonus'); }
-    setTimeout(() => { roulEl.hidden = true; roulEl.innerHTML = ''; roulBusy = false; }, 1300);
+    if (o.k !== 'magnet') power[o.k] = Math.max(power[o.k] || 0, 10);
+    setTimeout(() => { roulEl.hidden = true; roulEl.innerHTML = ''; roulBusy = false;   /* v26: the banner comes as the strip goes, so they do not overlap */
+      if (o.k === 'magnet') giveMagnet(10); else if (playing && matchOver <= 0) banner(o.b, 'bonus'); }, 800);
   };
   if (!rs.animate) { rs.style.transform = `translateX(${x1}px)`; done(); return; }
-  const an = rs.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${x1}px)` }], { duration: 2000, easing: 'cubic-bezier(.1,.7,.15,1)', fill: 'forwards' });
+  const an = rs.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${x1}px)` }], { duration: 1100, easing: 'cubic-bezier(.1,.7,.15,1)', fill: 'forwards' });
   let last = 0; const tick = () => { if (!roulBusy || an.playState === 'finished') return;
     try { const c = Math.round(-new DOMMatrixReadOnly(getComputedStyle(rs).transform).m41 / CW); if (c !== last) { last = c; sfx('tick', 0.4, 1.5); } } catch (e) {}
     requestAnimationFrame(tick); };
