@@ -203,7 +203,8 @@
       const b = p.b; if (!b) continue;
       const st = sample(p.buf, now - INTERP_MS); if (!st) continue;
       if (st.dd) {                                      // dead on its own screen (hazard, someone else): break apart here too
-        if (b.dead <= 0) { b.dead = 999; try { burstBot(b, 'rifle', b.pos); } catch (e) {} }
+        if (b.dead <= 0) { b.dead = 999; try { burstBot(b, 'rifle', b.pos); } catch (e) {}
+          if (now - (b.localKillMs || 0) > 900) { b.sd = (b.sd || 0) + 1; try { drawBoard(); } catch (e) {} } }   // own grenade, hazard: a death, no kill to anyone
         continue;
       }
       if (b.dead > 0) {                                 // alive again over there
