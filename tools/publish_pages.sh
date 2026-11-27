@@ -11,6 +11,8 @@ git -C "$ROOT" worktree add -q "$W" origin/gh-pages --detach
 find "$W" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -r "$TMP/out/." "$W/"
 [ -d "$ROOT/mptest" ] && cp -r "$ROOT/mptest" "$W/mptest"   # two-device online test page
+# online prototype of the same version: /mp/?mp=bridge (Playgama rooms) or /mp/?mp=local (two tabs)
+python3 -I "$ROOT/tools/build_mp.py" "$SRC" "$TMP/mp" && cp -r "$TMP/mp" "$W/mp"
 git -C "$W" add -A
 git -C "$W" commit -q -m "Play build $VER for testers (no Bridge)" || echo "nothing changed"
 git -C "$W" push -q origin HEAD:gh-pages
