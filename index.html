@@ -18184,6 +18184,19 @@ arsGrid.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === '
 window.__ng = { b: ngB, can: ngCan, open: ngOpen, emo: ngEmo, up: ngUp, apply: ngApply, get max() { return NADE_MAX; }, get regen() { return NADE_REGEN; }, get nades() { return nades; },
   give: (pts, bp) => { M3.k[NG_ID] = m3Pts(NG_ID) + (pts || 0); M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) + (bp || 0); saveProg(); } };   // test hook
 
+
+// ---------- NADESTARS2_PATCH (economy thread): grenade card and 4-column weapons grid fit on phones ----------
+(function () {
+  const st = document.createElement('style'); st.id = 'nadeStars2';
+  st.textContent = `
+  #lobby #arsGrid.ng4 .tact { padding: 0 6px; gap: 4px; }
+  #lobby #arsGrid.ng4 .tact img { width: 20px; height: 20px; }
+  #lobby #arsGrid.ng4 .wcd.ngd .nm .ngl { white-space: normal; overflow: visible; text-overflow: clip; line-height: 14px; }
+  @media (max-width: 900px), (max-height: 500px) { #lobby #arsGrid.ng4 .wcd.ngd { grid-template-columns: 66px minmax(0, 1fr) minmax(0, 118px); column-gap: 8px; } }
+  `;
+  document.head.appendChild(st);
+})();
+
 // ---------- v20: arena switch in place (Ivan 21:19, coordinator 21:31) ----------
 const __mine = [...document.body.children].filter(e => !__bodyKids.has(e)).concat([...document.head.children].filter(e => !__headKids.has(e)));
 window.__fxKill = function () {   // retire this instance: nothing of it runs, listens or holds the GPU after this
