@@ -10,6 +10,7 @@
   const Q = new URLSearchParams(location.search);
   const MODE = Q.get('mp') || (/\/mp\/(index\.html)?$/.test(location.pathname) ? 'bridge' : '');
   if (!MODE) return;
+  try { AA_ONLINE = true; } catch (e) {}   // online: capped aim help (core v47 AA_ONLINE_CFG)
   try { setup(); } catch (e) { console.error('[fastrix mp] setup failed', e); }
   function setup() {
   const SEND_MS = 66, INTERP_MS = 120, PEER_TIMEOUT = 4000;
