@@ -8708,7 +8708,16 @@ if (MAP === 'desert') (function desert50() {
     bg.setIndex(new THREE.BufferAttribute(idx, 1)); bg.computeBoundingSphere(); bg.computeBoundingBox();
     return bg;
   }
-  const solid = (x0, y0, z0, x1, y1, z1) => solids.push(new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)));
+  // v51: bullets and sight lines test small hidden boxes, not the big decor mesh (rays on this map cost 3x the arena's)
+  const hidden = new THREE.MeshBasicMaterial({ visible: false }), hitBox = new THREE.BoxGeometry(1, 1, 1),
+    cylG = new THREE.CylinderGeometry(1, 1, 1, 10), domeG = new THREE.SphereGeometry(1, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+  const rmesh = (geo, x, y, z, sx, sy, sz, p) => { const m = new THREE.Mesh(geo, hidden);
+    m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.updateMatrix(); m.matrixAutoUpdate = false;
+    if (p) p.add(m); else { scene.add(m); m.updateMatrixWorld(true); } solidMeshList.push(m); return m; };
+  const rbox = (x0, y0, z0, x1, y1, z1, p) => rmesh(hitBox, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, x1 - x0, y1 - y0, z1 - z0, p);
+  const rcyl = (x, z, R, y0, y1) => rmesh(cylG, x, (y0 + y1) / 2, z, R * 1.02, y1 - y0, R * 1.02), rdome = (x, y, z, r) => rmesh(domeG, x, y, z, r * 1.02, r, r * 1.02);   // round things
+  const wall = (x0, y0, z0, x1, y1, z1) => solids.push(new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1)));   // walking only
+  const solid = (x0, y0, z0, x1, y1, z1) => { wall(x0, y0, z0, x1, y1, z1); rbox(x0, y0, z0, x1, y1, z1); };
   const STONE = 0xe2b574, ROOF = 0xe9c48c, WOOD = 0x8a5a32, TERRA = 0xd9774a, TRUNK = 0xa8743e, LEAF = 0x2fbf6a;
   const D = new THREE.Group(), F = new THREE.Group();   // D: decor that stops bullets, F: far / thin decor
   const cyl = (x, y, z, r1, r2, h, c, seg = 16, p = D) => mk(new THREE.CylinderGeometry(r1, r2, h, seg), c, x, y + h / 2, z, p);
@@ -8718,17 +8727,18 @@ if (MAP === 'desert') (function desert50() {
   for (const [x, y, z, r, c] of DES.domes) {
     mk(new THREE.SphereGeometry(r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), c, x, y, z, D);
     cyl(x, y, z, r * 1.06, r * 1.1, 0.5, ROOF, 20); sph(0.35, 0xffd23f, x, y + r + 0.25, z, D);
-    solid(x - r * 0.72, y, z - r * 0.72, x + r * 0.72, y + r * 0.7, z + r * 0.72);
+    wall(x - r * 0.72, y, z - r * 0.72, x + r * 0.72, y + r * 0.7, z + r * 0.72);
+    rdome(x, y, z, r); rcyl(x, z, r * 1.1, y, y + 0.5); rcyl(x, z, 0.35, y + r - 0.2, y + r + 0.6);
   }
   // the dry fountain in the bazaar
   cyl(0, 0, 0, 6, 6.3, 1.1, STONE, 28); cyl(0, 1.1, 0, 5.3, 5.3, 0.1, 0xd9b888, 28);
   cyl(0, 0, 0, 1.0, 1.3, 5, STONE, 12); cyl(0, 5, 0, 2.2, 0.8, 0.8, STONE, 16); cyl(0, 5.8, 0, 0.45, 0.45, 0.6, 0x2aa7a0, 10);
-  solid(-6, 0, -4.3, 6, 1.1, 4.3); solid(-4.3, 0, -6, 4.3, 1.1, 6); solid(-1.1, 0, -1.1, 1.1, 5.8, 1.1);
+  wall(-6, 0, -4.3, 6, 1.1, 4.3); wall(-4.3, 0, -6, 4.3, 1.1, 6); rcyl(0, 0, 6.15, 0, 1.1); wall(-1.1, 0, -1.1, 1.1, 5.8, 1.1); rcyl(0, 0, 1.15, 1.1, 5); rcyl(0, 0, 1.6, 5, 5.8);
   // the well in the Well Yard
   { const X = -44, Z = 2; cyl(X, 0, Z, 2.6, 2.8, 1.1, STONE, 20); cyl(X, 1.1, Z, 2.1, 2.1, 0.06, 0x2b6fa8, 20);
     for (const sx of [-1, 1]) { bx(X + sx * 2.4, 0, Z, 0.4, 4.4, 0.4, WOOD); solid(X + sx * 2.4 - 0.25, 0, Z - 0.25, X + sx * 2.4 + 0.25, 4.6, Z + 0.25); }
     bx(X, 4.2, Z, 5.4, 0.4, 0.4, WOOD); cyl(X, 2.7, Z, 0.45, 0.35, 0.7, WOOD, 8);
-    solid(X - 2.7, 0, Z - 2.7, X + 2.7, 1.1, Z + 2.7); }
+    wall(X - 2.7, 0, Z - 2.7, X + 2.7, 1.1, Z + 2.7); rcyl(X, Z, 2.7, 0, 1.1); }
   // palms (trunk collider only, leaves are far decor)
   const palm = (x, z, h, lean) => {
     for (let i = 0; i < 6; i++) cyl(x + Math.sin(lean) * (i / 6) * (i / 6) * h * 0.6, i * h / 6, z, 0.5 - i * 0.04, 0.62 - i * 0.04, h / 6 + 0.05, TRUNK, 8);
@@ -8736,26 +8746,30 @@ if (MAP === 'desert') (function desert50() {
     for (let k = 0; k < 7; k++) { const L = new THREE.Mesh(new THREE.ConeGeometry(1.2, 7, 4), tm(k % 2 ? LEAF : 0x27a65a)); L.scale.set(1, 1, 0.25);
       const H = new THREE.Group(); H.rotation.y = k / 7 * Math.PI * 2 + lean; H.add(L); L.rotation.z = 1.85; L.position.set(3.0, -0.6, 0); G.add(H); }
     sph(0.9, 0x6b4a2a, tx, h - 0.2, z, F);
-    solid(x - 0.55, 0, z - 0.55, x + 0.55, h, z + 0.55);
+    wall(x - 0.55, 0, z - 0.55, x + 0.55, h, z + 0.55);
+    const lo = i => Math.sin(lean) * (i / 6) * (i / 6) * h * 0.6;
+    for (let i = 0; i < 6; i += 2) rcyl(x + (lo(i) + lo(i + 1)) / 2, z, 0.56 - i * 0.04 + Math.abs(lo(i + 1) - lo(i)) / 2, i * h / 6, (i + 2) * h / 6 + 0.05);
   };
   palm(-55, -14, 13, 0.2); palm(-54, 12, 11, -0.25); palm(-46, 47, 12, 0.2); palm(-38, 54, 10, -0.2); palm(-50, 55, 9, 0.3);
   palm(-16, -17, 9, 0.15); palm(16, 17, 10, -0.15); palm(58, 18, 10, 0.25);
   // pots: big ones are cover in the Potters' Yard, small ones dress the stalls
   const potG = s => new THREE.LatheGeometry([[0, 0], [0.9, 0.05], [1.5, 0.8], [1.6, 1.6], [1.2, 2.5], [0.7, 2.9], [0.8, 3.2], [0, 3.2]].map(([r, y]) => new THREE.Vector2(r * s, y * s)), 16);
+  const potLo = new THREE.LatheGeometry([[0, 0], [0.9, 0.05], [1.5, 0.8], [1.6, 1.6], [1.2, 2.5], [0.7, 2.9], [0.8, 3.2], [0, 3.2]].map(([r, y]) => new THREE.Vector2(r, y)), 8);   // v51: bullets
   for (const [x, z, sc] of [[35, -12, 1.6], [38, -13, 1.2], [36.5, -9.2, 1.0], [46, 16, 1.7], [49, 14.5, 1.3], [36, 15, 1.4], [38.5, 17.5, 1.0], [55, -12, 1.5]]) {
-    mk(potG(sc), sc > 1.3 ? TERRA : 0xe0a04f, x, 0, z, D); solid(x - 1.45 * sc, 0, z - 1.45 * sc, x + 1.45 * sc, 3.2 * sc, z + 1.45 * sc); }
+    mk(potG(sc), sc > 1.3 ? TERRA : 0xe0a04f, x, 0, z, D); wall(x - 1.45 * sc, 0, z - 1.45 * sc, x + 1.45 * sc, 3.2 * sc, z + 1.45 * sc); rmesh(potLo, x, 0, z, sc * 1.03, sc, sc * 1.03); }
   for (const [x, z] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) mk(potG(0.55), 0xe0a04f, x - 2.4, 1.2, z - Math.sign(z) * 0.2, F);
   // the kiln in the Potters' Yard
   mk(new THREE.SphereGeometry(4.5, 18, 9, 0, Math.PI * 2, 0, Math.PI / 2), TERRA, 52, 0, 4, D); cyl(52, 3.6, 4, 0.55, 0.75, 2.6, 0x9a4f2f, 10);
-  bx(52, 0, 8.25, 2.2, 2.4, 0.5, 0x3a2414); solid(48.8, 0, 0.8, 55.2, 3.3, 7.2); solid(50, 3.3, 2, 54, 4.6, 6);
+  bx(52, 0, 8.25, 2.2, 2.4, 0.5, 0x3a2414); wall(48.8, 0, 0.8, 55.2, 3.3, 7.2); wall(50, 3.3, 2, 54, 4.6, 6);
+  rdome(52, 0, 4, 4.5); rcyl(52, 4, 0.65, 3.6, 6.2); rbox(50.9, 0, 8.0, 53.1, 2.4, 8.5);
   // the water tower on the big north-east roof
   { const X = 54, Z = -32, Y = 11.6;
-    for (const [lx, lz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) { cyl(X + lx, Y, Z + lz, 0.25, 0.3, 7, WOOD, 6); solid(X + lx - 0.3, Y, Z + lz - 0.3, X + lx + 0.3, Y + 7, Z + lz + 0.3); }
+    for (const [lx, lz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) { cyl(X + lx, Y, Z + lz, 0.25, 0.3, 7, WOOD, 6); wall(X + lx - 0.3, Y, Z + lz - 0.3, X + lx + 0.3, Y + 7, Z + lz + 0.3); rcyl(X + lx, Z + lz, 0.28, Y, Y + 7); }
     bx(X, Y + 3.2, Z, 4.6, 0.25, 4.6, WOOD); cyl(X, Y + 7, Z, 3, 3, 4, 0x9fb4c8, 20); cyl(X, Y + 7, Z, 3.1, 3.1, 0.35, 0x6f8aa6, 20); cyl(X, Y + 10.65, Z, 3.1, 3.1, 0.35, 0x6f8aa6, 20);
-    solid(X - 3, Y + 7, Z - 3, X + 3, Y + 11, Z + 3); }
+    wall(X - 3, Y + 7, Z - 3, X + 3, Y + 11, Z + 3); rcyl(X, Z, 3.1, Y + 7, Y + 11.05); }
   // stall posts (thin colliders) and the gate towers' doors and bands
   for (const [x, z] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) for (const [px, pz] of [[-3.7, -2.7], [3.7, -2.7], [-3.7, 2.7], [3.7, 2.7]]) {
-    cyl(x + px, 0, z + pz, 0.16, 0.18, 4 + (pz * Math.sign(z) > 0 ? -0.5 : 0.5), WOOD, 6); solid(x + px - 0.2, 0, z + pz - 0.2, x + px + 0.2, 3.5, z + pz + 0.2); }
+    cyl(x + px, 0, z + pz, 0.16, 0.18, 4 + (pz * Math.sign(z) > 0 ? -0.5 : 0.5), WOOD, 6); wall(x + px - 0.2, 0, z + pz - 0.2, x + px + 0.2, 3.5, z + pz + 0.2); rcyl(x + px, z + pz, 0.17, 0, 4); }
   const door = (x, z, ry, c) => { const G = new THREE.Group(); G.position.set(x, 0, z); G.rotation.y = ry; F.add(G);
     bx(0, 0, 0.06, 1.8, 2.8, 0.12, c, G); const a = mk(new THREE.CylinderGeometry(0.9, 0.9, 0.12, 14, 1, false, Math.PI / 2, Math.PI), c, 0, 2.8, 0.06, G); a.rotation.x = Math.PI / 2;
     bx(0, 0, 0.03, 2.3, 0.25, 0.1, 0xd9bf98, G); };
@@ -8774,7 +8788,7 @@ if (MAP === 'desert') (function desert50() {
     cyl(Math.cos(a) * r, 0, Math.sin(a) * r, w * 0.8, w, h, i % 2 ? 0xd98f5a : 0xe0a06a, 9, F); }
   for (const [x, z] of [[-92, -30], [-98, -18], [96, 40], [88, 52]]) { const h = 10, G = new THREE.Group(); G.position.set(x, h, z); F.add(G);
     cyl(x, 0, z, 0.5, 0.6, h, TRUNK, 6, F); for (let k = 0; k < 6; k++) { const L = new THREE.Mesh(new THREE.ConeGeometry(1.2, 7, 4), tm(LEAF)); L.scale.set(1, 1, 0.25); const H = new THREE.Group(); H.rotation.y = k; H.add(L); L.rotation.z = 1.85; L.position.set(3.0, -0.6, 0); G.add(H); } }
-  { const m = new THREE.Mesh(bake(D), vcMat); scene.add(m); m.updateMatrixWorld(); solidMeshList.push(m); }
+  { const m = new THREE.Mesh(bake(D), vcMat); scene.add(m); }   // v51: drawn only, its hidden boxes stop bullets
   { const m = new THREE.Mesh(bake(F), vcMat); scene.add(m); }
   // awnings over the stalls and washing on two lines in the Potters' Yard: one striped atlas
   { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
@@ -8785,7 +8799,7 @@ if (MAP === 'desert') (function desert50() {
     const G = new THREE.Group(), plane = (w, h, t) => { const g = new THREE.PlaneGeometry(w, h), U = g.attributes.uv; for (let i = 0; i < U.count; i++) U.setXY(i, ((t % 2) + 0.02 + U.getX(i) * 0.96) / 2, (1 - Math.floor(t / 2) + 0.02 + U.getY(i) * 0.96) / 2); return g; };
     [[-11, -11, 0], [11, -11, 1], [-11, 11, 2], [11, 11, 0]].forEach(([x0, z0, t]) => { const m = new THREE.Mesh(plane(8, 6, t)); m.position.set(x0, 4, z0); m.rotation.x = -Math.PI / 2 + 0.18 * Math.sign(z0); G.add(m); });
     const flat = m => { const U = m.geometry.attributes.uv; for (let i = 0; i < U.count; i++) U.setXY(i, 0.094, 0.75); return m; };   // a cream texel: posts keep their colour
-    for (const lx of [36, 41]) { for (const pz of [-5, 5]) { flat(cyl(lx, 0, pz, 0.15, 0.15, 5, WOOD, 6, G)); solid(lx - 0.2, 0, pz - 0.2, lx + 0.2, 5, pz + 0.2); }
+    for (const lx of [36, 41]) { for (const pz of [-5, 5]) { flat(cyl(lx, 0, pz, 0.15, 0.15, 5, WOOD, 6, G)); wall(lx - 0.2, 0, pz - 0.2, lx + 0.2, 5, pz + 0.2); rcyl(lx, pz, 0.15, 0, 5); }
       flat(bx(lx, 4.7, 0, 0.06, 0.06, 10, 0xfff1d6, G));
       [[-2.4, 3], [2.4, 1]].forEach(([pz, t]) => { const m = new THREE.Mesh(plane(3.6, 3, t)); m.position.set(lx, 3.2, pz); m.rotation.y = Math.PI / 2; G.add(m); }); }
     const m = new THREE.Mesh(bake(G), new THREE.MeshToonMaterial({ map: tex, vertexColors: true, gradientMap: gradTex, side: THREE.DoubleSide })); scene.add(m);
@@ -8820,7 +8834,9 @@ if (MAP === 'desert') (function desert50() {
   const HIPS = [[0.7, 1.7, 0], [-0.7, 1.7, Math.PI], [0.7, -1.7, Math.PI], [-0.7, -1.7, 0]];
   const place = (u, x, z, dx, dz) => { const hx = Math.abs(dx) * u.hl + Math.abs(dz) * u.hw, hz = Math.abs(dz) * u.hl + Math.abs(dx) * u.hw;
     u.B.min.set(x - hx, 0, z - hz); u.B.max.set(x + hx, u.top, z + hz); };
-  for (const u of CV.units) { u.B = new THREE.Box3(); solids.push(u.B); scene.add(u.m); solidMeshList.push(u.m); const [x, z, dx, dz] = at(CV.s - u.off); u.x = x; u.z = z; place(u, x, z, dx, dz); u.m.position.set(x, 0, z); u.m.rotation.y = Math.atan2(dx, dz); }
+  for (const u of CV.units) { u.B = new THREE.Box3(); solids.push(u.B); scene.add(u.m);
+    if (u.camel) { rbox(-1.02, 2.9, -2.1, 1.02, 5.8, 2.1, u.m); rbox(-0.5, 3.5, 2.0, 0.5, 6.5, 4.3, u.m); } else rbox(-1.65, 0.1, -2.6, 1.65, 2.3, 2.6, u.m);
+    const [x, z, dx, dz] = at(CV.s - u.off); u.x = x; u.z = z; place(u, x, z, dx, dz); u.m.position.set(x, 0, z); u.m.rotation.y = Math.atan2(dx, dz); }
   const lim = S - 0.95;
   const clampE = e => { const ox = e.pos.x, oz = e.pos.z;
     if (Math.abs(ox) <= lim && Math.abs(oz) <= lim) return;
@@ -10125,6 +10141,39 @@ let fireCd = 0, recoil = 0, flashT = 0, hitMarkT = 0;
 const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
 const solidMeshes = solidMeshList.slice();
 solidMeshes.push(floor);
+// ===== OPPONENT SIGHT SPEED-UP (begin) =====
+// The opponents' sight checks (canSee, botLos, aiHidden, cover) cast rays against solidMeshes. mergeStatic leaves each map with a few
+// big meshes that span the whole map (the desert: one of 7,870 triangles), so every ray tested every triangle. Here the big static
+// meshes are cut into raycast-only chunks on a 12 m grid (same triangles and materials, never added to the scene), so a ray only
+// tests the chunks its path crosses. Answers are exactly the same; only the AI sight checks use it (shots and cameras do not).
+// Glue (patch_los.py): after solidMeshes is made; canSee / botLos / aiHidden / the cover ray use losList().
+const LOS = { n: -1, list: [], id: new THREE.Matrix4() };
+function losList() { if (LOS.n !== solidMeshes.length) losBuild(); return LOS.list; }
+function losBuild() {
+  LOS.n = solidMeshes.length; LOS.list = [];
+  const C = 12, v = new THREE.Vector3();
+  for (const m of solidMeshes) {
+    const g = m.geometry, P = g && g.attributes && g.attributes.position, I = g && g.index;
+    const tri = P ? (I ? I.count : P.count) / 3 : 0;
+    m.updateMatrixWorld();
+    // only big static meshes already in world space (what mergeStatic makes); anything placed by a transform may move: used as it is
+    if (tri < 300 || Array.isArray(m.material) || !m.parent || m.parent !== scene || (g.groups && g.groups.length > 1) || !m.matrixWorld.equals(LOS.id)) { LOS.list.push(m); continue; }
+    const cells = new Map(), W = m.matrixWorld;
+    for (let t = 0; t < tri; t++) {
+      const a = I ? I.getX(3 * t) : 3 * t, b = I ? I.getX(3 * t + 1) : 3 * t + 1, c = I ? I.getX(3 * t + 2) : 3 * t + 2;
+      let cx = 0, cz = 0; const p9 = [];
+      for (const k of [a, b, c]) { v.fromBufferAttribute(P, k).applyMatrix4(W); p9.push(v.x, v.y, v.z); cx += v.x; cz += v.z; }
+      const key = Math.floor(cx / 3 / C) + ',' + Math.floor(cz / 3 / C);
+      let arr = cells.get(key); if (!arr) cells.set(key, arr = []); for (const x of p9) arr.push(x);
+    }
+    for (const arr of cells.values()) {
+      const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+      bg.computeBoundingSphere(); bg.computeBoundingBox();
+      const cm = new THREE.Mesh(bg, m.material); cm.matrixAutoUpdate = false; cm.updateMatrixWorld(true); cm.userData.losOf = m; LOS.list.push(cm);
+    }
+  }
+}
+// ===== OPPONENT SIGHT SPEED-UP (end) =====
 
 // ----- bullet bStreaks: a bright head with a fading tail that flies from the muzzle to the hit point
 const STREAK_N = 72;
@@ -12227,7 +12276,7 @@ function canSee(b) {
   eyeB.set(b.pos.x, b.pos.y + 1.85, b.pos.z); eyeP.set(player.pos.x, player.pos.y + player.h - 0.1, player.pos.z);
   const d = eyeB.distanceTo(eyeP); if (d > 60) return false;
   dirV.subVectors(eyeP, eyeB).normalize(); losRay.set(eyeB, dirV); losRay.far = d;
-  return losRay.intersectObjects(solidMeshes, false).length === 0;
+  return losRay.intersectObjects(losList(), false).length === 0;
 }
 
 let hp = 100, deaths = 0, kills = 0, deadT = 0, dmgT = 0, killer = '';
@@ -12634,7 +12683,7 @@ let noise = null, botNoise = null;   // botNoise: where bots last shot at each o
 function hiddenFromPlayer(x, z) {
   cvA.set(player.pos.x, player.pos.y + player.h - 0.1, player.pos.z); cvB.set(x, 1.3, z);
   const d = cvA.distanceTo(cvB); cvD.subVectors(cvB, cvA).normalize(); coverRay.set(cvA, cvD); coverRay.far = d;
-  return coverRay.intersectObjects(solidMeshes, false).length > 0;
+  return coverRay.intersectObjects(losList(), false).length > 0;
 }
 // ===== bot AI v2 (bots thread): threats, cover hidden from every threat, peeking, running away, bot-vs-bot noise =====
 const aiA = new THREE.Vector3(), aiB = new THREE.Vector3(), aiD = new THREE.Vector3(), aiRay = new THREE.Raycaster();
@@ -12646,7 +12695,7 @@ function aiThreats(b) {
 }
 function aiHidden(x, z, T) {
   for (const e of T) { aiA.set(e[0], e[1], e[2]); aiB.set(x, 1.3, z); const d = aiA.distanceTo(aiB); aiD.subVectors(aiB, aiA).normalize(); aiRay.set(aiA, aiD); aiRay.far = d;
-    if (!aiRay.intersectObjects(solidMeshes, false).length) return false; }
+    if (!aiRay.intersectObjects(losList(), false).length) return false; }
   return true;
 }
 // a near spot that no threat can see, not towards them
@@ -12743,7 +12792,7 @@ function botShoot(b, dist, moving) {
 
 const botEye = new THREE.Vector3(), botEye2 = new THREE.Vector3();
 function botLos(a, o) { botEye.set(a.pos.x, a.pos.y + 1.7, a.pos.z); botEye2.set(o.pos.x, o.pos.y + 1.5, o.pos.z); const d = botEye.distanceTo(botEye2);
-  dirV.subVectors(botEye2, botEye).normalize(); losRay.set(botEye, dirV); losRay.far = d; return losRay.intersectObjects(solidMeshes, false).length === 0; }
+  dirV.subVectors(botEye2, botEye).normalize(); losRay.set(botEye, dirV); losRay.far = d; return losRay.intersectObjects(losList(), false).length === 0; }
 function findBotFoe(b, now, maxD) {
   if (b.hunting && Math.random() < 0.6) return null;                               // on a hunt: ignore the others
   if (!rvHungry(b) && Math.random() < 0.25 * diff) return null;                                    // the better you play, the more they focus you
