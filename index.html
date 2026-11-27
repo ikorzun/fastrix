@@ -16766,6 +16766,14 @@ function diTiles() {   // locks on every item not owned, ★ badges grey while u
     } catch (er) {}
   });
 }
+
+
+// ---- PVKEEP_PATCH (weapons thread): the open weapon window keeps the preview model; the Arsenal stage gets it back on close
+{ const pvs0 = pvShow; pvShow = function (host, id) {
+    try { const st = ipOpen && ipOpen.kind === 'w' && !ipop.hidden ? ipBox.querySelector('#ipStage') : null; if (st && host !== st) return; } catch (e) {}
+    return pvs0(host, id); };
+  const cp0 = closePop; closePop = function (quiet) { const was = !!ipOpen; cp0(quiet);
+    try { if (was && pmTab === 'ars' && !arsStage.hidden && (arsMode === 's' || arsMode === 'd') && !(PV.r && PV.r.domElement.parentNode === arsStage)) renderArsenal(); } catch (e) {} }; }
 // ---------- v20: arena switch in place (Ivan 21:19, coordinator 21:31) ----------
 const __mine = [...document.body.children].filter(e => !__bodyKids.has(e)).concat([...document.head.children].filter(e => !__headKids.has(e)));
 window.__fxKill = function () {   // retire this instance: nothing of it runs, listens or holds the GPU after this
