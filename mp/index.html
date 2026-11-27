@@ -14360,7 +14360,7 @@ function weaponTick(dt) {
   gun.visible = deadT <= 0 && !scopedNow && !gunHidden;
 }
 // ----- grenades: F (G) on desktop, button on touch; 3 charges that refill
-const NADE_MAX = 3; let nades = NADE_MAX, nadeRegen = 0, botNadeCd = 6;
+let NADE_MAX = 3, NADE_REGEN = 6; let nades = NADE_MAX, nadeRegen = 0, botNadeCd = 6;
 const nadeMat = new THREE.MeshToonMaterial({ color: 0x3dbb4a, gradientMap: gradTex }), nadeBand = new THREE.MeshBasicMaterial({ color: 0xffe14d });
 const nadeGeo = new THREE.BoxGeometry(0.3, 0.34, 0.3), nadeBandGeo = new THREE.BoxGeometry(0.32, 0.07, 0.32), nadePinGeo = new THREE.BoxGeometry(0.08, 0.1, 0.08);
 const grenades = [];
@@ -14384,7 +14384,7 @@ function playerNade() {
 function nadeInSolid(p) { for (const b of solids) if (p.x > b.min.x - 0.12 && p.x < b.max.x + 0.12 && p.z > b.min.z - 0.12 && p.z < b.max.z + 0.12 && p.y > b.min.y - 0.12 && p.y < b.max.y + 0.05) return true; return false; }
 function updateGrenades(dt) {
   if (deadT <= 0) learn.high += ((player.pos.y > 3 ? 1 : 0) - learn.high) * dt * 0.02;
-  if (nades < NADE_MAX) { nadeRegen += dt; if (nadeRegen > 6) { nadeRegen = 0; nades++; updNade(); } } else nadeRegen = 0;
+  if (nades < NADE_MAX) { nadeRegen += dt; if (nadeRegen > NADE_REGEN) { nadeRegen = 0; nades++; updNade(); } } else nadeRegen = 0;
   botNadeCd -= dt;
   for (const n of grenades) {
     if (!n.live) continue;
@@ -14476,7 +14476,7 @@ function updateBigBlast(dt) {
   if (!ringOn) bxRings.forEach(m => m.visible = false); if (!coreOn) bxCore.visible = false;
 }
 function explode(n) {
-  n.live = false; n.g.visible = false; const p = n.g.position, R = 9, now = performance.now() * 0.001;
+  n.live = false; n.g.visible = false; const p = n.g.position, R = 9 * nadeUpR(n), now = performance.now() * 0.001;
   pfx('plasma-explosion', tmpV.set(p.x, p.y + 1.0, p.z), 5.5, { must: true }); pfx('poof', tmpV.set(p.x, p.y - 0.1, p.z), 3.4, { must: true });
   burstAt(tmpV.set(p.x, p.y + 0.5, p.z), 0xff8a1f, 50, 10); burstAt(tmpV, 0xffe14d, 30, 7); burstAt(tmpV, 0x3a3f4b, 24, 6);
   const dP = Math.hypot(p.x - player.pos.x, p.y - player.pos.y - 1, p.z - player.pos.z);
@@ -18133,6 +18133,167 @@ arsStage.addEventListener('click', e => {
   document.head.appendChild(st);
 })();
 window.__kf = { list: () => KF_LIST.map(o => o.id), own: kfOwn, give: kfGive, on: kfOnId, equip: kfEquip, live: () => KF_G.live.length, fx: KFX, start: kfStart, G: KF_G };
+
+
+// ---------- NADESTARS_PATCH (economy thread, Ivan 2026-11-27 21:39): grenade stars ★1-10 and the player's emoji flying out of the blast ----------
+const NG_EN = L_EN3;
+const NGT = NG_EN ? {
+  name: 'Grenade', more: 'details', role: 'Throwable', close: 'Close', up: 'Upgrade',
+  dmg: 'Damage', rad: 'Blast radius', reg: 'Recharge', max: 'Grenades', thr: 'Throw range', m: ' m', sec: ' s',
+  g: { 2: '+8% blast radius', 3: '+8% damage', 4: '−15% recharge', 5: 'Evolution I: 4 grenades', 6: '+8% damage', 7: '+8% blast radius',
+       8: '+15% throw range', 9: '+8% damage', 10: 'Evolution II: 5 grenades, −15% recharge' },
+  line: (b) => `${b.max} grenades · ${b.R.toFixed(1)} m · ${b.reg.toFixed(1)} s`,
+  wsHint: 'Workshop: 3 blueprints of a weapon → 1 grenade blueprint', ws: (n, id, q) => `Swap ${n} ${wN3(id)} blueprints → ${q}`
+} : {
+  name: 'Граната', more: 'подробнее', role: 'Бросок', close: 'Закрыть', up: 'Улучшить',
+  dmg: 'Урон', rad: 'Радиус взрыва', reg: 'Перезарядка', max: 'Гранат', thr: 'Дальность броска', m: ' м', sec: ' с',
+  g: { 2: '+8% радиус взрыва', 3: '+8% урона', 4: '−15% перезарядка', 5: 'Эволюция I: 4 гранаты', 6: '+8% урона', 7: '+8% радиус взрыва',
+       8: '+15% дальность броска', 9: '+8% урона', 10: 'Эволюция II: 5 гранат, −15% перезарядка' },
+  line: (b) => `${b.max} ${plural(b.max, 'граната', 'гранаты', 'гранат')} · ${b.R.toFixed(1)} м · ${b.reg.toFixed(1)} с`,
+  wsHint: 'Мастерская: 3 чертежа оружия → 1 чертёж гранаты', ws: (n, id, q) => `Обменять ${n} чертежей ${wN3(id, true)} → ${q}`
+};
+WN3.nade = ['Граната', 'Grenade', 'Гранаты'];
+const NG_ID = 'nade', NG_DMG0 = 165, NG_R0 = 9, NG_REG0 = 6;
+function ngB() {
+  const n = m3Star(NG_ID), c = (...ks) => ks.filter(k => n >= k).length, b = { n, dmg: 1 + 0.08 * c(3, 6, 9), r: 1 + 0.08 * c(2, 7),
+    reg: NG_REG0 * Math.pow(0.85, c(4, 10)), max: 3 + c(5, 10), thr: 1 + 0.15 * c(8) };
+  b.R = NG_R0 * b.r; return b;
+}
+function nadeUpR(n) { try { return n && n.owner ? 1 : ngB().r; } catch (e) { return 1; } }
+function ngApply(fill) {
+  const b = ngB(); NADE_MAX = b.max; NADE_REGEN = b.reg;
+  if (fill || nades > NADE_MAX) nades = NADE_MAX; try { updNade(); } catch (e) {}
+}
+ngApply(true);
+function ngCan() {
+  const n = m3Star(NG_ID), k = n + 1; if (n >= 10) return 'max';
+  if (m3MLv(m3Pts(NG_ID)) < k) return 'ms'; if (prog.lvl < M3_LVL[k]) return 'lvl';
+  if ((M3.bp[NG_ID] | 0) < M3_BP[k]) return 'bp'; if (coins < M3_COIN[k]) return 'coins'; return '';
+}
+// ---- fight: throw range, damage, mastery
+{ const tg0 = throwGrenade; throwGrenade = function (from, vel, owner, fuse) {
+    if (!owner && vel) { try { const k = ngB().thr; if (k !== 1) { vel.x *= k; vel.z *= k; vel.y *= Math.sqrt(k); } } catch (e) {} }
+    return tg0.apply(this, arguments); }; }
+function ngPts(add) {
+  const L0 = m3MLv(m3Pts(NG_ID)); M3.k[NG_ID] = m3Pts(NG_ID) + add; const L1 = m3MLv(M3.k[NG_ID]);
+  if (L1 > L0) { stamp(M3T.msUp(NG_ID, L1), 'cyan', 'level_up', { coins: M3_MSCOIN[L1] || 0, badge: L1 }); saveProg(); }
+}
+{ const db0 = damageBot; damageBot = function (bot, dmg, head, point, opt) {
+    if (!opt || opt.kind !== 'nade') return db0.apply(this, arguments);
+    const alive = bot && bot.dead <= 0; try { dmg *= ngB().dmg; } catch (e) {}
+    const r = db0.call(this, bot, dmg, head, point, opt);
+    try { if (alive && bot.dead <= 0) ngPts(0.5); } catch (e) {}
+    return r; }; }
+{ const ok0 = onKillReward; onKillReward = function (b, head) { const r = ok0.apply(this, arguments); try { if (b && b.killedBy === 'nade') ngPts(2); } catch (e) {} return r; }; }
+// ---- the blast: the player's own kill emoji fly out, smaller than at a kill
+function ngEmo(p) {
+  const pk = EMOJI_PACKS.find(k => k.id === prog.emoji) || EMOJI_PACKS[0], pack = pk && pk.e; if (!pack || !pack.length) return 0;
+  const n = Math.max(4, Math.round((isTouch ? 8 : 10) * (TQ.pk || 1))), off = (Math.random() * pack.length) | 0, a0 = Math.random() * 6.283;
+  for (let i = 0; i < n; i++) {
+    const e = emojis[emojiIdx++ % emojis.length]; e.sp.material = emojiMat(pack[(i + off) % pack.length]); e.lead = false;
+    const a = a0 + i / n * 6.283 + (Math.random() - 0.5) * 0.5, sp = 4.5 + Math.random() * 5.5;
+    e.sp.position.set(p.x, p.y + 0.7, p.z); e.v.set(Math.cos(a) * sp, 6 + Math.random() * 5, Math.sin(a) * sp);
+    e.t = 1.05 + Math.random() * 0.45; e.spin = (Math.random() - 0.5) * 10; e.s = 0.6 + Math.random() * 0.3; e.sp.scale.set(0.01, 0.01, 1); e.sp.visible = true;
+  }
+  return n;
+}
+{ const ex0 = explode; explode = function (n) { const own = n && !n.owner, r = ex0.apply(this, arguments);
+    if (own) try { ngEmo(n.g.position); } catch (e) {} return r; }; }
+// ---- chests: the blueprint roll can land on the grenade (one share among the owned weapons below ★10)
+{ const cr0 = chRoll; chRoll = function (t) { const out = cr0(t); try {
+    if (m3Star(NG_ID) >= 10) return out;
+    const nw = WEAPONS.filter(w => own3(w) && m3Star(w.id) < 10).length, row = out.find(r => r && r.k === 'bp');
+    if (row && row.o && row.o.w !== NG_ID) { if (Math.random() < 1 / (nw + 1)) { M3.bp[row.o.w] = Math.max(0, (M3.bp[row.o.w] | 0) - row.n); M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) + row.n; row.o = { w: NG_ID }; } }
+    else if (!row && M3_BPCH[t]) { const n = M3_BPCH[t]; M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) + n;
+      const at = out.findIndex(r => r.k === 'item'); out.splice(at < 0 ? out.length : at, 0, { k: 'bp', n, o: { w: NG_ID } }); }
+  } catch (e) {} return out; }; }
+// ---- arsenal: the grenade card (spans two cells of a 4-column grid) and the grenade window
+function ngCard() {
+  const b = ngB(), n = b.n, up = !ngCan();
+  const btn = n >= 10 ? `<button type="button" class="tact on" disabled>${M3T.max}</button>` : `<button type="button" class="tact${up ? ' buy' : ''}" data-a="ng">${NGT.up}</button>`;
+  return `<div class="wcd ngd" data-ng="1" role="button" tabindex="0" aria-label="${NGT.name}: ${NGT.more}"><span class="pic">${wIcon(NG_ID, 'wi')}</span>`
+    + `<span class="nm"><b>${NGT.name}</b><small class="m3s${up ? ' up' : ''}${n >= 10 ? ' ult' : n >= 5 ? ' evo' : ''}">★${n}</small><small class="ngl">${NGT.line(b)}</small></span>${btn}</div>`;
+}
+{ const ra = renderArsenal; renderArsenal = function () { const r = ra.apply(this, arguments);
+    try { if (arsMode === 'w' && !arsGrid.querySelector('.ngd')) { arsGrid.classList.add('ng4'); arsGrid.insertAdjacentHTML('beforeend', ngCard()); } } catch (e) {} return r; }; }
+{ const uw0 = updPmWallet; updPmWallet = function () { uw0(); try { if (!ngCan()) { const t = pmTabs.querySelector('[data-t="ars"]'); if (t) t.classList.add('dot'); } } catch (e) {} }; }
+function ngDonor() { let d = null; for (const w of WEAPONS) if ((M3.bp[w.id] | 0) >= 3 && (!d || M3.bp[w.id] > M3.bp[d.id])) d = w; return d; }
+function ngNext() {
+  const n = m3Star(NG_ID);
+  if (n >= 10) return `<div class="m3nx max"><b>${M3T.maxStar}</b><span class="rq"><i class="ok">${NGT.g[10]}</i></span></div>`;
+  const k = n + 1, L = m3MLv(m3Pts(NG_ID)), bp = M3.bp[NG_ID] | 0, nb = M3_BP[k], chip = (ok, cls, t) => `<i class="${cls}${ok ? ' ok' : ''}">${t}</i>`;
+  let h = `<div class="m3nx"><b>★${k} · ${NGT.g[k]}</b><span class="rq">` + chip(L >= k, 'ms', `${M3T.ms} ${L}/${k}`)
+    + chip(prog.lvl >= M3_LVL[k], 'lvl', `${M3T.lvl} ${M3_LVL[k]}`) + (nb ? chip(bp >= nb, 'bp', `${M3T.bp} ${fmtN(bp)}/${fmtN(nb)}`) : '') + '</span>';
+  const d = nb && bp < nb ? ngDonor() : null;
+  if (d) { const q = Math.min(nb - bp, Math.floor((M3.bp[d.id] | 0) / 3)); h += `<button type="button" class="m3ws" data-a="nws" title="${NGT.wsHint}">${NGT.ws(q * 3, d.id, q)}</button>`; }
+  return h + '</div>';
+}
+function ngInfo() {
+  const b = ngB(), n = b.n, row = (l, v) => `<span class="sn">${l}</span><span class="sv">${v}</span>`, k = n + 1;
+  return `<div class="m3top">${m3Stars(n)}</div>`
+    + `<div class="stats">${row(NGT.dmg, Math.round(NG_DMG0 * b.dmg))}${row(NGT.rad, b.R.toFixed(1) + NGT.m)}${row(NGT.reg, b.reg.toFixed(1) + NGT.sec)}${row(NGT.max, b.max)}`
+    + `${row(NGT.thr, b.thr > 1 ? '+' + Math.round((b.thr - 1) * 100) + '%' : '—')}</div>`
+    + ngNext() + (n < 10 ? `<div class="m3act"><button type="button" class="dbtn m3up ${ngCan() ? 'no' : 'buy'}" data-a="nup">${M3T.up} ★${k} · ${priceChip([M3_COIN[k], 0])}</button></div>` : '');
+}
+function ngStage() {
+  const st = ipBox.querySelector('#ipStage'); if (!st || !ipOpen || ipOpen.kind !== 'n') return;
+  const o = st.querySelector('.m3ms'); if (o) o.remove();
+  const p = m3Pts(NG_ID), L = m3MLv(p), cur = p - 5 * L * (L - 1), nd = 10 * L, pc = L >= 20 ? 100 : Math.round(Math.min(1, cur / nd) * 100);
+  st.insertAdjacentHTML('beforeend', `<div class="m3ms"><b>${M3T.ms} ${L}</b><i><s style="width:${pc}%"></s></i><small>${L >= 20 ? M3T.max : fmtN(Math.floor(cur)) + ' / ' + fmtN(nd)}</small></div>`);
+}
+function ngOpen() {
+  if (ipOpen) closePop(true);
+  ipOpen = { kind: 'n', id: NG_ID }; ipop.hidden = false; ipBox.classList.add('m3'); ipBox.setAttribute('aria-label', NGT.name);
+  ipBox.innerHTML = `<div class="phd"><div class="ptt"><h4>${NGT.name}</h4></div><button type="button" class="ib" data-a="close" aria-label="${NGT.close}">${IC.x}</button></div>`
+    + `<div class="ipb"><div id="ipStage"></div><div class="ipi">${ngInfo()}</div></div>`;
+  { const st = ipBox.querySelector('#ipStage'); if (PV.host === st) pvStop(); st.insertAdjacentHTML('beforeend', wIcon(NG_ID, 'ngpv')); } ngStage(); sfx('ui_open', 0.6);
+  if (!isTouch) { const f = ipBox.querySelector('.dbtn:not(:disabled)') || ipBox.querySelector('.ib'); if (f) f.focus({ preventScroll: true }); }
+}
+{ const pi0 = popInfo; popInfo = function () { if (ipOpen && ipOpen.kind === 'n') { try { return ngInfo(); } catch (e) { return ''; } } return pi0.apply(this, arguments); }; }
+function ngUp(btn) {
+  const k = m3Star(NG_ID) + 1, why = ngCan();
+  if (why) { if (why === 'coins') short(btn, [M3_COIN[k] - coins, 0]); else { nope(btn); const c = ipBox.querySelector('.rq .' + why); if (c) restart(c, 'm3sh'); } return; }
+  const m0 = NADE_MAX; coins -= M3_COIN[k]; coinN.textContent = coins; M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) - M3_BP[k]; M3.s[NG_ID] = k;
+  ngApply(false); if (NADE_MAX > m0) { nades = Math.min(NADE_MAX, nades + NADE_MAX - m0); updNade(); }
+  saveProg(); sfx(k === 5 || k === 10 ? 'levelup' : 'buy', 0.9); vib([20, 30, 20]);
+  renderArsenal(); refreshPop(); ngStage(); const s = ipBox.querySelector('.m3st'); if (s) restart(s, 'm3pop');
+}
+function ngWs(btn) {
+  const k = m3Star(NG_ID) + 1, d = ngDonor(), lack = (M3_BP[k] || 0) - (M3.bp[NG_ID] | 0); if (!d || lack <= 0) { nope(btn); return; }
+  const q = Math.min(lack, Math.floor((M3.bp[d.id] | 0) / 3)); M3.bp[d.id] -= q * 3; M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) + q;
+  saveProg(); sfx('equip', 0.7); vib(15); refreshPop(); renderArsenal();
+}
+{ const da0 = doAct; doAct = function (kind, id, act, btn) {
+    if (kind === 'n') { if (act === 'nup') ngUp(btn); else if (act === 'nws') ngWs(btn); return; }
+    return da0.apply(this, arguments); }; }
+arsGrid.addEventListener('click', e => {
+  const t = e.target.closest('.ngd'); if (!t || arsMode !== 'w') return; e.stopPropagation();
+  const b = e.target.closest('.tact'); if (b && b.disabled) return;
+  tap(0.6); ngOpen();
+}, true);
+arsGrid.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.ngd')) { e.preventDefault(); e.stopPropagation(); tap(0.6); ngOpen(); } }, true);
+(function () {
+  const st = document.createElement('style'); st.id = 'nadeStars';
+  st.textContent = `
+  #lobby #arsGrid.g-w.ng4 { width: min(900px, calc(100% - 32px)); grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  #lobby #arsGrid.ng4 .wcd { grid-template-columns: 66px minmax(0, 1fr); column-gap: 8px; padding: 6px 8px 6px 6px; }
+  #lobby #arsGrid.ng4 .wcd .wi { width: 62px; height: 40px; }
+  #lobby #arsGrid.ng4 .wcd .nm b { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #lobby #arsGrid.ng4 .tact { min-width: 0; padding: 0 8px; overflow: hidden; }
+  #lobby #arsGrid.ng4 .tact img { flex: none; }
+  #lobby #arsGrid.ng4 .wcd.ngd { grid-column: span 2; grid-template-columns: 66px minmax(0, 1fr) minmax(0, 150px); column-gap: 10px; }
+  #lobby #arsGrid.ng4 .wcd.ngd .nm { grid-column: 2; grid-row: 1 / span 2; align-self: center; flex-wrap: wrap; row-gap: 2px; }
+  #lobby #arsGrid.ng4 .wcd.ngd .nm .ngl { flex: 0 0 100%; font: 700 12px/15px var(--font); color: #7a6aa0; }
+  #lobby #arsGrid.ng4 .wcd.ngd .tact { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-top: 0; }
+  #ipBox.m3 .ipi .stats .sv { font-variant-numeric: tabular-nums; }
+  #ipStage .ngpv { position: absolute; left: 50%; top: 44%; width: 46%; height: 62%; object-fit: contain; transform: translate(-50%, -50%); animation: ngbob 2.4s ease-in-out infinite; pointer-events: none; }
+  @keyframes ngbob { 0%, 100% { transform: translate(-50%, -50%) rotate(-6deg); } 50% { transform: translate(-50%, -56%) rotate(6deg); } }
+  @media (prefers-reduced-motion: reduce) { #ipStage .ngpv { animation: none; } }
+  `;
+  document.head.appendChild(st);
+})();
+window.__ng = { b: ngB, can: ngCan, open: ngOpen, emo: ngEmo, up: ngUp, apply: ngApply, get max() { return NADE_MAX; }, get regen() { return NADE_REGEN; }, get nades() { return nades; },
+  give: (pts, bp) => { M3.k[NG_ID] = m3Pts(NG_ID) + (pts || 0); M3.bp[NG_ID] = (M3.bp[NG_ID] | 0) + (bp || 0); saveProg(); } };   // test hook
 
 // ---------- v20: arena switch in place (Ivan 21:19, coordinator 21:31) ----------
 const __mine = [...document.body.children].filter(e => !__bodyKids.has(e)).concat([...document.head.children].filter(e => !__headKids.has(e)));
