@@ -11936,16 +11936,23 @@ const fpClay = (() => { const c = document.createElement('canvas'); c.width = c.
   g.fillStyle = '#7d7480'; g.fillRect(0, 0, 128, 128);
   const r = g.createRadialGradient(52, 46, 4, 64, 64, 66); r.addColorStop(0, '#ffffff'); r.addColorStop(0.55, '#e9e4e6'); r.addColorStop(0.8, '#b8b0b6'); r.addColorStop(1, '#7d7480');
   g.fillStyle = r; g.beginPath(); g.arc(64, 64, 64, 0, Math.PI * 2); g.fill(); return new THREE.CanvasTexture(c); })();
-const fpSkinMat = new THREE.MeshMatcapMaterial({ color: 0xffd9b0, matcap: fpClay }), fpSleeveMat = new THREE.MeshMatcapMaterial({ color: 0x3a86ff, matcap: fpClay }),
-  fpForeMat = new THREE.MeshMatcapMaterial({ color: 0xffd9b0, matcap: fpClay });
+// v28 (Ivan 11:09): skin gets its own warm, light clay: white front, soft peach sides, no grey rim, so hands read as skin
+const fpSkinClay = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#d9b49c'; g.fillRect(0, 0, 128, 128);
+  const r = g.createRadialGradient(52, 46, 4, 64, 64, 66); r.addColorStop(0, '#ffffff'); r.addColorStop(0.55, '#fff6ef'); r.addColorStop(0.8, '#f2dccb'); r.addColorStop(1, '#d9b49c');
+  g.fillStyle = r; g.beginPath(); g.arc(64, 64, 64, 0, Math.PI * 2); g.fill(); return new THREE.CanvasTexture(c); })();
+const FP_SKIN_LIFT = new THREE.Color(0xfff1e6), fpSkinTone = hex => new THREE.Color(hex).lerp(FP_SKIN_LIFT, 0.22);
+const fpSkinMat = new THREE.MeshMatcapMaterial({ color: fpSkinTone(0xffd9b0), matcap: fpSkinClay }), fpSleeveMat = new THREE.MeshMatcapMaterial({ color: 0x3a86ff, matcap: fpClay }),
+  fpForeMat = new THREE.MeshMatcapMaterial({ color: fpSkinTone(0xffd9b0), matcap: fpSkinClay });
 gunRest.y = -0.215; gunFitOk = true; fitGun();   // the view model sits a little higher so the gripping hand clears the weapon card
 const fpBox = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);   // unit block growing along +Z from its origin
 function fpArmsLook(d) {
   d = d || (typeof blkDefault === 'function' ? blkDefault() : null); if (!d) return;
   const sk = (d.colors && (d.colors.rightArm != null ? d.colors.rightArm : d.colors.torso)) ?? 0xffd9b0, sh = d.shirt || {};
-  fpSkinMat.color.setHex(sk);
+  fpSkinMat.color.copy(fpSkinTone(sk));
   const bare = !sh.id || sh.id === 'none' || sh.id === 'tank', short = sh.id === 'tee' || sh.id === 'stripes' || sh.id === 'vest';
-  fpSleeveMat.color.setHex(bare ? sk : (sh.c1 ?? 0x3a86ff)); fpForeMat.color.setHex(bare || short ? sk : (sh.c1 ?? 0x3a86ff));
+  fpSleeveMat.color.copy(bare ? fpSkinTone(sk) : new THREE.Color(sh.c1 ?? 0x3a86ff)); fpSleeveMat.matcap = bare ? fpSkinClay : fpClay;
+  fpForeMat.color.copy(bare || short ? fpSkinTone(sk) : new THREE.Color(sh.c1 ?? 0x3a86ff)); fpForeMat.matcap = bare || short ? fpSkinClay : fpClay;
 }
 function fpMakeArm() {
   const g = new THREE.Group(); g.userData.fpArm = true; const mk = (m, w) => { const b = new THREE.Mesh(fpBox, m); b.scale.set(w, w, 1); g.add(b); return b; };
