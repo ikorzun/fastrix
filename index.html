@@ -8736,6 +8736,7 @@ const BOT_GUN_SCALE = { rifle: [1, 1, 1], pistol: [0.8, 0.8, 0.55], shotgun: [1.
 function randomFreeNear(cx, cz, r) { for (let k = 0; k < 30; k++) { const x = cx + (Math.random() * 2 - 1) * r, z = cz + (Math.random() * 2 - 1) * r; if (isFree(x, z)) return [x, z]; } return randomFree(); }
 // half the time roam towards the player's area so fights keep happening
 function pickGoal(b) {
+  if (rvGoal(b)) return;
   const r = Math.random(), groundPads = PADS.filter(P => P.y === 0);
   // snipers love high ground, everyone else sometimes takes a jump pad for fun
   if (groundPads.length && r < (b.role === 'sniper' ? 0.6 : 0.22 + (learn ? learn.high * 0.35 : 0))) { const P = groundPads[Math.random() * groundPads.length | 0]; b.goal.set(P.x, 0, P.z); b.padGoal = true; return; }
@@ -8748,7 +8749,7 @@ const ROLES = { rusher: { range: [4, 7], fight: 5.4, strafe: [0.25, 0.6], jump: 
 // adaptive difficulty: 0..1, grows when you win fights and shrinks when you die; bots also "learn" your habits
 var diff = 0.35; try { const v = parseFloat(localStorage.getItem('arenaDiff')); if (v >= 0 && v <= 1) diff = v; } catch (e) {}
 // ===== OPPONENT DIFFICULTY CURVE (begin) =====
-// Every match starts with a warm-up: opponents are easy for the first ~90 s, even after a won match.
+// Every match starts with a warm-up: opponents are easy for the first ~90 s (shorter if the player racks up kills), even after a won match.
 // What the earlier matches change is the pace: after wins the level climbs faster, after losses it drops faster.
 // The level never jumps: it walks towards a target at a capped speed (straight lines, no exponential runaway),
 // and the target comes from how this match is going (kills, deaths, damage taken, accuracy, head shots).
@@ -8770,22 +8771,28 @@ function ddCurveNew(P) {
   const warm = 0.12 + 0.08 * P.r;                                           // start of every match: easy for everyone
   return { t: 0, lvl: warm, warm, home: 0.24 + 0.56 * P.r, score: 0, shots: 0, hits: 0, kills: 0, heads: 0, deaths: 0, alive: 0, mobT: 0, campT: 0, sumLvl: 0, sumT: 0 };
 }
-// target level right now: warm-up ramp to the player's home level, then up or down with how the match goes
+// target level right now: warm-up ramp to the player's home level, then up or down with how the match goes.
+// The warm-up counts time and kills: ~90 s, or less for a player who racks up kills (each kill = 5 s of warm-up)
+function ddRamp(S) { return ddSmooth((S.t + 5 * S.kills) / 90); }
 function ddCurveTarget(S, P) {
-  const ramp = ddSmooth(S.t / 90), base = S.warm + (S.home - S.warm) * ramp;
+  const ramp = ddRamp(S), base = S.warm + (S.home - S.warm) * ramp;
   const dom = Math.tanh(S.score / 3);                                       // -1..1: struggling .. dominating (bounded)
   const accNow = S.shots > 12 ? S.hits / S.shots : P.acc;
-  const tgt = base + (0.22 + 0.08 * ramp) * dom + 0.25 * ddClamp(accNow - P.acc, -0.2, 0.2) * ramp;
+  const kpm = S.kills / Math.max(1, S.t / 60);                              // a fast killer (over 4 a minute) pushes the level further up
+  const tgt = base + (0.22 + 0.08 * ramp) * dom + 0.25 * ddClamp(accNow - P.acc, -0.2, 0.2) * ramp + 0.25 * ddClamp((kpm - 4) / 6, 0, 1) * ramp;
   return ddClamp(Math.min(tgt, S.warm + 0.08 + 0.92 * ramp), 0.05, 1);     // in the warm-up the ceiling is low whatever happens
 }
-// speed limits per second (linear steps): wins speed up the climb, losses speed up the drop, style tunes both
-function ddCurveRates(P) {
-  const sk = ddStyleSkill(P), up = 0.0032 * (1 + 0.9 * Math.max(0, P.mom) + 0.6 * sk), down = 0.0045 * (1 + 0.9 * Math.max(0, -P.mom) + 0.4 * (1 - sk));
+// speed limits per second (linear steps): wins speed up the climb, losses speed up the drop, style tunes both,
+// and how this match goes right now: a player who dominates gets the climb up to 3x faster (still a straight line)
+function ddCurveRates(P, S) {
+  const sk = ddStyleSkill(P), dom = S ? Math.tanh(S.score / 3) : 0;
+  const up = 0.0032 * (1 + 0.9 * Math.max(0, P.mom) + 0.6 * sk) * (1 + 2 * Math.max(0, dom));
+  const down = 0.0045 * (1 + 0.9 * Math.max(0, -P.mom) + 0.4 * (1 - sk)) * (1 + 1.2 * Math.max(0, -dom));
   return [up, down];
 }
 function ddCurveStep(S, P, dt) {
   S.t += dt; S.score *= Math.max(0, 1 - dt / 70);                          // what happened a minute ago matters less (linear fade per step)
-  const tgt = ddCurveTarget(S, P), [up, down] = ddCurveRates(P), d = tgt - S.lvl;
+  const tgt = ddCurveTarget(S, P), [up, down] = ddCurveRates(P, S), d = tgt - S.lvl;
   S.lvl += d > 0 ? Math.min(d, up * dt) : Math.max(d, -down * dt);
   if (S.t > 60) { S.sumLvl += S.lvl * dt; S.sumT += dt; }
   return S.lvl;
@@ -8830,6 +8837,67 @@ function ddHurt(n) { const S = DD.S; if (S) S.score -= Math.max(0, n) / 100 * 0.
 function ddEndMatch(place, win, n) { if (!DD.S) return; ddCurveEnd(DD.S, DD.P, place, win, n); ddSave(); }
 diff = 0.12 + 0.08 * DD.P.r;   // the first match after loading starts in the warm-up too (no carry-over of the old level)
 // ===== OPPONENT DIFFICULTY CURVE (end) =====
+// ===== OPPONENT RIVALS (begin) =====
+// Two opponents per match are the player's "rivals": they keep pace with the player on the board, like live players of about
+// the same level. Rival A runs a little ahead of a weak player and neck and neck with a strong one; rival B a little behind.
+// They earn every kill for real (they shoot other opponents and the player); only how hard they press changes:
+// behind their pace they hunt other opponents, aim and hit a bit better, respawn a bit sooner; ahead of it they ease off.
+// The pace drifts slowly (a long sine), so the race is never a visible rubber band. Picked anew every match, nothing on screen marks them.
+// Glue: rvTick (updateBots), rvHitB / rvDmg / fire rate (botShootBot), rvBold (cover choice), bot-first target choice, rvHitP (botShoot), rvHungry / rvRange (findBotFoe), rvGoal (pickGoal), rvResp (respawn).
+const RV = { S: null, list: [], ps: 0.3, t: 0 };
+function rvPick() {
+  RV.S = DD.S; RV.t = 0; RV.list = []; RV.ps = ddClamp(0.15 + 0.5 * DD.P.r, 0, 1);
+  for (const b of bots) b.rv = null;
+  const pool = bots.slice().sort(() => Math.random() - 0.5);
+  [[2.0, -1.0], [0.5, -3.0]].forEach((g, i) => { const b = pool[i]; if (!b) return;
+    b.rv = { weak: g[0], strong: g[1], d: 0, ph: Math.random() * 6.28, per: 70 + Math.random() * 40 }; RV.list.push(b); });
+}
+// how strong the player is in this match, 0..1: kills per minute, K/D, and the long-term rating at the start
+function rvStrength(S) {
+  const min = Math.max(0.75, S.t / 60), kpm = S.kills / min, kd = (S.kills + 1) / (S.deaths + 1);
+  return ddClamp(0.25 * DD.P.r + 0.4 * ddClamp((kd - 0.8) / 3, 0, 1) + 0.35 * ddClamp(kpm / 6, 0, 1), 0, 1);
+}
+function rvTick(dt) {
+  if (!DD.S) return;
+  if (RV.S !== DD.S) rvPick();
+  if (typeof matchOver !== 'undefined' && matchOver > 0) return;
+  if (typeof meF === 'undefined' || !meF) return;
+  RV.t += dt;
+  const ps = rvStrength(DD.S); RV.ps += ddClamp(ps - RV.ps, -0.03 * dt, 0.03 * dt);   // straight-line drift, no jumps
+  for (const b of RV.list) { const r = b.rv; if (!r) continue;
+    const gap = r.weak + (r.strong - r.weak) * RV.ps + 1.1 * Math.sin(RV.t * 6.283 / r.per + r.ph);
+    const tgt = Math.min(MATCH_GOAL - 1, Math.max(0, meF.sk + gap));
+    const want = ddClamp((tgt - b.sk) / 2.5, -1, 1.5);                                  // >0: behind its pace, <0: ahead
+    r.d += ddClamp(want - r.d, -0.3 * dt, 0.3 * dt);
+    // behind its pace with nobody in sight: heads for the nearest fight, as if it heard it
+    if ((r.seekT = (r.seekT || 0) - dt) <= 0) { r.seekT = 1.5 + Math.random();
+      if (b.dead <= 0 && rvHungry(b) && !b.foe && (b.mode === 'roam' || b.mode === 'hunt') && performance.now() * 0.001 - b.lastSeen > 2) {
+        let best = null, bd = 1e9;
+        for (const o of bots) { if (o === b || o.dead > 0) continue; const d = Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z); if (d < bd) { bd = d; best = o; } }
+        if (best) { b.mode = 'hunt'; b.last.set(best.pos.x, 0, best.pos.z); b.lastSeen = performance.now() * 0.001 - 1; b.flankGoal = null; } } }
+  }
+}
+function rvD(b) { return b && b.rv ? b.rv.d : 0; }
+// hit chance against other opponents (added to the base before the skill multiplier)
+function rvHitB(b) { const d = rvD(b); return 0.18 * Math.max(0, d) - 0.12 * Math.max(0, -d); }
+// damage multiplier for a hit of b on another opponent o
+function rvDmg(b, o) { const d = rvD(b), e = rvD(o); return (1 + 1.3 * Math.max(0, d) - 0.35 * Math.max(0, -d)) * (1 - 0.3 * Math.max(0, e)); }
+// hit chance against the player: a rival is a touch sharper, more so when behind its pace
+function rvHitP(b) { if (!b || !b.rv) return 0; const d = ddClamp(b.rv.d, -1, 1); return 0.04 + 0.06 * d; }
+function rvHungry(b) { return rvD(b) > 0.25; }
+function rvRange(b) { return rvHungry(b) ? 55 : 36; }
+// behind its pace: go where the other opponents are instead of roaming
+function rvGoal(b) {
+  if (!rvHungry(b) || Math.random() > 0.75) return false;
+  let best = null, bd = 1e9;
+  for (const o of bots) { if (o === b || o.dead > 0) continue; const d = Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z); if (d > 6 && d < bd) { bd = d; best = o; } }
+  if (!best) return false;
+  const [x, z] = randomFreeNear(best.pos.x, best.pos.z, 4); b.goal.set(x, 0, z); b.padGoal = false; return true;
+}
+// behind its pace and not badly hurt: keeps fighting instead of ducking into cover
+function rvBold(b) { return rvHungry(b) && b.hp > 0.35 * (b.maxHp || 100); }
+function rvResp(b) { return 1 + 0.5 * Math.max(0, rvD(b)); }
+// ===== OPPONENT RIVALS (end) =====
 var learn = { high: 0.2, range: 12 };
 // is a step to (x, z) blocked by something taller than a step for this bot?
 function botBlocked(b, x, z) {
@@ -10883,7 +10951,7 @@ function botShoot(b, dist, moving) {
   const pSpeed = Math.hypot(player.vel.x, player.vel.z);
   let chance = 0.5 * b.skill + Math.min(0.22, (b.seeT - b.react) * 0.12) - dist * (w === 'sniper' ? 0.004 : 0.009) - pSpeed * 0.022
     - (player.onGround ? 0 : 0.12 * DD.airK) - (slideT > 0 ? 0.15 * DD.airK : 0) - (moving ? 0.07 : 0) - (b.onGround ? 0 : 0.2) + (w === 'shotgun' && dist < 8 ? 0.25 : 0);
-  chance = Math.max(0.08, Math.min(w === 'sniper' ? 0.75 : 0.85, chance));
+  chance += rvHitP(b); chance = Math.max(0.08, Math.min(w === 'sniper' ? 0.75 : 0.85, chance));
   const hit = Math.random() < chance;
   b.gunG.localToWorld(muzzleB.set(0, b.muzY != null ? b.muzY : 0.02, b.muzZ || -0.62));
   aimP.set(player.pos.x, player.pos.y + 1.3, player.pos.z);
@@ -10909,8 +10977,8 @@ function botLos(a, o) { botEye.set(a.pos.x, a.pos.y + 1.7, a.pos.z); botEye2.set
   dirV.subVectors(botEye2, botEye).normalize(); losRay.set(botEye, dirV); losRay.far = d; return losRay.intersectObjects(solidMeshes, false).length === 0; }
 function findBotFoe(b, now, maxD) {
   if (b.hunting && Math.random() < 0.6) return null;                               // on a hunt: ignore the others
-  if (Math.random() < 0.25 * diff) return null;                                    // the better you play, the more they focus you
-  let best = null, bd = Math.min(36, maxD || 36);
+  if (!rvHungry(b) && Math.random() < 0.25 * diff) return null;                                    // the better you play, the more they focus you
+  let best = null, bd = Math.min(rvRange(b), maxD || rvRange(b));
   for (const o of bots) { if (o === b || o.dead > 0) continue; const d = Math.hypot(o.pos.x - b.pos.x, o.pos.z - b.pos.z); if (d < bd && botLos(b, o)) { bd = d; best = o; } }
   if (best) { b.foeT = now; if (!best.foe) { best.foe = b; best.foeT = now; } }
   return best;
@@ -10925,13 +10993,13 @@ function botShootBot(b, o, dist) {
   if (!botRound(b)) return;
   botNoise = { x: b.pos.x, z: b.pos.z, t: performance.now() * 0.001, by: b };
   if (b.burst <= 0) b.burst = 2 + (Math.random() * 3 | 0);
-  b.burst--; b.fireCd = b.burst > 0 ? 0.15 : 0.8 + Math.random() * 0.8;
-  const hit = Math.random() < Math.max(0.12, 0.42 * b.skill - dist * 0.01);
+  b.burst--; b.fireCd = b.burst > 0 ? 0.15 : (0.8 + Math.random() * 0.8) * (rvHungry(b) ? 0.6 : 1);
+  const hit = Math.random() < Math.max(0.12, (0.47 + rvHitB(b)) * b.skill - dist * 0.01);
   b.gunG.localToWorld(muzzleB.set(0, b.muzY != null ? b.muzY : 0.02, b.muzZ || -0.62));
   aimP.set(o.pos.x, o.pos.y + 1.2, o.pos.z); if (!hit) aimP.add(tmpV.set((Math.random() - .5) * 2.5, (Math.random() - .3) * 1.5, (Math.random() - .5) * 2.5));
   tracer(muzzleB, aimP, 0xff7a6b, 0.06, 'bot'); b.recoilT = 0.1;
   sfx('enemy', 0.4 * Math.max(0.08, 1 - Math.hypot(b.pos.x - player.pos.x, b.pos.z - player.pos.z) / 45), 1, { pos: b.pos });
-  if (hit) botHurtBot(b, o, 8 + Math.random() * 4, b.wpn);
+  if (hit) botHurtBot(b, o, (10 + Math.random() * 5) * rvDmg(b, o), b.wpn);
 }
 function nearestHealth(b, R) { let best = null, bd = R; for (const o of loot) if (o.live && o.type === 'health' && !o.magnet) { const d = Math.hypot(o.p.x - b.pos.x, o.p.z - b.pos.z); if (d < bd) { bd = d; best = o; } } return best; }
 function botThrow(b, tx, ty, tz) {
@@ -11123,13 +11191,13 @@ function bmPlan(b, dt, now, sees, fo, dist, toP, mx, mz, speed, wantJump) {
 }
 // ===== BOT MOVES (end) =====
 function updateBots(dt) {
-  ddTick(dt);
+  ddTick(dt); rvTick(dt);
   const now = performance.now() * 0.001;
   camera.getWorldDirection(camFwd);
   for (const b of bots) {
     if (b.dead > 0) {
       b.spotT = 0;
-      b.dead -= dt;
+      b.dead -= dt * rvResp(b);
       if (b.dead <= 0) { b.mats.forEach(m => m.emissive.setHex(0)); spawnBot(b); pfx('respawn-beam', b.pos, 3.4); }
       continue;
     }
@@ -11146,7 +11214,7 @@ function updateBots(dt) {
     if (sees && !b.hunting) {
       const pd = Math.hypot(player.pos.x - b.pos.x, player.pos.z - b.pos.z);
       if (!b.foe && b.mode !== 'heal' && (b.foeScan = (b.foeScan || 0) - dt) <= 0) { b.foeScan = 0.8 + Math.random() * 0.6; b.foe = findBotFoe(b, now, pd); }
-      if (b.foe && Math.hypot(b.foe.pos.x - b.pos.x, b.foe.pos.z - b.pos.z) < pd * (1.05 + 0.3 * (1 - diff))) sees = false;
+      if (b.foe && Math.hypot(b.foe.pos.x - b.pos.x, b.foe.pos.z - b.pos.z) < pd * (1.05 + 0.3 * (1 - diff)) * (rvHungry(b) ? 1.6 : 1)) sees = false;
     }
     if (sees && b.seeT === 0) alertNear(b, player.pos.x, player.pos.z);
     b.seeT = sees ? b.seeT + dt : 0;
@@ -11166,7 +11234,7 @@ function updateBots(dt) {
     // bots that hear other bots fighting come over (third party)
     if (!sees && !b.foe && botNoise && botNoise.by !== b && now - botNoise.t < 0.3 && (b.mode === 'roam' || b.mode === 'hunt') && Math.hypot(botNoise.x - b.pos.x, botNoise.z - b.pos.z) < 32 && Math.random() < 0.5) {
       b.mode = 'hunt'; b.last.set(botNoise.x, 0, botNoise.z); b.lastSeen = now; b.flankGoal = null; }
-    if ((sees || fo) && b.mode !== 'cover' && b.mode !== 'flee' && b.mode !== 'heal' && now - (b.coverUsed || -99) > 5 && (b.aiScan = (b.aiScan || 0) - dt) <= 0) {
+    if ((sees || fo) && b.mode !== 'cover' && b.mode !== 'flee' && b.mode !== 'heal' && now - (b.coverUsed || -99) > 5 && !rvBold(b) && (b.aiScan = (b.aiScan || 0) - dt) <= 0) {
       b.aiScan = 0.45; const T = aiThreats(b), hpK = b.hp / (b.maxHp || 100), many = T.length >= 2; let go = null;
       if (hpK <= 0.3 || (many && hpK < 0.6)) { const f = aiFlee(b, T); if (f) go = ['flee', f]; }
       if (!go && (hpK <= 0.55 || (!b.engaged && Math.random() < (b.role === 'sniper' ? 0.6 : b.role === 'flanker' ? 0.45 : 0.1)))) { const c = aiCover(b, T); if (c) go = ['cover', c]; }
