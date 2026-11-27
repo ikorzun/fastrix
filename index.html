@@ -1929,6 +1929,95 @@ html body.touch.hudm #hudv #slide { right: calc(var(--sr) + 13px); bottom: calc(
 html body.touch.hudm #hudv #swapBtn { right: calc(var(--sr) + 20px); bottom: calc(var(--sb) + 204px); }
 body.touch :is(#setGrid, #pV).fadeB { -webkit-mask-image: linear-gradient(#000 calc(100% - 34px), #0000); mask-image: linear-gradient(#000 calc(100% - 34px), #0000); }
 </style>
+<style id="v42u">
+/* ---- 1) desktop: lists wrap and scroll vertically ---- */
+html:root body:not(.touch) #arsGrid:is(.g-s, .g-d) { flex-wrap: wrap; justify-content: center; align-content: flex-start; row-gap: 6px;
+  overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; scroll-behavior: auto; margin-top: 0; padding: 8px 12px 10px;
+  -webkit-mask: none; mask: none; background: var(--cara2); border-radius: 18px; box-sizing: border-box; }
+html:root body:not(.touch) #arsGrid.g-d .dlb { flex: 0 0 100%; height: 16px; margin: 0; padding: 0 4px; background: none; border-radius: 0; text-align: left;
+  font: 800 13px/16px var(--font); color: var(--ds-color-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+html:root body:not(.touch) #arsGrid.g-s .s1br { flex: 0 0 100%; margin: 2px 0 0; padding: 0 4px; background: none; color: var(--ds-color-yellow); text-align: left; }
+html:root body:not(.touch) #q4Pop .s5t { display: flex; flex-direction: column; gap: 4px; }
+html:root body:not(.touch) #q4Pop .s5t .lb { width: auto; flex-direction: row; gap: 4px; }
+html:root body:not(.touch) #q4Pop .s5t .lb .lv { width: 40px; flex: none; height: auto; }
+html:root body:not(.touch) #q4Pop .s5t .lb span { flex: 1; height: 22px; }
+html:root body:not(.touch) #q4Pop .trk { position: relative; flex-direction: column; overflow-x: hidden; overflow-y: auto; max-height: 216px; gap: 4px; padding: 0 2px 0 0; }
+html:root body:not(.touch) #q4Pop .trk .col { width: auto; flex-direction: row; align-items: stretch; }
+html:root body:not(.touch) #q4Pop .trk .col .lv { width: 40px; flex: none; height: auto; display: grid; place-items: center; }
+html:root body:not(.touch) #q4Pop .trk .col .sc { flex: 1 1 0; height: 46px; flex-direction: row; gap: 6px; }
+html:root body:not(.touch) #s4Pop .c6r.fx .pcs { flex-wrap: wrap; overflow-x: visible; }
+/* ---- 2) Arsenal stage: dark semi-transparent plate ---- */
+html:root body:not(.touch) #lobby.tallL #arsStage { top: 78px; height: 156px; }
+html:root body:not(.touch) #lobby.tallL #arsGrid:is(.g-s, .g-d) { top: 246px; }
+html:root body #lobby #arsStage { background: radial-gradient(circle at 50% 56%, rgba(255,255,255,.16) 0, rgba(255,255,255,.05) 46%, rgba(255,255,255,0) 72%), var(--cara2); border: 0; color: #fff; }
+html:root body #lobby #arsStage .sth { color: #fff; }
+html:root body #lobby #arsStage :is(.stw, .stn) { color: var(--ds-color-text-muted); }
+html:root body #lobby #arsStage .stw b, html:root body #lobby #arsStage.dl .stw i b { color: #fff; }
+html:root body #lobby #ipStage { background: radial-gradient(circle at 50% 56%, rgba(255,255,255,.2) 0, rgba(255,255,255,.07) 50%, rgba(255,255,255,.04) 100%); }
+/* ---- 3) segmented plates: round ends, yellow segment edge to edge ---- */
+html:root body #lobby #pmTabs { padding: 0; gap: 0; border-radius: 999px; }
+html:root body #lobby #pmTabs button { height: calc(var(--ds-tab-h, 44px) + 8px); border-radius: 0; box-shadow: none; padding: 0 18px 0 14px; }
+html:root body #lobby #pmTabs button:first-child { border-radius: 999px 0 0 999px; padding-left: 22px; }
+html:root body #lobby #pmTabs button:last-child { border-radius: 0 999px 999px 0; padding-right: 26px; }
+html:root body #lobby #pmTabs button.on { box-shadow: none; }
+html:root body #lobby #pmTabs button.dot::after { right: 12px; top: 6px; }
+html:root body #lobby #arsSeg { border-radius: 999px; }
+html:root body #lobby #arsSeg button:first-child { padding-left: 8px; }
+html:root body #lobby #arsSeg button:last-child { padding-right: 8px; }
+html:root body :is(#lobby, #pauseL) .tseg { border-radius: 999px; }
+html:root body :is(#lobby, #pauseL) .tseg button:first-child { padding-left: 14px; }
+html:root body :is(#lobby, #pauseL) .tseg button:last-child { padding-right: 14px; }
+html:root body :is(#q4Pop .seg, #s4Pop .seg.s6) { gap: 0; border-radius: 999px; background: #ffffff1a; overflow: hidden; }
+html:root body :is(#q4Pop .seg, #s4Pop .seg.s6) button { border-radius: 0; background: transparent; }
+html:root body :is(#q4Pop .seg, #s4Pop .seg.s6) button.on { background: var(--yel); color: var(--ink); }
+html:root body :is(#q4Pop .seg, #s4Pop .seg.s6) button + button { box-shadow: inset 1px 0 0 #ffffff22; }
+/* ---- 5) Settings: one dark block in the centre ---- */
+html:root body #lobby #setGrid { left: 50%; right: auto; top: 62px; bottom: calc(var(--sb) + 70px); width: min(74%, 700px); transform: translateX(-50%);
+  display: flex; align-items: center; justify-content: center; overflow: visible; padding: 0; -webkit-mask-image: none; mask-image: none; }
+html:root body:not(.touch) #lobby.tallL #setGrid { top: 4px; bottom: 14px; }
+html:root body #lobby #setGrid .sbx { width: 100%; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 10px 22px 14px;
+  border-radius: 18px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
+html:root body #lobby #setGrid .sbx .tcol { width: 100%; gap: 6px; }
+html:root body #lobby #setGrid .sbx .tmore { justify-content: center; }
+html:root body #lobby #setGrid .sbx .shelp h5 { margin-bottom: 6px; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) { background: var(--cara2); color: #fff; border: 0; box-shadow: none; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .tgrp { background: transparent; border: 0; border-radius: 0; padding: 4px 0 2px; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .tgrp h5 { color: var(--ds-color-text-muted); }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .trow { border-top-color: #ffffff1f; color: #fff; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .tsw.off { background: #ffffff40; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) :is(.hr, .hrule) { color: #fff; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .hcred { color: var(--ds-color-text-muted); }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) .hbody { overflow: visible; }
+html:root body :is(#lobby #setGrid .sbx, #pauseL #pBox.wide, #lobby #lsBox) kbd { color: var(--ink); background: #fff; }
+html:root body #lobby #lsBox .ptt h4 { color: #fff; }
+html:root body #lobby #lsBox .ptt small { color: var(--ds-color-text-muted); }
+html:root body #lobby #lsBox .phd .ib { background: #fff; color: var(--ink); }
+html:root body #pauseL #pBox.wide :is(#pT) { color: #fff; }
+html:root body #pauseL #pBox.wide #pS { color: var(--ds-color-text-muted); }
+html:root body #pauseL #pBox.wide :is(#pX, #pBack) { background-color: #fff; }
+html:root body #pauseL #pV.vset { flex-direction: column; gap: 6px; overflow-x: hidden; overflow-y: auto; }
+html:root body #pauseL #pV.vset .tcol { width: 100%; flex: none; }
+/* ---- 6) match results: one centred composition (Ivan 17:56); stat tiles and Menu are dark plates ---- */
+html:root body #results #resBox { position: absolute; left: 50%; top: 50%; right: auto; bottom: auto; width: auto; height: auto; transform: translate(-50%, -50%); transform-origin: 50% 50%;
+  display: grid; grid-template-columns: auto auto; grid-template-areas: "t t" "tb tb" "tl tl" "m a"; justify-items: center; align-items: center; gap: 16px 16px; }
+html:root body #results #resTitle { position: static; grid-area: t; justify-items: center; text-align: center; }
+html:root body #results #resTitle .rt { transform-origin: 50% 50%; }
+html:root body #results #resTbl { position: static; grid-area: tb; width: 420px; }
+html:root body #results #resTiles { position: static; grid-area: tl; justify-content: center; }
+html:root body #results #resTiles .tl { background: var(--ds-color-plate); border: 0; color: #fff; }
+html:root body #results #resTiles span { color: var(--ds-color-text-muted); }
+html:root body #results #resBox button { position: static; top: auto; right: auto; }
+html:root body #results #resBox #resMenu { grid-area: m; justify-self: end; width: 160px; background: var(--ds-color-plate); color: #fff; border: 0; }
+html:root body #results #resBox #resAgain { grid-area: a; justify-self: start; width: 220px; }
+html:root body.touch #results #resBox { grid-template-columns: 400px auto auto; grid-template-areas: "t t t" "tb tl tl" "tb m a"; align-items: start; gap: 14px 14px; }
+html:root body.touch #results #resTbl { width: 400px; }
+html:root body.touch #results #resBox :is(#resMenu, #resAgain) { align-self: end; }
+/* ---- 7) loading screen: the cover with the logo is a card in the central ~70% (max 1600 px), the rest is plain background;
+   only vw/vh units, so the upright-phone turn (patch_touch swaps them) keeps working ---- */
+html:root #fxLoad .fl-bg { inset: auto; left: 50%; top: 50%; width: min(70vw, 124.4vh, 1600px); height: auto; aspect-ratio: 16 / 9; translate: -50% -50%;
+  transform: none; animation: none; will-change: auto; background-size: cover; background-position: 50% 50%; border-radius: 22px; box-shadow: 0 18px 60px rgba(14, 12, 80, .35); }
+html:root #fxLoad .fl-c { bottom: calc(50vh - min(19.69vw, 34.99vh, 450px) + 2vh); width: min(600px, 56vw, 99.5vh); }
+</style>
 <script>window.__fxL && __fxL.set(0.08, 'Загружаю движок…')</script>
 <script src="three.min.js"></script>
 <script>/* three.js r128 GLTFLoader + SkeletonUtils (MIT) */
@@ -14088,7 +14177,11 @@ function bindRange(root) {
   const r = root.querySelector('.tsl'); if (!r) return;
   r.addEventListener('input', () => { sens = +r.value; r.style.setProperty('--p', ((sens - 0.3) / 2.2 * 100).toFixed(0) + '%'); store('arenaSens', sens); });
 }
-function renderSettings() { setGrid.innerHTML = settingsHTML(false); bindRange(setGrid); }
+function renderSettings() { const o = setGrid.querySelector('.sbx'), top = o ? o.scrollTop : 0;
+  setGrid.innerHTML = '<div class="sbx">' + settingsHTML(false) + '<div class="tgrp shelp" id="setHelp"><h5>Как играть</h5>' + helpHTML() + '</div></div>';
+  const sb = setGrid.firstChild, mo = sb.querySelector('.tmore'); if (mo) sb.appendChild(mo); sb.scrollTop = top; bindRange(setGrid); }
+setGrid.addEventListener('click', e => { const b = e.target.closest('.trow.hlp button'); if (!b) return; e.stopPropagation(); e.preventDefault();
+  const hp = setGrid.querySelector('#setHelp'), sb = setGrid.querySelector('.sbx'); if (hp && sb) sb.scrollTo({ top: hp.offsetTop - 8, behavior: 'smooth' }); try { tap(); } catch (er) {} }, true);
 function refreshSettings() {
   if (!pmReady) return;
   if (!startEl.hidden && pmTab === 'set') renderSettings();
@@ -16294,7 +16387,7 @@ function s5Cell(row, l) {
     + (got ? `<span class="ok">${IC.check}</span>` : lock ? S5_LOCK : '') + '</button>';
 }
 function m5Draw() {
-  const box = q4Pop.querySelector('.box'), m = m5(), L = m5Lvl(), d = m4Day(), w = m4Week(), old = box.querySelector('.trk'), keep = old && !s5Scroll ? old.scrollLeft : null;
+  const box = q4Pop.querySelector('.box'), m = m5(), L = m5Lvl(), d = m4Day(), w = m4Week(), old = box.querySelector('.trk'), keep = old && !s5Scroll ? old.scrollLeft : null, keepT = old && !s5Scroll ? old.scrollTop : null;
   const dotD = d.q.some(q => q.v >= q.n && !q.c) || (!d.b && d.q.every(q => q.c)), dotW = w.q.some(q => q.v >= q.n && !q.c) || (!w.b && w.q.every(q => q.c));
   const st = m.st | 0, pc = L >= S5_MAX ? 100 : Math.round((st % S5_PER) / S5_PER * 100);
   let cols = '';
@@ -16308,9 +16401,9 @@ function m5Draw() {
     + `<div class="s5t"><div class="lb"><i class="lv"></i><span>${M5T.free}</span><span class="pr">${M5T.prem}</span></div><div class="trk">${cols}</div></div>`
     + `<p class="nt sm">${M5T.earn}</p>`;
   const trk = box.querySelector('.trk');
-  if (keep != null) trk.scrollLeft = keep;
+  if (keep != null) { trk.scrollLeft = keep; trk.scrollTop = keepT; }
   else { let t = 1; for (let l = 1; l <= L; l++) if (m5Can('f', l) || m5Can('p', l)) { t = l; break; } if (t === 1 && !m5Claimable()) t = L;
-    const c = trk.querySelector(`.col[data-l="${t}"]`); if (c) trk.scrollLeft = Math.max(0, c.offsetLeft - trk.offsetLeft - 8); }
+    const c = trk.querySelector(`.col[data-l="${t}"]`); if (c) { trk.scrollLeft = Math.max(0, c.offsetLeft - trk.offsetLeft - 8); trk.scrollTop = Math.max(0, c.offsetTop - 8); } }
   s5Scroll = false;
 }
 { const qd0 = q4Draw; q4Draw = function () {
@@ -16489,6 +16582,43 @@ window.__m6 = { M6, FX6, SH6, obj: s6Obj, have: s6Have, ready: s6Ready, roll: w6
 
 
 
+/* v42u: popups take ~70-80% of the screen and sit in the centre (Ivan 17:48); arsenal lists end above the tab bar */
+(function () {
+  const F = 0.86, SMAX = 2.2, SMIN = 0.55;
+  const shown = e => !!e && !e.hidden && !e.closest('[hidden]') && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none';
+  const fit = (root, box, mode, reserve, smax) => {
+    if (!shown(root) || !shown(box)) { if (box) box._pf = 0; return; }
+    const W = root.clientWidth, H = root.clientHeight - (reserve || 0), bw = box.offsetWidth, bh = box.offsetHeight;
+    if (!W || !H || !bw || !bh) return;
+    const key = W + 'x' + H + '|' + box.className + '|' + (mode === 'top' ? pV.className : '');
+    let s = Math.max(SMIN, Math.min(smax || SMAX, F * W / bw, F * H / bh));
+    if (box._pf && box._pfK === key && s >= box._pf * 0.98) s = box._pf;   // keep the size while it fits
+    if (box._pf === s && box._pfK === key && box._pfH === bh) return;
+    box._pf = s; box._pfK = key; box._pfH = bh;
+    if (mode === 'scale') box.style.scale = s;
+    else if (mode === 'tc') box.style.transform = `translate(-50%, -50%) scale(${s})`;
+    else { box.style.transformOrigin = '50% 0'; box.style.transform = `translateX(-50%) scale(${s})`; box.style.top = Math.round(reserve + Math.max(0, (H - bh * s) / 2)) + 'px'; }
+  };
+  const tick = () => {
+    try {
+      for (const m of document.querySelectorAll('.mpop, #chPop')) fit(m, m.querySelector(':scope > .box'), 'scale');
+      fit(document.getElementById('ipop'), document.getElementById('ipBox'), 'tc');
+      fit(document.getElementById('lsheet'), document.getElementById('lsBox'), 'tc', 0, 1.25);
+      fit(document.getElementById('results'), document.getElementById('resBox'), 'tc', 0, 1.4);
+      const pb = document.getElementById('pBox'); if (pb) fit(pb.parentElement, pb, 'top', 60, 1.25);
+      const g = document.getElementById('arsGrid'), tb = document.getElementById('pmTabs');
+      if (g && tb && !document.body.classList.contains('touch') && shown(g) && /g-[sd]/.test(g.className)) {
+        const k = g.getBoundingClientRect().width / (g.offsetWidth || 1) || 1, av = (tb.getBoundingClientRect().top - g.getBoundingClientRect().top) / k - 12;
+        const v = Math.max(60, Math.round(av)) + 'px'; if (g.style.maxHeight !== v) g.style.maxHeight = v;
+      } else if (g && g.style.maxHeight) g.style.maxHeight = '';
+    } catch (e) {}
+  };
+  setInterval(tick, 120);
+  const soon = () => { requestAnimationFrame(tick); setTimeout(tick, 40); };
+  for (const ev of ['click', 'pointerup', 'keyup']) __on(window, ev, soon, true);
+  __on(window, 'resize', () => { for (const b of document.querySelectorAll('.box, #ipBox, #lsBox, #pBox, #resBox')) b._pf = 0; soon(); });
+})();
+
 // ---- DECINFO_PATCH (weapons thread): the Decor tab explains every item: state, what it needs, where it comes from, one action
 (function () {
   const st = document.createElement('style'); st.id = 'wdi-css';
@@ -16522,7 +16652,7 @@ window.__m6 = { M6, FX6, SH6, obj: s6Obj, have: s6Have, ready: s6Ready, roll: w6
   #arsGrid.g-d .fxst.dmet { background: #ffd23f; } #arsGrid.g-d .fxst.dun { background: #8c8fae; color: #fff; }
   #arsGrid.g-d .shc.lk .fxs { opacity: .5; filter: saturate(.6); }
   #arsGrid.g-d .dcc.disel { outline: 3px solid #fff; outline-offset: 2px; border-radius: 12px; }
-  @media (max-height: 460px) {
+  @media all {   /* v43: the stage is 156px tall on desktop too (ui patch42u), so the compact card is used everywhere */
     #decInfo { padding: 7px 9px; gap: 4px; top: 6px; bottom: 6px; width: min(33%, 300px); }
     #decInfo { width: 44%; }
     #arsStage.dl.disel canvas.pv3 { transform: translateX(-22%); }
