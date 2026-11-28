@@ -10238,6 +10238,70 @@ function updateStreaks(dt) {
 
 // ---------- bots ----------
 const bots = [], botParts = [];
+// ===== OPPONENT LOADOUTS (begin) =====
+// Opponents carry the new base weapons like players would: what they pick depends on the difficulty tier at spawn (low: mostly
+// striker with a pocket pistol; mid: ranger and hornet appear, buzz as the sidearm; high: bruiser, ranger, hornet, bulldog).
+// The behaviour class stays in b.wpn (rifle / pistol / shotgun / sniper), so all AI keeps working; b.wid is the real base id
+// (model, damage, rhythm, kill feed). Damage per shot is derived from each base's rhythm so that its expected damage per second
+// against the player is WL[id].k times the class anchor (striker for rifles, pocket for pistols): the feel differs, fairness holds.
+// Glue (patch_loadout.py): spawnBot (wlSpawn), bmSpawn / bmDoSwap (primary and sidearm ids), botArm / botRound (wlMag),
+// botShoot (wlCadence, wlAcc, wlDmg, wlKW), botShootBot (wlBB), blkSetWeapon (wlModel, wlLen).
+const WL = {
+  //        class     gap within a burst, burst size, +diff*2 shots?, pause (s, x (1.25 - 0.55 diff)), accuracy loss per m, flat, close (<10 m), mag, k
+  rifle:   { c: 'rifle',  gap: 0.12,  bu: [3, 5], bd: 1, pa: [0.5, 1.1],  dist: 0.009, acc: 0,     near: 0,    mag: 30, k: 1,    len: 1.15 },
+  ranger:  { c: 'rifle',  gap: 0.09,  bu: [3, 3], bd: 0, pa: [0.45, 0.95], dist: 0.007, acc: 0.02, near: 0,    mag: 30, k: 1.05, len: 1.25 },
+  bruiser: { c: 'rifle',  gap: 0.15,  bu: [3, 4], bd: 1, pa: [0.55, 1.15], dist: 0.009, acc: -0.03, near: 0,    mag: 30, k: 1.1,  len: 1.2 },
+  hornet:  { c: 'rifle',  gap: 0.075, bu: [5, 7], bd: 1, pa: [0.45, 1.0],  dist: 0.014, acc: 0,     near: 0.05, mag: 40, k: 1,    len: 0.85, rng: 10 },
+  pistol:  { c: 'pistol', gap: 0.24,  bu: [2, 3], bd: 1, pa: [0.5, 1.1],  dist: 0.009, acc: 0,     near: 0,    mag: 12, k: 1,    len: 0.62 },
+  buzz:    { c: 'pistol', gap: 0.085, bu: [4, 6], bd: 1, pa: [0.5, 1.1],  dist: 0.013, acc: 0,     near: 0.04, mag: 20, k: 1,    len: 0.7 },
+  bulldog: { c: 'pistol', gap: 0.5,   bu: [1, 2], bd: 0, pa: [0.7, 1.2],  dist: 0.008, acc: -0.04, near: 0,    mag: 6,  k: 1.1,  len: 0.75 }
+};
+const WL_BASE = { rifle: [7, 10], pistol: [9, 13] };   // the anchors' damage per hit before the difficulty scale (as before)
+// weights per tier: [low, mid, high]
+const WL_PICK = {
+  rifle:  { rifle: [0.8, 0.45, 0.25], ranger: [0.1, 0.3, 0.3], hornet: [0.1, 0.25, 0.15], bruiser: [0, 0, 0.3] },
+  pistol: { pistol: [0.8, 0.4, 0.3], buzz: [0.2, 0.4, 0.3], bulldog: [0, 0.2, 0.4] }
+};
+// expected damage per second of a base at diff 0.5 per unit of damage per hit (hit chance left out: it is shared)
+function wlRate(s) { const n = (s.bu[0] + s.bu[1]) / 2 + (s.bd ? 1 : 0), pause = (s.pa[0] + s.pa[1]) / 2 * (1.25 - 0.55 * 0.5); return n / ((n - 1) * s.gap + pause); }
+(function wlInit() {
+  for (const id in WL) { const s = WL[id], a = WL_BASE[s.c], anchor = WL[s.c], f = s.k * wlRate(anchor) / wlRate(s);
+    s.dmg = [a[0] * f, a[1] * f]; s.bb = s.k; }   // bb: damage factor on other opponents (their fire rhythm there is shared, so only k)
+})();
+function wlTier(D) { return D < 0.35 ? 0 : D < 0.65 ? 1 : 2; }
+function wlRoll(cls, D) {
+  const P = WL_PICK[cls]; if (!P) return cls; const t = wlTier(D); let sum = 0; for (const id in P) sum += P[id][t];
+  let r = Math.random() * sum; for (const id in P) { r -= P[id][t]; if (r <= 0) return id; } return cls;
+}
+function wlSpec(b) { return WL[b && b.wid] || WL[b && b.wpn] || WL.rifle; }
+// spawnBot: after the class is chosen
+function wlSpawn(b, D) {
+  b.wid = wlRoll(b.wpn, D);
+  const sc = typeof bmSec === 'function' ? bmSec(b.wpn) : 'pistol'; b.wlS = wlRoll(sc, D);
+  const s = WL[b.wid]; if (s && s.rng) b.range = Math.min(b.range, s.rng);
+}
+function wlMag(b) { const s = WL[b.wid]; return s ? s.mag : (BOT_MAG[b.wpn || 'rifle'] || 30); }
+function wlCadence(b) {
+  const s = wlSpec(b);
+  if (b.burst <= 0) b.burst = s.bu[0] + (Math.random() * (s.bu[1] - s.bu[0] + 1) | 0) + (s.bd ? Math.round(diff * 2) : 0);
+  b.burst--; b.fireCd = b.burst > 0 ? s.gap : (s.pa[0] + Math.random() * (s.pa[1] - s.pa[0])) * (1.25 - 0.55 * diff);
+}
+function wlAcc(b, dist) { const s = WL[b.wid]; if (!s || b.wpn === 'sniper' || b.wpn === 'shotgun') return 0; return (0.009 - s.dist) * dist + s.acc + (dist < 10 ? s.near : 0); }
+function wlDmg(b) { const s = wlSpec(b), d = s.dmg || WL_BASE.rifle; return d[0] + Math.random() * (d[1] - d[0]); }
+function wlBB(b) { const s = WL[b && b.wid]; return s && s.bb ? s.bb : 1; }
+// the id the kill feed and the death screen get: the base when the game knows it, else the class (as before)
+function wlKW(b) { return b && b.wid && typeof WEAPONS !== 'undefined' && WEAPONS[b.wid] ? b.wid : (b && b.wpn) || 'rifle'; }
+// third-person model: the weapons thread's light model gsBuildTP(id) when it is there, else the class's gun (as before).
+// Convention (same as the GOB guns): barrel toward -X, top +Y, any size (blkSetWeapon scales it to WL[id].len), one shared
+// geometry per id (we clone the group per opponent). The grip goes at the rear 30% / lower 38% of the box (pistols 20% / 30%).
+const WL_TP = {};
+function wlModel(b) {
+  const id = b.wid; if (!id || !WL[id] || typeof gsBuildTP !== 'function') return null;
+  if (!(id in WL_TP)) { try { WL_TP[id] = gsBuildTP(id) || null; } catch (e) { WL_TP[id] = null; } }
+  return WL_TP[id];
+}
+function wlLen(b) { const s = WL[b.wid]; return s ? s.len : 0; }
+// ===== OPPONENT LOADOUTS (end) =====
 const BOT_COUNT = 11;   // a pool: each match takes what its mode and arena need (MATCH MODES)
 const bBody = new THREE.BoxGeometry(0.7, 0.9, 0.4), bHead = new THREE.BoxGeometry(0.42, 0.42, 0.42);
 const bLeg = new THREE.BoxGeometry(0.24, 0.75, 0.26), bGun = new THREE.BoxGeometry(0.1, 0.1, 0.6);
@@ -10302,6 +10366,7 @@ function spawnBot(b) {
   if (learn && learn.range < 7 && b.role !== 'rusher') b.range += 3;             // you like close range: they keep away
   b.wpn = b.role === 'sniper' ? 'sniper' : b.role === 'rusher' ? (Math.random() < 0.35 + D * 0.4 ? 'shotgun' : 'rifle') : (Math.random() < 0.25 ? 'pistol' : 'rifle');
   if (b.wpn === 'shotgun') b.range = Math.min(b.range, 5);
+  wlSpawn(b, D);
   b.foe = null; b.nadeCd = 5 + Math.random() * 6; b.charged = false; b.chargeT = 0; b.healO = null;
   if (b.gob) gobSetWeapon(b); else if (b.gunG) { const sc = BOT_GUN_SCALE[b.wpn]; b.gunG.scale.set(sc[0], sc[1], sc[2]); }
   if (b.aimLine) b.aimLine.visible = false;
@@ -11866,19 +11931,19 @@ function attachBlokit(b, i, pick, seed, desc) {
 const _bkM = new THREE.Matrix4(), _bkBox = new THREE.Box3(), _bkV = new THREE.Vector3();
 const BLK_GUN_LEN = { rifle: 1.15, shotgun: 1.1, sniper: 1.45, pistol: 0.62 };   // metres at the classic 1-stud hand; Roblox guns are about 1.5-4 studs long
 function blkSetWeapon(b) {
-  const w = b.wpn || 'rifle'; if (b.gobW === w) return;
+  const w = b.wpn || 'rifle', wk = w + ':' + (b.wid || w); if (b.gobW === wk) return;
   if (b.gunG && b.gunG.parent) b.gunG.parent.remove(b.gunG);
   if (b.blkTool === false) { b.gunG = null; b.gobW = null; return; }
-  const src = GOB.gun[w] || GOB.gun.rifle; if (!src) return; const gun = src.clone(true);
+  const src = wlModel(b) || GOB.gun[w] || GOB.gun.rifle; if (!src) return; const gun = src.clone(true);
   gun.traverse(o => { if (o.isMesh) { o.material = gobGunMat(o.material); o.frustumCulled = false; } });
   gun.rotation.y = -Math.PI / 2; gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
-  const K = b.blkBuilt.k, len = _bkBox.max.z - _bkBox.min.z || 1, s = (BLK_GUN_LEN[w] || 0.9) * (K.sx / BLK_STUD) / len; gun.scale.setScalar(s); gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
+  const K = b.blkBuilt.k, len = _bkBox.max.z - _bkBox.min.z || 1, s = (wlLen(b) || BLK_GUN_LEN[w] || 0.9) * (K.sx / BLK_STUD) / len; gun.scale.setScalar(s); gun.updateMatrixWorld(true); _bkBox.setFromObject(gun);
   // the handle (rear part, lower part of the gun) sits inside the block hand, like a Roblox tool Grip at RightGripAttachment
   const gh = _bkBox.max.y - _bkBox.min.y, gz = _bkBox.max.z - (_bkBox.max.z - _bkBox.min.z) * (w === 'pistol' ? 0.2 : 0.3), gy = _bkBox.min.y + gh * (w === 'pistol' ? 0.3 : 0.38);
   gun.position.set(-(_bkBox.min.x + _bkBox.max.x) / 2, -gy, -gz);
   const holder = new THREE.Group(); holder.add(gun);
   _bkM.makeBasis(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0)); holder.quaternion.setFromRotationMatrix(_bkM);
-  const A = b.blkBuilt.att.RightGripAttachment; holder.position.set(A[1], A[2] * 0.5, A[3]); b.gobBones.handR.add(holder); b.gunG = holder; b.gobW = w;
+  const A = b.blkBuilt.att.RightGripAttachment; holder.position.set(A[1], A[2] * 0.5, A[3]); b.gobBones.handR.add(holder); b.gunG = holder; b.gobW = wk;
   b.muzZ = _bkBox.min.z - gz; b.muzY = _bkBox.min.y + gh * 0.72 - gy;
   if (typeof markClean === 'function') markClean(holder);
   if (b.xrayOn) holder.traverse(o => o.layers.enable(2));
@@ -12732,12 +12797,12 @@ function findCover(b) {
   return best;
 }
 const BOT_MAG = { rifle: 30, pistol: 12, shotgun: 6, sniper: 5 };
-function botArm(b) { const m = BOT_MAG[b.wpn || 'rifle'] || 30; b.clip = m; b.bres = m * 4; b.dry = false; }
+function botArm(b) { const m = wlMag(b); b.clip = m; b.bres = m * 4; b.dry = false; }
 // one round per shot; an empty clip means a reload pause, an empty reserve means no shooting until it finds a box
 function botRound(b) {
   if (b.clip == null) botArm(b);
   if (b.clip > 0) { b.clip--; return true; }
-  const w = b.wpn || 'rifle', m = BOT_MAG[w] || 30;
+  const w = b.wpn || 'rifle', m = wlMag(b);
   if (b.bres > 0) { const t = Math.min(m, b.bres); b.clip = t; b.bres -= t; b.fireCd = w === 'shotgun' ? 2.0 : 1.6; b.burst = 0; b.charged = false; return false; }
   b.dry = true; b.fireCd = 0.6; botSeekAmmo(b); return false;
 }
@@ -12752,7 +12817,7 @@ function botAmmoTick(dt) {
     if (!b.dry || b.dead > 0) continue;
     for (const o of loot) { if (!o.live || o.type !== 'ammo' || o.magnet) continue;
       if (Math.hypot(o.p.x - b.pos.x, o.p.z - b.pos.z) < 1.8 && Math.abs(o.p.y - b.pos.y) < 2.5) {
-        o.live = false; if (o.mesh) o.mesh.visible = false; const m = BOT_MAG[b.wpn || 'rifle'] || 30; b.bres = m * 3; b.clip = 0; b.dry = false;
+        o.live = false; if (o.mesh) o.mesh.visible = false; const m = wlMag(b); b.bres = m * 3; b.clip = 0; b.dry = false;
         burstAt(_baV.set(o.p.x, o.p.y, o.p.z), 0xffb020, 8, 4, 0.1); break; } }
     if (b.dry && (b.ammoLookT = (b.ammoLookT || 0) - dt) <= 0) { b.ammoLookT = 0.8; botSeekAmmo(b); }
   }
@@ -12764,12 +12829,11 @@ function botShoot(b, dist, moving) {
   b.charged = false; b.chargeT = 0;
   if (w === 'sniper') b.fireCd = (2.0 + Math.random() * 0.8) * (1.2 - 0.4 * diff);
   else if (w === 'shotgun') b.fireCd = (0.8 + Math.random() * 0.4) * (1.15 - 0.3 * diff);
-  else { if (b.burst <= 0) b.burst = (w === 'pistol' ? 2 + (Math.random() * 2 | 0) : 3 + (Math.random() * 3 | 0)) + Math.round(diff * 2);
-    b.burst--; b.fireCd = b.burst > 0 ? (w === 'pistol' ? 0.24 : 0.12) : (0.5 + Math.random() * 0.6) * (1.25 - 0.55 * diff); }
+  else wlCadence(b);
   const pSpeed = Math.hypot(player.vel.x, player.vel.z);
   let chance = 0.5 * b.skill + Math.min(0.22, (b.seeT - b.react) * 0.12) - dist * (w === 'sniper' ? 0.004 : 0.009) - pSpeed * 0.022
     - (player.onGround ? 0 : 0.12 * DD.airK) - (slideT > 0 ? 0.15 * DD.airK : 0) - (moving ? 0.07 : 0) - (b.onGround ? 0 : 0.2) + (w === 'shotgun' && dist < 8 ? 0.25 : 0);
-  chance += rvHitP(b); chance = Math.max(0.08, Math.min(w === 'sniper' ? 0.75 : 0.85, chance));
+  chance += rvHitP(b) + wlAcc(b, dist); chance = Math.max(0.08, Math.min(w === 'sniper' ? 0.75 : 0.85, chance));
   const hit = Math.random() < chance;
   b.gunG.localToWorld(muzzleB.set(0, b.muzY != null ? b.muzY : 0.02, b.muzZ || -0.62));
   aimP.set(player.pos.x, player.pos.y + 1.3, player.pos.z);
@@ -12784,9 +12848,9 @@ function botShoot(b, dist, moving) {
   { const sp = { pos: b.pos }; if (w === 'sniper') sfx('w_sniper', 0.55 * vol, 0.92, sp); else if (w === 'shotgun') sfx('w_shotgun', 0.5 * vol, 0.95, sp); else if (w === 'pistol') sfx('w_pistol', 0.4 * vol, 0.97, sp); else sfx('enemy', 0.6 * vol, 1, sp); if (!hit) whizBy(muzzleB, aimP); }
   const scale = 0.8 + 0.7 * diff;
   if (hit) {
-    let dmg = w === 'sniper' ? 34 + Math.random() * 12 : w === 'shotgun' ? (17 + Math.random() * 10) * Math.max(0.25, 1 - dist / 14) : w === 'pistol' ? 9 + Math.random() * 4 : 7 + Math.random() * 3;
+    let dmg = w === 'sniper' ? 34 + Math.random() * 12 : w === 'shotgun' ? (17 + Math.random() * 10) * Math.max(0.25, 1 - dist / 14) : wlDmg(b);
     const zone = botHitZone(b); dmg *= zone === 'head' ? 1.6 : zone === 'leg' ? 0.75 : 1;
-    if (worldK < 0.95) slowHit(dmg * scale, b.name, w, muzzleB, dist, zone); else { hurtPlayer(dmg * scale, b.name, w); if (deadT <= 0 || hp <= 0) playerHitNum(dmg * scale, zone); if (zone === 'head') sfx('head', 0.45, 0.8); }
+    if (worldK < 0.95) slowHit(dmg * scale, b.name, wlKW(b), muzzleB, dist, zone); else { hurtPlayer(dmg * scale, b.name, wlKW(b)); if (deadT <= 0 || hp <= 0) playerHitNum(dmg * scale, zone); if (zone === 'head') sfx('head', 0.45, 0.8); }
   }
 }
 
@@ -12817,7 +12881,7 @@ function botShootBot(b, o, dist) {
   aimP.set(o.pos.x, o.pos.y + 1.2, o.pos.z); if (!hit) aimP.add(tmpV.set((Math.random() - .5) * 2.5, (Math.random() - .3) * 1.5, (Math.random() - .5) * 2.5));
   tracer(muzzleB, aimP, 0xff7a6b, 0.06, 'bot'); b.recoilT = 0.1;
   sfx('enemy', 0.4 * Math.max(0.08, 1 - Math.hypot(b.pos.x - player.pos.x, b.pos.z - player.pos.z) / 45), 1, { pos: b.pos });
-  if (hit) botHurtBot(b, o, (10 + Math.random() * 5) * rvDmg(b, o), b.wpn);
+  if (hit) botHurtBot(b, o, (10 + Math.random() * 5) * rvDmg(b, o) * wlBB(b), b.wpn);
 }
 function nearestHealth(b, R) { let best = null, bd = R; for (const o of loot) if (o.live && o.type === 'health' && !o.magnet) { const d = Math.hypot(o.p.x - b.pos.x, o.p.z - b.pos.z); if (d < bd) { bd = d; best = o; } } return best; }
 function botThrow(b, tx, ty, tz) {
@@ -12846,6 +12910,7 @@ function bmSpawn(b) {
   b.bm = { stam: 1, tired: false, rest: 0, supCd: 1 + r() * 3, slideCd: 0.5, airDashed: false, dbl: false, airT: 0, thinkT: r() * 0.3,
     nades: r() < 0.5 ? 2 : 1, nadeReg: 0, wind: 0, tx: 0, ty: 0, tz: 0, tFoe: null, jumpy: 0.5 + r(), dashy: 0.4 + r() * 1.1, nadey: 0.5 + r(),
     pri: b.wpn, sec: bmSec(b.wpn), ammo: {}, range0: b.range, swapT: 0, swapTo: null, calmT: 0, padGo: null, padT: 0, highT: 0, roamRun: false };
+  b.bm.pid = b.wid; b.bm.sid = b.wlS;
   if (b.bmHB) { b.head.position.y = b.bmHB.h; b.torso.position.y = b.bmHB.t; b.bmHB = null; }
   b.slideT = 0; b.dashT = 0; b.sprint = false;
 }
@@ -12875,7 +12940,7 @@ function bmSlide(b) {
 // ---- weapons: a second gun, swapped like a player does (empty clip in a fight, enemy too close for the sniper, calm again) ----
 function bmStartSwap(b, w) { const M = b.bm; if (M.swapT > 0 || b.wpn === w || M.wind > 0) return; M.swapT = 0.45; M.swapTo = w; if (b.blk && typeof blkSwap === 'function') blkSwap(b); sfx('wswitch', 0.35 * bmVol(b), 1, { pos: b.pos }); }
 function bmDoSwap(b, w) {
-  const M = b.bm; M.ammo[b.wpn] = [b.clip, b.bres]; b.wpn = w; const a = M.ammo[w];
+  const M = b.bm; M.ammo[b.wpn] = [b.clip, b.bres]; b.wpn = w; b.wid = w === M.pri ? M.pid : M.sid; const a = M.ammo[w];
   if (a && a[0] != null && (a[0] > 0 || a[1] > 0)) { b.clip = a[0]; b.bres = a[1]; } else b.clip = null;
   b.dry = false; b.burst = 0; b.charged = false; b.chargeT = 0; if (b.aimLine) b.aimLine.visible = false;
   b.range = w === M.pri ? M.range0 : w === 'shotgun' ? Math.min(M.range0, 5) : w === 'pistol' ? Math.min(M.range0, 9) : Math.min(M.range0, 12);
