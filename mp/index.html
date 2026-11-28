@@ -18278,7 +18278,7 @@ window.__m6 = { M6, FX6, SH6, obj: s6Obj, have: s6Have, ready: s6Ready, roll: w6
       fit(document.getElementById('results'), document.getElementById('resBox'), 'tc', 0, 1.4);
       const pb = document.getElementById('pBox'); if (pb) fit(pb.parentElement, pb, 'top', 60, 1.25);
       const g = document.getElementById('arsGrid'), tb = document.getElementById('pmTabs');
-      if (g && tb && !document.body.classList.contains('touch') && shown(g) && /g-[sd]/.test(g.className)) {
+      if (g && tb && !document.body.classList.contains('touch') && !document.body.classList.contains('lobL') && shown(g) && /g-[sd]/.test(g.className)) {
         const k = g.getBoundingClientRect().width / (g.offsetWidth || 1) || 1, av = (tb.getBoundingClientRect().top - g.getBoundingClientRect().top) / k - 12;
         const v = Math.max(60, Math.round(av)) + 'px'; if (g.style.maxHeight !== v) g.style.maxHeight = v;
       } else if (g && g.style.maxHeight) g.style.maxHeight = '';
@@ -19532,7 +19532,7 @@ html:root body #decInfo .dib, html:root body #kfInfo .dib { background: var(--mi
     const box = e => { const q = e.getBoundingClientRect(); if (!rot) return { left: q.left, top: q.top, right: q.right, bottom: q.bottom, width: q.width, height: q.height };
       return { left: q.top - bb.top, right: q.bottom - bb.top, top: bb.right - q.right, bottom: bb.right - q.left, width: q.height, height: q.width }; };
     const VW = rot ? B.offsetWidth : innerWidth, VH = rot ? B.offsetHeight : innerHeight;
-    const on = B.classList.contains('touch') && VW >= VH * 1.5 && vis(seg);
+    const hk = typeof window.__lobSide === 'function' ? window.__lobSide() : null, on = (hk ? hk.on : B.classList.contains('touch') && VW >= VH * 1.5) && vis(seg), BK = hk && hk.on ? hk.back || 0 : 0;   // v63m: the new main screen turns the side layout on for every landscape screen and puts a Back button above the tabs
     if (B.classList.contains('arsSide') !== on) B.classList.toggle('arsSide', on);
     if (!on) { clr(seg); clr(sg); clr(g); g.classList.remove('n3'); return; }
     const P = seg.offsetParent; if (!P) return;
@@ -19542,9 +19542,9 @@ html:root body #decInfo .dib, html:root body #kfInfo .dib { background: var(--mi
     const nr = vis(nav) ? box(nav) : null, gap = 10 * k;
     const T = Math.max(lg.bottom, lv.bottom, wl.bottom) + gap, L = Math.max(lg.left, 8 * k), R = Math.min(wl.right, VW - 8 * k);
     const NB = nr ? nr.bottom : VH - 8 * k, NT = (nr ? nr.top : VH) - 8 * k;
-    const n = Math.max(1, seg.children.length), bh = Math.max(30 * k, Math.min(46 * k, (NB - T) / n));
-    const sw = Math.min(134 * k, Math.max(108 * k, (R - L) * 0.15));
-    put(seg, { left: X(L), top: Y(T), width: D(sw), height: D(bh * n), transform: 'none', right: 'auto', bottom: 'auto' });
+    const n = Math.max(1, seg.children.length), ST = T + BK * k, bh = Math.max(30 * k, Math.min(46 * k, (NB - ST) / n));
+    const sw = hk && hk.on && hk.sw ? hk.sw * k : Math.min(134 * k, Math.max(108 * k, (R - L) * 0.15));
+    put(seg, { left: X(L), top: Y(ST), width: D(sw), height: D(bh * n), transform: 'none', right: 'auto', bottom: 'auto' });
     const cl = L + sw + gap * 1.2, stage = !!sg && !sg.hidden && getComputedStyle(sg).display !== 'none';
     if (!stage) { clr(sg); const n3 = g.classList.contains('ng4') && (R - cl) / k / 4 < 200; if (g.classList.contains('n3') !== n3) g.classList.toggle('n3', n3); if (n3) { /* more than 3 rows: the 4th peeks out, so the list reads as scrollable */ const cells = g.children.length + (g.querySelector('.ngd') ? 1 : 0), rh = Math.max(72, Math.min(96, Math.floor(((NT - T) / k - 12 - (cells > 9 ? 24 : 16)) / (cells > 9 ? 3.3 : 3)))) + 'px'; if (g.style.getPropertyValue('--n3h') !== rh) g.style.setProperty('--n3h', rh); } put(g, { left: X(cl), top: Y(T), width: D(R - cl), height: D(NT - T), transform: 'none', right: 'auto', bottom: 'auto', 'max-height': 'none' }); return; }
     const gw = Math.min(3 * 58 * k + 30 * k, (R - cl) * 0.38), gl = R - gw;
@@ -19621,6 +19621,151 @@ window.__fxUp = __G;   // this instance came up to the end of its script
   arsStage.addEventListener('click', e => { const b = e.target.closest('#decInfo [data-dh]'); if (!b) return; e.stopPropagation(); try { tap(0.6); } catch (er) {} dhOpen(); });
   __on(document, 'keydown', e => { if (e.key === 'Escape') { const h = document.getElementById('diHelp'); if (h && !h.hidden) { e.stopPropagation(); dhClose(); } } }, true);
   try { if (typeof pmTab !== 'undefined' && pmTab === 'ars' && arsMode === 'd') decDrawTab(); } catch (e) {} }
+
+
+/* v63m: new main screen (interface thread, Ivan 28.11 13:11): menu column at the left, mode on top, arenas in a strip; sections get Back + their menu */
+(function () {
+  const st = document.createElement('style'); st.id = 'v63m'; st.textContent = `html:root body.lobL #lobby #pmTabs { flex-direction: column !important; padding: 0 !important; gap: 0 !important; border-radius: 18px !important; overflow: hidden !important; box-sizing: border-box !important; margin: 0 !important; }
+html:root body.lobL #lobby #pmTabs button, html:root body.lobL #lobby #pmTabs button:first-child, html:root body.lobL #lobby #pmTabs button:last-child { flex: 1 1 0 !important; width: 100% !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; margin: 0 !important;
+  border-radius: 0 !important; padding: 0 10px 0 12px !important; gap: 8px !important; justify-content: flex-start !important; font-size: 16px !important; box-shadow: none !important; }
+html:root body.lobL #lobby #pmTabs button + button { border-top: 2px solid rgba(27,16,54,.12) !important; }
+html:root body.lobL #lobby #pmTabs button.on + button, html:root body.lobL #lobby #pmTabs button.on { border-top-color: transparent !important; }
+html:root body.lobL #lobby #pmTabs .ic29 { width: 30px !important; height: 30px !important; }
+html:root body.lobL #lobby #pmTabs .ti { width: 34px !important; height: 26px !important; }
+html:root body.lobL #lobby #pmTabs button.dot::after { left: 40px !important; right: auto !important; top: 5px !important; }
+html:root body.lobL.lobSec #lobby #pmTabs { display: none !important; }
+#lobBack, #setSeg { display: none; }
+html:root body.lobL.lobSec #lobby #lobBack { display: flex; position: absolute; align-items: center; gap: 8px; box-sizing: border-box; padding: 0 14px 0 6px; border-radius: 999px; pointer-events: auto;
+  background: rgba(27,16,54,.78); color: #fff; font: 800 16px var(--ds-font-text, var(--font)); white-space: nowrap; z-index: 3; }
+#lobBack i { width: 32px; height: 32px; flex: none; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+#lobBack svg { width: 18px; height: 18px; }
+html:root body.lobL.lobSet #lobby #setSeg { display: flex; position: absolute; flex-direction: column; gap: 0; border-radius: 18px; overflow: hidden; box-sizing: border-box; background: #fff; pointer-events: auto; z-index: 2; }
+#setSeg button { flex: 1 1 0; min-height: 0; display: flex; align-items: center; padding: 0 14px; font: 800 16px var(--ds-font-text, var(--font)); color: var(--ink, #1b1036); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#setSeg button + button { border-top: 2px solid rgba(27,16,54,.12); }
+#setSeg button.on { background: var(--ds-color-yellow, var(--yel, #ffd23f)); border-top-color: transparent; }
+#setSeg button.on + button { border-top-color: transparent; }
+html:root body.lobL #lobby #mMode { justify-content: flex-start !important; box-sizing: border-box !important; padding: 0 16px 0 5px !important; border-radius: 999px !important; font-size: 14px !important; overflow: hidden !important; margin: 0 !important; }
+html:root body.lobL #lobby #mMode.sm { font-size: 12px !important; }
+html:root body.lobL #lobby #mMode .mdSeg { margin: 0 4px 0 0 !important; padding: 0 !important; gap: 0 !important; background: #fff !important; border: 3px solid var(--ds-color-ink, #1b1036) !important; border-radius: 999px !important; overflow: hidden; flex: none; }
+html:root body.lobL #lobby #mMode .mdSeg b { display: flex; align-items: center; height: 38px; padding: 0 18px !important; border-radius: 0 !important; font: 800 17px var(--ds-font-text, var(--font)) !important; color: var(--ds-color-ink, #1b1036) !important; }
+html:root body.lobL #lobby #mMode .mdSeg b.on { background: var(--ds-color-yellow, #ffd23f) !important; }
+html:root body.lobL #lobby #mMode.xs .mdSeg b { padding: 0 12px !important; font-size: 15px !important; }
+html:root body.lobL #lobby #mapBtns { flex-wrap: nowrap !important; justify-content: flex-start !important; gap: var(--lobGap, 12px) !important; overflow-x: auto !important; overflow-y: hidden !important; scroll-snap-type: x mandatory;
+  scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; touch-action: pan-x; box-sizing: border-box !important; margin: 0 !important; padding: 0 !important; border-radius: 18px; }
+html:root body.lobL #lobby #mapBtns::-webkit-scrollbar { display: none; }
+html:root body.lobL #lobby #mapBtns.fit { overflow: visible !important; }
+html:root body.lobL #lobby #mapBtns.more { --mL: 1; --mR: 0; -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,var(--mL)) 0, #000 34px, #000 calc(100% - 34px), rgba(0,0,0,var(--mR)) 100%); mask-image: linear-gradient(90deg, rgba(0,0,0,var(--mL)) 0, #000 34px, #000 calc(100% - 34px), rgba(0,0,0,var(--mR)) 100%); }
+html:root body.lobL #lobby #mapBtns.more.mid { --mL: 0; }
+html:root body.lobL #lobby #mapBtns.more.end { --mR: 1; }
+html:root body.lobL #lobby #mapBtns .map { flex: 0 0 auto !important; width: var(--lobMapW) !important; height: var(--lobMapH) !important; scroll-snap-align: start; margin: 0 !important; }
+html:root body.lobL #lobby #chRow { justify-content: space-between !important; gap: 8px !important; box-sizing: border-box !important; margin: 0 !important; }
+html:root body.lobL #lobby #chRow .chs { flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; }
+html:root body.lobL #lobby #chRow .chx { flex: none !important; position: absolute !important; margin: 0 !important; }
+html:root body.lobL #lobby #mapBtns .map .im { height: calc(var(--lobMapH) - 58px) !important; }
+html:root body.lobL.arsSide #lobby #arsGrid { max-height: none !important; }   /* patch42u caps the desktop list at the bottom menu, which is gone here */
+html:root body.lobL.arsSide #lobby #arsGrid .emall { grid-template-columns: repeat(auto-fill, 52px) !important; justify-content: start !important; padding-right: 4px; box-sizing: border-box; }   /* 9 fixed columns overflowed both sides */
+html:root body.lobL.lobSet #lobby #setGrid { box-sizing: border-box !important; margin: 0 !important; max-height: none !important; }
+html:root body.lobL.lobSet #lobby #setGrid > .sbx { max-height: 100% !important; height: 100% !important; box-sizing: border-box; }`; document.head.appendChild(st);
+  const B = document.body, $ = id => document.getElementById(id), EN = () => !(window.__i18n && window.__i18n.lang === 'ru');
+  const KEYS = ['left', 'top', 'width', 'height', 'right', 'bottom', 'transform', 'max-height'], placed = new Set();
+  const put = (e, o) => { for (const k in o) if (e.style.getPropertyValue(k) !== o[k] || e.style.getPropertyPriority(k) !== 'important') e.style.setProperty(k, o[k], 'important'); placed.add(e); };
+  const clrAll = () => { for (const e of placed) for (const k of KEYS) e.style.removeProperty(k); placed.clear(); };
+  const vis = e => !!e && e.getClientRects().length > 0 && !e.closest('[hidden]');
+  const r1 = v => Math.round(v * 10) / 10 + 'px';
+  let back = null, sseg = null, sSig = '', wasPlay = false, needMain = true;
+  const goMain = () => { try { if (typeof pmTab !== 'undefined' && pmTab === 'match') return; setTab('match'); sfx('ui_tab', 0.7); } catch (e) { const b = document.querySelector('#pmTabs button[data-t="match"]'); b && b.click(); } };
+  { const st0 = setTab; setTab = function (t) {   /* hide the menu column before the section draws, so its fitters (emFit, gsWFit) measure the final screen */
+      if (B.classList.contains('lobL')) { B.classList.toggle('lobSec', t !== 'match'); B.classList.toggle('lobSet', t === 'set'); }
+      const r = st0.apply(this, arguments); soon(); return r; }; }
+  let SWD = 0; window.__lobSide = () => ({ on: B.classList.contains('lobL'), back: 52, sw: SWD });
+  function sbx() { const g = $('setGrid'); return g && g.querySelector('.sbx'); }
+  function groups() { const g = $('setGrid'); return g ? [...g.querySelectorAll('.sbx h5')].filter(x => x.getClientRects().length) : []; }   /* every group title: Controls, Assist, Sound, Graphics, How to play */
+  const offIn = (el, box) => { let y = 0, e = el; while (e && e !== box && box.contains(e)) { y += e.offsetTop; e = e.offsetParent; } if (e !== box) y -= box.offsetTop; return y; };
+  function mk() {
+    const lb = document.querySelector('#lobby .lbox'); if (!lb) return false;
+    if (!back) { back = document.createElement('button'); back.type = 'button'; back.id = 'lobBack';
+      back.innerHTML = '<i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4.5 7.5 12l7.5 7.5" fill="none" stroke="#1b1036" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span></span>';
+      back.addEventListener('click', e => { e.stopPropagation(); goMain(); }); lb.appendChild(back); }
+    const t = EN() ? 'Back' : 'Назад'; if (back.lastChild.textContent !== t) { back.lastChild.textContent = t; back.setAttribute('aria-label', t); }
+    if (!sseg) { sseg = document.createElement('div'); sseg.id = 'setSeg'; sseg.setAttribute('role', 'tablist'); lb.appendChild(sseg);
+      sseg.addEventListener('click', e => { const b = e.target.closest('button'); const sb = sbx(), g = groups()[b ? +b.dataset.i : -1]; if (!b || !sb || !g) return; e.stopPropagation();
+        sb.scrollTo({ top: Math.max(0, offIn(g, sb) - 8), behavior: 'smooth' }); for (const x of sseg.children) x.classList.toggle('on', x === b); sseg._lock = performance.now() + 700; try { sfx('ui_tab', 0.6); } catch (e2) {} }); }
+    return true;
+  }
+  function setSegSync() {
+    const gs = groups(), sig = gs.map(g => g.textContent.trim()).join('|');
+    if (sig !== sSig) { sSig = sig; sseg.innerHTML = ''; gs.forEach((g, i) => { const b = document.createElement('button'); b.type = 'button'; b.dataset.i = i; b.setAttribute('role', 'tab'); b.textContent = g.textContent.trim(); sseg.appendChild(b); }); }
+    const sb = sbx(); if (!sb || (sseg._lock && performance.now() < sseg._lock)) return;
+    let cur = 0; const top = sb.scrollTop + 24; gs.forEach((g, i) => { if (offIn(g, sb) <= top) cur = i; });
+    if (sb.scrollTop + sb.clientHeight >= sb.scrollHeight - 4) cur = gs.length - 1;
+    [...sseg.children].forEach((x, i) => { if (x.classList.contains('on') !== (i === cur)) x.classList.toggle('on', i === cur); });
+  }
+  function edges(mb) {   /* fade the strip's edge where more arenas wait: right at the start, both in the middle, left at the end */
+    const more = mb.classList.contains('more'), end = more && mb.scrollLeft + mb.clientWidth >= mb.scrollWidth - 4, mid = more && mb.scrollLeft > 4;
+    if (mb.classList.contains('end') !== end) mb.classList.toggle('end', end); if (mb.classList.contains('mid') !== mid) mb.classList.toggle('mid', mid); }
+  function lay() {
+    const lob = $('lobby'), tabs = $('pmTabs'); if (!lob || !tabs || !mk()) return;
+    const pl = typeof playing !== 'undefined' && !!playing;
+    if (wasPlay && !pl) needMain = true; wasPlay = pl;
+    const shown = vis(lob) && !(pl && !(typeof pauseOpen !== 'undefined' && pauseOpen));
+    if (needMain && shown && !pl) { needMain = false; goMain(); }   /* the main screen is always arena select */
+    const bq = B.getBoundingClientRect(), rot = document.documentElement.classList.contains('rot90') && Math.abs(bq.width - B.offsetHeight) < 2 && Math.abs(bq.width - B.offsetWidth) > 2, bb = bq;
+    const box = e => { const q = e.getBoundingClientRect(); if (!rot) return { left: q.left, top: q.top, right: q.right, bottom: q.bottom, width: q.width, height: q.height };
+      return { left: q.top - bb.top, right: q.bottom - bb.top, top: bb.right - q.right, bottom: bb.right - q.left, width: q.height, height: q.width }; };
+    const VW = rot ? B.offsetWidth : innerWidth, VH = rot ? B.offsetHeight : innerHeight;
+    const on = shown && VW >= VH * 1.2;
+    if (B.classList.contains('lobL') !== on) B.classList.toggle('lobL', on);
+    if (!on) { clrAll(); B.classList.remove('lobSec', 'lobSet'); const mb = $('mapBtns'); mb && mb.classList.remove('fit', 'more', 'end', 'mid'); return; }
+    const cur = typeof pmTab !== 'undefined' ? pmTab : ((tabs.querySelector('button.on') || {}).dataset || {}).t || 'match';
+    if (B.classList.contains('lobSec') !== (cur !== 'match')) B.classList.toggle('lobSec', cur !== 'match');
+    if (B.classList.contains('lobSet') !== (cur === 'set')) B.classList.toggle('lobSet', cur === 'set');
+    const place = (e, x, y, w, h) => { const P = e.offsetParent; if (!P) return 1; const pr = box(P), kk = pr.width / (P.offsetWidth || 1) || 1, o = { left: r1((x - pr.left) / kk), top: r1((y - pr.top) / kk), transform: 'none', right: 'auto', bottom: 'auto' };
+      if (w != null) o.width = r1(Math.max(0, w) / kk); if (h != null) o.height = r1(Math.max(0, h) / kk); put(e, o); return kk; };
+    const lbx = lob.querySelector('.lbox'), k = box(lbx).width / (lbx.offsetWidth || 1) || 1;
+    const lg = box($('mLogo')), lv = box($('mLvl')), wl = box($('mWal')), gap = 10 * k;
+    const T = Math.max(lg.bottom, lv.bottom, wl.bottom) + gap, L = Math.max(lg.left, 8 * k), R = Math.min(wl.right, VW - 8 * k);
+    const sbv = parseFloat(getComputedStyle(lbx).getPropertyValue('--sb')) || 14, BOT = VH - Math.max(10, Math.min(24, sbv)) * k;
+    SWD = Math.round(Math.min(140, Math.max(128, (R - L) / k * 0.17))); const sw = SWD * k, cl = L + sw + gap * 1.2, CW = R - cl;   /* patch57s takes the same column width through __lobSide */
+    if (cur !== 'match') {
+      place(back, L, T, sw, 44 * k);
+      if (cur === 'set') { setSegSync(); const n = Math.max(1, sseg.children.length), bh = Math.max(30 * k, Math.min(46 * k, (BOT - T - 52 * k) / n));
+        place(sseg, L, T + 52 * k, sw, bh * n); const sg = $('setGrid'); if (sg) place(sg, cl, T, CW, BOT - T); }
+      if (cur === 'ars' && typeof arsMode !== 'undefined' && arsMode === 'e') { const g = $('arsGrid'), all = g && g.querySelector('.emall');   /* the emoji list scrolls inside the side layout's grid */
+        if (all && vis(all)) { const a = box(all), gb = box(g), kk = a.width / (all.offsetWidth || 1) || 1, mh = Math.max(90, Math.floor((gb.bottom - 8 * k - a.top) / kk)) + 'px';
+          for (const [p2, v] of [['max-height', mh], ['overflow-y', 'auto'], ['overflow-x', 'hidden'], ['overscroll-behavior', 'contain']]) if (all.style.getPropertyValue(p2) !== v || all.style.getPropertyPriority(p2) !== 'important') all.style.setProperty(p2, v, 'important'); } }
+      return;
+    }
+    const n = Math.max(1, tabs.children.length), bh = Math.max(40 * k, Math.min(54 * k, (BOT - T) / 5));
+    place(tabs, L, T, sw, bh * n);
+    const mm = $('mMode'), mb = $('mapBtns'), ch = $('chRow'); if (!mm || !mb) return;
+    const modeH = 48 * k; place(mm, cl, T, CW, modeH);
+    { /* too long (Teams: «to 40 team kills»): first the conditions get smaller (sm), then the mode segments (xs) */
+      const rg = document.createRange(); rg.selectNodeContents(mm); const need = box({ getBoundingClientRect: () => rg.getBoundingClientRect() }).width / k, have = mm.clientWidth - 22;
+      const lv = mm.classList.contains('xs') ? 2 : mm.classList.contains('sm') ? 1 : 0;
+      if (need > have && lv < 2) mm.classList.add(lv ? 'xs' : 'sm'); else if (lv && need * 1.18 < have - 10) mm.classList.remove(lv === 2 ? 'xs' : 'sm'); }
+    const tall = lob.classList.contains('tallL'), goH = tall ? 60 * k : 0, cg = 12 * k, nm = Math.max(1, mb.children.length);
+    const qs = ch ? [...ch.querySelectorAll(':scope > .chx')] : [];   /* Quests and Shop go to the left column under the menu */
+    if (qs.length) { const qw = Math.min(64 * k, (sw - 8 * k * (qs.length - 1)) / qs.length), qh = 52 * k, qy = T + bh * n + 10 * k;
+      qs.forEach((q, i) => place(q, L + i * (qw + 8 * k), qy, qw, qh)); }
+    const chH = ch && vis(ch) ? ch.offsetHeight * k : 0;
+    const fitW = (CW - cg * (nm - 1)) / nm; let w, fit = fitW >= 160 * k;
+    if (fit) w = Math.min(232 * k, fitW); else { w = (CW - 2 * cg - 40 * k) / 3; if (w < 150 * k) w = (CW - cg - 40 * k) / 2; w = Math.max(140 * k, Math.min(220 * k, w)); }
+    const yM = T + modeH + 12 * k, room = (ch ? BOT - chH - 14 * k : BOT) - yM;
+    let h = Math.min(Math.max(156 * k, w * (tall ? 1.0 : 0.84)), 214 * k, room - goH); h = Math.max(110 * k, h);
+    const kk = place(mb, cl, yM, CW, h + goH);
+    mb.style.setProperty('--lobMapW', r1(w / kk)); mb.style.setProperty('--lobMapH', r1(h / kk)); mb.style.setProperty('--lobGap', r1(cg / kk));
+    const more = !fit && mb.scrollWidth > mb.clientWidth + 2;
+    if (mb.classList.contains('fit') !== fit) mb.classList.toggle('fit', fit); if (mb.classList.contains('more') !== more) mb.classList.toggle('more', more); edges(mb);
+    if (ch) place(ch, cl, yM + h + goH + 14 * k, CW, null);
+  }
+  const run = () => { try { lay(); } catch (e) {} try { window.__v57s && window.__v57s(); } catch (e) {} };
+  setInterval(run, 150);
+  const soon = () => { requestAnimationFrame(run); setTimeout(run, 60); };
+  for (const ev of ['click', 'pointerup', 'resize', 'orientationchange']) window.addEventListener(ev, soon, true);
+  document.addEventListener('scroll', e => { const t = e.target; if (t && t.id === 'mapBtns') edges(t);
+    else if (t && t.classList && t.classList.contains('sbx') && sseg && B.classList.contains('lobSet')) setSegSync(); }, true);
+  window.__v63m = run;
+})();
 
 ;/* ===== FASTRIX ONLINE (tools/mp_patch.js, injected by tools/build_mp.py) =====
  * Live players in one arena, free-for-all.
