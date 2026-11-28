@@ -14210,7 +14210,7 @@ function assemble(wid, look) {
 }
 // ---- the game's skin slots: body -> gm, light parts -> gmLight, dark -> gmDark, accents -> glowMat; wood and brass keep their colour
 const KEEPM = {};
-function keepMat(c) { const k = c.getHexString(); return KEEPM[k] || (KEEPM[k] = new THREE.MeshMatcapMaterial({ color: c.clone().convertLinearToSRGB(), matcap: matcapTex('gloss') })); }
+function keepMat(c) { const k = c.getHexString(); return KEEPM[k] || (KEEPM[k] = matchLook(new THREE.MeshMatcapMaterial({ color: c.clone().convertLinearToSRGB(), matcap: matcapTex('gloss') }))); }
 function toSlots(root) {
   root.traverse(o => { if (!o.isMesh) return; const m = o.material;
     if (m && m.isMeshBasicMaterial) { o.material = glowMat; return; }
@@ -14425,8 +14425,8 @@ function showOn(root) {   // swap every matcap material under root to the studio
     SHOW.keep.push([m, m.matcap, m.color.clone(), m.opacity]);
     m.opacity = 1;   // the game draws guns at opacity .5 for its own alpha pass; on the transparent preview canvas that made them look washed out
     if (m.map) continue;   // painted skins keep their own matcap and colour; they already read well
-    const custom = m.matcap && m.matcap !== matcapTex('gloss') && m.matcap !== matcapTex('matte');   // gold, chrome, ice skins keep their finish
-    m.color.getHSL(SHOW_HSL); const vivid = SHOW_HSL.s > 0.6 && SHOW_HSL.l > 0.2, warm = !vivid && SHOW_HSL.s > 0.15 && (SHOW_HSL.h < 0.14 || SHOW_HSL.h > 0.95);   // wood, brass, red-brown
+    const custom = m.matcap && !isPlainMc(m.matcap);   // gold, chrome, ice skins keep their finish
+    baseColor(m).getHSL(SHOW_HSL); const vivid = SHOW_HSL.s > 0.6 && SHOW_HSL.l > 0.2, warm = !vivid && SHOW_HSL.s > 0.15 && (SHOW_HSL.h < 0.14 || SHOW_HSL.h > 0.95);   // wood, brass, red-brown
     if (!custom) m.matcap = studioTex(warm || vivid ? 'warm' : 'metal');
     const l = SHOW_HSL.l; SHOW_C.setHSL(SHOW_HSL.h, Math.min(1, SHOW_HSL.s * (custom ? 1 : 0.9)), custom ? Math.max(l, 0.45) : vivid ? Math.min(0.75, l * 1.2) : warm ? Math.min(0.9, l * 1.35 + 0.08) : 0.8 + Math.min(l, 0.5) * 0.3);
     m.color.copy(SHOW_C);
@@ -14434,6 +14434,27 @@ function showOn(root) {   // swap every matcap material under root to the studio
 }
 function showOff() { for (const [m, mc, c, op] of SHOW.keep) { if (c) { m.matcap = mc; m.color.copy(c); } m.opacity = op; } SHOW.keep.length = 0; }
 function showRender(r, sc, cam, root) { showOn(root || sc); try { r.render(sc, cam); } finally { showOff(); } }
+
+/* ---- IN-HAND LOOK (Ivan 2026-11-28 09:44: «оружие… выглядит слишком просто в руках игрока»). The match now uses the same studio matcap
+   on the gun's own materials, so the gun in hand reads as polished gunmetal with highlights instead of a flat dark shape. It is only a
+   texture and a colour on the existing materials: no new shader, no extra draw calls, the same on every quality tier. Opacity is left
+   alone (the game's alpha pass needs it). Skins with a painted map or their own finish (gold, chrome, ice) are not touched.
+   The colour we set is remembered, so setSkin() and the Arsenal showcase always start from the skin's real colour. ---- */
+function isPlainMc(t) { return t === matcapTex('gloss') || t === matcapTex('matte') || t === SHOW.tex.metal || t === SHOW.tex.warm; }
+function baseColor(m) { const u = m.userData; return u.gsLift != null && u.gsBase && m.color.getHex() === u.gsLift ? u.gsBase : m.color; }
+const MATCH_HSL = {};
+function matchLook(m) {
+  if (!m || !m.isMeshMatcapMaterial) return m;
+  if (m.map || !isPlainMc(m.matcap)) { const b0 = baseColor(m); if (b0 !== m.color) m.color.copy(b0); m.userData.gsLift = null; return m; }   // a skin with its own look: give back the real colour
+  const b = baseColor(m).clone(); b.getHSL(MATCH_HSL);
+  const vivid = MATCH_HSL.s > 0.6 && MATCH_HSL.l > 0.2, warm = !vivid && MATCH_HSL.s > 0.15 && (MATCH_HSL.h < 0.14 || MATCH_HSL.h > 0.95), l = MATCH_HSL.l;
+  const tex = studioTex(warm || vivid ? 'warm' : 'metal');
+  if (m.matcap !== tex) { m.matcap = tex; m.needsUpdate = true; }
+  // a touch darker than the Arsenal showcase: the match world is bright, the gun should stay the darkest thing on screen
+  m.color.setHSL(MATCH_HSL.h, Math.min(1, MATCH_HSL.s * 0.9), vivid ? Math.min(0.7, l * 1.12) : warm ? Math.min(0.85, l * 1.3 + 0.06) : 0.68 + Math.min(l, 0.5) * 0.3);
+  m.userData.gsBase = b; m.userData.gsLift = m.color.getHex(); return m;
+}
+function matchAll() { for (const m of [gm, gmLight, gmDark, ...Object.values(KEEPM)]) matchLook(m); }
 
 const CSS = `
 html:root body #ipBox.gs { width: min(880px, 82vw); max-width: none; max-height: 86vh; box-sizing: border-box; overflow: hidden; top: 50%; transform: translate(-50%, -50%); }
@@ -14468,7 +14489,7 @@ function init() {
   markClean(gun);
   return grip;
 }
-return { showOn, showOff, showRender, BASE, CID, IDS, FORMS, FORM_LIST, PARTS, SLOTS, T, GS_PRICE, GS_LV, init, mount, refresh, setStats, stats, look, ownForm, giveForm, formOf, rarity, panel, act, buyForm, tpModel, pic, build, assemble };
+return { showOn, showOff, showRender, matchLook, matchAll, BASE, CID, IDS, FORMS, FORM_LIST, PARTS, SLOTS, T, GS_PRICE, GS_LV, init, mount, refresh, setStats, stats, look, ownForm, giveForm, formOf, rarity, panel, act, buyForm, tpModel, pic, build, assemble };
 })();
 const GS_GRIP = GS.init();
 window.GS_FORMS = GS.FORM_LIST; window.GS_PRICE = GS.GS_PRICE; window.GS_LV = GS.GS_LV;
@@ -17729,6 +17750,8 @@ function gsWFit() { try {
   Object.assign(g.style, { height: Math.max(120, Math.floor((lim - a.top) / k)) + 'px', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', paddingBottom: '6px' });
 } catch (e) {} }
 { const ra1 = renderArsenal; renderArsenal = function () { ra1.apply(this, arguments); gsWFit(); requestAnimationFrame(gsWFit); setTimeout(gsWFit, 400); setTimeout(gsWFit, 1000); /* again after the open animation */ }; __on(window, 'resize', () => setTimeout(gsWFit, 60)); }
+// IN-HAND LOOK (Ivan 2026-11-28 09:44): the studio matcap also on the gun in the match; re-applied after every skin change
+{ const ss0 = setSkin; setSkin = function (i, a) { ss0(i, a); GS.matchAll(); }; GS.matchAll(); }
 // SHOWCASE (Ivan 2026-11-28 09:25): every Arsenal preview (weapon window, Decor, Skins) is drawn with the studio matcap at full opacity,
 // on every device and quality tier; the match keeps its own materials (swap for the one render, then restore)
 { const pe0 = pvEnsure; pvEnsure = function () { const ok = pe0(); if (ok && PV.r && !PV.r._gsShow) { const r0 = PV.r.render.bind(PV.r); PV.r.render = (s, c) => { GS.showOn(s); try { r0(s, c); } finally { GS.showOff(); } }; PV.r._gsShow = 1; } return ok; }; }
