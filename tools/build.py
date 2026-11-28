@@ -46,8 +46,6 @@ window.__fx = {
 '''
 TOUCH_RE = re.compile(r"matchMedia\('\(pointer: coarse\)'\)\.matches \|\| 'ontouchstart' in window")
 STORE_TITLE = 'Fastrix: FPS Arena Shooter Online'   # rule 3.5.1: matches the Playgama form title
-# Tester-only switches that must never ship to Playgama (economy thread's unlock-everything etc.).
-TESTER_RE = re.compile(r'__fxTester\s*=\s*true|UNLOCK_ALL\s*=\s*true|unlockEverything\s*=\s*true', re.I)
 SCRIPT_RE = re.compile(r'<script(\s[^>]*)?>(.*?)</script>', re.S | re.I)
 
 
@@ -88,8 +86,6 @@ def inject_bridge(html):
     head = '<script src="%s"></script>\n<script>%s</script>\n' % (BRIDGE_CDN, boot)
     html = re.sub(r'<head>\s*', lambda m: m.group(0) + head, html, count=1)
     html = re.sub(r'<title>[^<]*</title>', '<title>%s</title>' % STORE_TITLE, html, count=1)
-    if TESTER_RE.search(html):
-        sys.exit('bridge: a tester unlock switch is ON in this build: turn it off before a Playgama archive')
     return html, len(parked)
 
 
@@ -123,6 +119,13 @@ def main():
 
     nparked = 0
     if use_bridge:
+        # Tester mode (economy thread, patch_tester.py) never ships to Playgama: cut its marked spans.
+        html, nt1 = re.subn(r'<!--FX_TESTER-->.*?<!--/FX_TESTER-->', '', html, flags=re.S)
+        html, nt2 = re.subn(r'/\*FX_TESTER\{\*/.*?/\*\}FX_TESTER\*/', '', html, flags=re.S)
+        if nt1 or nt2:
+            print('tester  : cut %d html + %d js spans' % (nt1, nt2))
+        if 'FX_TESTER' in html or '__fxTester' in html:
+            sys.exit('bridge: tester mode code is still in the build after cutting its spans: stop')
         html, nparked = inject_bridge(html)
 
     problems = []

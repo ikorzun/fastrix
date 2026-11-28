@@ -1,23 +1,30 @@
-;/* ===== FASTRIX ONLINE PROTOTYPE (tools/mp_patch.js, injected by tools/build_mp.py) =====
- * Live players in one arena, free-for-all. Turned on by ?mp=bridge (Playgama Bridge rooms)
- * or ?mp=local (BroadcastChannel: two tabs of one browser, for testing without servers).
+;/* ===== FASTRIX ONLINE (tools/mp_patch.js, injected by tools/build_mp.py) =====
+ * Live players in one arena, free-for-all.
+ * Modes:
+ *   auto      Playgama build (window.__fxBridge, no ?mp): every fresh start («Play») looks for players
+ *             in a Playgama Bridge room for this map while the 3-2-1 countdown runs. Somebody there:
+ *             the match goes online. Nobody: the room is left and the match runs as usual.
+ *             An online match left alone for 6 s turns back into a usual one.
+ *   bridge    ?mp=bridge or the /mp/ test page: online from load, Bridge rooms.
+ *   local     ?mp=local: online from load, BroadcastChannel (two tabs, no servers).
+ *   autolocal ?mp=autolocal: auto mode over BroadcastChannel, for tests.
  * Model: each client owns its own player (position, health, death). Shots are checked
  * by the shooter and sent to the victim as 'hit'; the victim applies them with hurtPlayer.
- * Computer opponents are switched off in this mode for now; remote players appear as
- * the same characters (puppets), driven by the network with 120 ms interpolation.
+ * Computer opponents are off while online; remote players appear as the same characters
+ * (puppets), driven by the network with 120 ms interpolation.
  */
 (function () {
   const Q = new URLSearchParams(location.search);
-  const MODE = Q.get('mp') || (/\/mp\/(index\.html)?$/.test(location.pathname) ? 'bridge' : '');
+  const MODE = Q.get('mp') || (/\/mp\/(index\.html)?$/.test(location.pathname) ? 'bridge' : (window.__fxBridge ? 'auto' : ''));
   if (!MODE) return;
-  try { AA_ONLINE = true; } catch (e) {}   // online: capped aim help (core v47 AA_ONLINE_CFG)
+  const AUTO = MODE === 'auto' || MODE === 'autolocal', LOCAL = MODE === 'local' || MODE === 'autolocal';
   try { setup(); } catch (e) { console.error('[fastrix mp] setup failed', e); }
   function setup() {
-  const SEND_MS = 66, INTERP_MS = 120, PEER_TIMEOUT = 4000;
-  const NET = window.__net = { mode: MODE, state: 'подключение…', peers: new Map(), rtt: null, sent: 0, recv: 0, room: null };
-  let myName = nickOne();
+  const SEND_MS = 66, INTERP_MS = 120, PEER_TIMEOUT = 4000, SEARCH_MS = 3000, ALONE_MS = 6000;
+  const NET = window.__net = { mode: MODE, on: false, state: 'подключение…', peers: new Map(), rtt: null, sent: 0, recv: 0, room: null, searching: false };
+  let myName = nickOne(), ON = false, T = null, aloneMs = 0;
 
-  // ----- status chip -----
+  // ----- status chip (auto mode: only while a match is online) -----
   const chip = document.createElement('div');
   chip.id = 'netChip'; chip.setAttribute('translate', 'no'); chip.className = 'notranslate';
   chip.style.cssText = 'position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:99999;pointer-events:none;' +
@@ -26,19 +33,24 @@
   const EN = { 'подключение…': 'connecting…', 'в комнате (локально)': 'in a room (local)', 'онлайн недоступен на этой платформе': 'online is not available on this platform',
     'ищу комнату…': 'looking for a room…', 'в комнате': 'in a room', 'в комнате (хост)': 'in a room (host)', 'вне комнаты': 'out of the room' };
   function drawChip() {
+    chip.hidden = AUTO && !ON;
     const n = NET.peers.size + 1, en = /^en/.test(document.documentElement.lang || '');
-    const st = en ? (EN[NET.state] || NET.state.replace('связь: ', 'link: ').replace('ошибка: ', 'error: ')) : NET.state;
-    const txt = en ? 'Online: ' + st + ' · players ' + n + (NET.rtt != null ? ' · ping ' + NET.rtt + ' ms' : '')
-                   : 'Онлайн: ' + st + ' · игроков ' + n + (NET.rtt != null ? ' · пинг ' + NET.rtt + ' мс' : '');
+    let txt;
+    if (AUTO) txt = en ? 'Online · players ' + n + (NET.rtt != null ? ' · ping ' + NET.rtt + ' ms' : '') : 'Онлайн · игроков ' + n + (NET.rtt != null ? ' · пинг ' + NET.rtt + ' мс' : '');
+    else {
+      const st = en ? (EN[NET.state] || NET.state.replace('связь: ', 'link: ').replace('ошибка: ', 'error: ')) : NET.state;
+      txt = en ? 'Online: ' + st + ' · players ' + n + (NET.rtt != null ? ' · ping ' + NET.rtt + ' ms' : '')
+               : 'Онлайн: ' + st + ' · игроков ' + n + (NET.rtt != null ? ' · пинг ' + NET.rtt + ' мс' : '');
+    }
     if (chip.textContent !== txt) chip.textContent = txt;
   }
   setInterval(drawChip, 500);
 
-  // ----- computer opponents off: they become a pool of puppets for remote players -----
   // the board code expects at least one opponent; with nobody joined yet it must not throw
   { const _drawBoard = drawBoard; drawBoard = function () { try { return _drawBoard.apply(this, arguments); } catch (e) {} }; }
-  const pool = bots.splice(0);
-  for (const b of pool) { b.dead = 1e9; b.g.visible = false; b.net = null; if (b.aimLine) b.aimLine.visible = false; }
+
+  // ----- online on / off -----
+  let pool = [], savedMode = null;
   function rebuildBoard() {
     if (typeof initBoard !== 'function' || !meF) return;
     const keep = new Map(fighters.map(f => [f.me ? '__me' : f, [f.sk, f.sd]]));
@@ -46,17 +58,43 @@
     for (const f of fighters) { const s = keep.get(f.me ? '__me' : f); if (s) { f.sk = s[0]; f.sd = s[1]; } }
     drawBoard();
   }
-  rebuildBoard();
-  // core v48 match modes: online is deathmatch only, and the bots list belongs to the network
-  // (mdApply would refill it from MD.all). Force 'dm', keep the puppets, ignore the Teams switch.
-  if (typeof mdApply === 'function') {
-    mdApply = function () { try { mdInit(); MD.mode = 'dm'; MD.cur = 'dm'; MD.win = null; MD.sc.A = 0; MD.sc.B = 0;
-      for (const b of bots) { b.team = null; b.rv = null; b.foe = null; }
-      if (MD.boardMode !== 'dm') { MD.boardMode = 'dm'; rebuildBoard(); } } catch (e) {} };
+  function enable() {
+    if (ON) return; ON = true; NET.on = true; aloneMs = 0;
+    try { AA_ONLINE = true; } catch (e) {}        // capped aim help (core v47 AA_ONLINE_CFG)
+    try { SLOWMO_ON = false; } catch (e) {}       // nobody slows the world for real people
+    try { mdInit(); savedMode = MD.mode; MD.mode = 'dm'; MD.cur = 'dm'; MD.win = null; MD.sc.A = 0; MD.sc.B = 0; } catch (e) {}
+    pool = bots.splice(0);                        // computer opponents leave; they become puppets for players
+    for (const b of pool) { b.dead = 1e9; b.g.visible = false; b.net = null; b.team = null; b.rv = null; b.foe = null; if (b.aimLine) b.aimLine.visible = false; }
+    try { MD.boardMode = 'dm'; } catch (e) {}
+    try { initBoard(); } catch (e) {}
+    sendState(); drawChip();
   }
-  if (typeof mdSetMode === 'function') { const _ms = mdSetMode; mdSetMode = function (m) { if (m === 'dm') return _ms.apply(this, arguments); }; }
-  try { mdInit(); MD.mode = 'dm'; } catch (e) {}
-  if (typeof nickAll === 'function') nickAll = function () {};   // puppet names come from their owners
+  function disable() {                            // back to a usual match: opponents return and spawn
+    if (!ON) return;
+    for (const q of [...NET.peers.values()]) removePeer(q);
+    ON = false; NET.on = false;
+    try { AA_ONLINE = false; } catch (e) {}
+    try { SLOWMO_ON = true; } catch (e) {}
+    for (const b of pool) { b.net = null; if (bots.indexOf(b) < 0) bots.push(b); }
+    pool = [];
+    try { if (savedMode) MD.mode = savedMode; MD.boardMode = null; _mdApply(); } catch (e) {}
+    try { nickAll(); } catch (e) {}
+    for (const b of bots) { b.dead = 0; try { spawnBot(b); } catch (e) {} }
+    try { initBoard(); } catch (e) {}
+    leaveRoom(); drawChip();
+  }
+  // core v48 match modes: online is deathmatch only, and the bots list belongs to the network
+  const _mdApply = typeof mdApply === 'function' ? mdApply : function () {};
+  if (typeof mdApply === 'function') {
+    mdApply = function () {
+      if (!ON) return _mdApply.apply(this, arguments);
+      try { mdInit(); MD.mode = 'dm'; MD.cur = 'dm'; MD.win = null; MD.sc.A = 0; MD.sc.B = 0;
+        for (const b of bots) { b.team = null; b.rv = null; b.foe = null; }
+        if (MD.boardMode !== 'dm') { MD.boardMode = 'dm'; rebuildBoard(); } } catch (e) {}
+    };
+  }
+  if (typeof mdSetMode === 'function') { const _ms = mdSetMode; mdSetMode = function (m) { if (!ON || m === 'dm') return _ms.apply(this, arguments); }; }
+  if (typeof nickAll === 'function') { const _na = nickAll; nickAll = function () { if (!ON) return _na.apply(this, arguments); }; }   // puppet names come from their owners
 
   function takePuppet(p) {
     const b = pool.find(x => !x.net); if (!b) return null;
@@ -73,34 +111,41 @@
     rebuildBoard();
   }
 
-  // ----- transports: both give send(type, data, to?) and call onMsg({type, data, from}) -----
-  let T = null;
+  // ----- transports: send(type, data, to?), leave(); incoming messages go to onMsg({type, data, from}) -----
   function localTransport() {
     const id = Math.random().toString(36).slice(2, 10);
     const bc = new BroadcastChannel('fastrix-mp-' + MAP);
-    const t = { id, send(type, data, to) { bc.postMessage({ type, data, from: id, to: to || null }); }, onMsg: null, leave() { t.send('bye', {}); } };
-    bc.onmessage = e => { const m = e.data; if (!m || (m.to && m.to !== id)) return; t.onMsg && t.onMsg(m); };
+    const t = { id, ready: Promise.resolve(), send(type, data, to) { try { bc.postMessage({ type, data, from: id, to: to || null }); } catch (e) {} },
+      leave() { t.send('bye', {}); try { bc.close(); } catch (e) {} } };
+    bc.onmessage = e => { const m = e.data; if (!m || (m.to && m.to !== id) || T !== t) return; onMsg(m); };
     NET.state = 'в комнате (локально)'; NET.room = 'local-' + MAP;
     return t;
   }
+  const B = window.bridge, M = B && B.multiplayer;
+  let bridgeHooked = false;
   function bridgeTransport() {
-    const B = window.bridge, M = B && B.multiplayer;
     if (!M || !M.isSupported) { NET.state = 'онлайн недоступен на этой платформе'; return null; }
     const E = B.EVENT_NAME;
-    const t = { id: null, send(type, data, to) { if (!M.roomId) return; try { M.send(type, data, to ? { to } : undefined); } catch (e) {} }, onMsg: null, leave() { try { M.leaveRoom(); } catch (e) {} } };
-    M.on(E.MULTIPLAYER_STATE_CHANGED, s => { if (!M.roomId) NET.state = 'связь: ' + s; });
-    M.on(E.MULTIPLAYER_MESSAGE_RECEIVED, m => t.onMsg && t.onMsg({ type: m.type, data: m.data, from: m.from }));
-    M.on(E.MULTIPLAYER_PLAYER_LEFT, p => { const q = NET.peers.get(p.id); if (q) removePeer(q); });
-    M.on(E.MULTIPLAYER_ROOM_LEFT, () => { NET.state = 'вне комнаты'; NET.room = null; for (const q of [...NET.peers.values()]) removePeer(q); });
+    if (!bridgeHooked) {
+      bridgeHooked = true;
+      M.on(E.MULTIPLAYER_STATE_CHANGED, s => { if (!M.roomId) NET.state = 'связь: ' + s; });
+      M.on(E.MULTIPLAYER_MESSAGE_RECEIVED, m => { if (T && T.bridge) onMsg({ type: m.type, data: m.data, from: m.from }); });
+      M.on(E.MULTIPLAYER_PLAYER_LEFT, p => { const q = NET.peers.get(p.id); if (q) removePeer(q); });
+      M.on(E.MULTIPLAYER_ROOM_LEFT, () => { NET.state = 'вне комнаты'; NET.room = null; for (const q of [...NET.peers.values()]) removePeer(q); });
+    }
+    const t = { bridge: true, id: null, gone: false,
+      send(type, data, to) { if (!M.roomId || t.gone) return; try { M.send(type, data, to ? { to } : undefined); } catch (e) {} },
+      leave() { t.gone = true; try { if (M.roomId) M.leaveRoom(); } catch (e) {} } };
     NET.state = 'ищу комнату…';
-    M.joinOrCreateRoom({ maxPlayers: 8, filter: { mode: 'fx-ffa', map: MAP, v: 1 } }).then(id => {
+    t.ready = M.joinOrCreateRoom({ maxPlayers: 8, filter: { mode: 'fx-ffa', map: MAP, v: 1 } }).then(id => {
+      if (t.gone) { try { M.leaveRoom(); } catch (e) {} return; }   // gave up before the room answered
       t.id = M.playerId; NET.room = id; NET.state = 'в комнате' + (M.isHost ? ' (хост)' : '');
     }).catch(e => { NET.state = 'ошибка: ' + ((e && (e.code || e.message)) || e); });
     return t;
   }
-  T = MODE === 'local' ? localTransport() : bridgeTransport();
-  if (!T) { drawChip(); return; }
-  addEventListener('pagehide', () => T.leave());
+  function openRoom() { if (!T) T = LOCAL ? localTransport() : bridgeTransport(); return T; }
+  function leaveRoom() { if (T) { try { T.leave(); } catch (e) {} T = null; } NET.room = null; }
+  addEventListener('pagehide', () => leaveRoom());
 
   // ----- peers -----
   function peerFor(id, name) {
@@ -115,9 +160,44 @@
   }
   function removePeer(p) { dropPuppet(p); NET.peers.delete(p.id); }
 
+  // ----- auto mode: look for players while the 3-2-1 countdown runs -----
+  let searchT = 0, searchHi = 0;
+  function search() {
+    if (NET.searching) return;
+    if (!openRoom()) return;                      // no multiplayer on this platform: a usual match
+    NET.searching = true;
+    const hi = () => { if (T) T.send('hi', { n: myName }); };
+    Promise.resolve(T.ready).then(hi);
+    searchHi = setInterval(hi, 500);
+    searchT = setTimeout(() => endSearch(false), SEARCH_MS);
+  }
+  function endSearch(found) {
+    if (!NET.searching) return;
+    NET.searching = false; clearTimeout(searchT); clearInterval(searchHi);
+    if (found) enable(); else if (!ON) leaveRoom();
+  }
+  if (AUTO && typeof goPlay === 'function') {
+    const _gp = goPlay;
+    goPlay = function (fresh) {
+      const r = _gp.apply(this, arguments);       // first, so full screen and the mouse keep the player's tap
+      try {
+        if (fresh) {
+          if (ON && !NET.peers.size) disable();   // everybody left between matches
+          if (!ON) search();
+        }
+      } catch (e) { console.warn('[fastrix mp] search', e); }
+      return r;
+    };
+  }
+
   const W_SET = { rifle: 1, pistol: 1, shotgun: 1, sniper: 1 };
-  T.onMsg = m => {
+  function onMsg(m) {
     NET.recv++;
+    if (!ON) {                                    // not online yet: a sign of life from another player ends the search
+      if (NET.searching && (m.type === 'hi' || m.type === 'st')) { endSearch(true); } else return;
+      if (m.type === 'hi') return;
+    }
+    if (m.type === 'hi') { sendState(); return; } // answer at once: the newcomer is still counting 3-2-1
     if (m.type === 'st') {
       const d = m.data, p = peerFor(m.from, d.n);
       p.last = performance.now();
@@ -126,24 +206,29 @@
       if (d.s && d.s.length && p.b) for (const s of d.s) remoteShot(p, s);
     } else if (m.type === 'hit') {
       const p = NET.peers.get(m.from); if (!p) return;
-      const d = m.data; hurtPlayer(d.d, p.name, d.w, p.b ? p.b.pos : null);
+      const d = m.data, alive = deadT <= 0; hurtPlayer(d.d, p.name, d.w, p.b ? p.b.pos : null);
       if (d.h && deadT <= 0) sfx('head', 0.45, 0.8);
-    } else if (m.type === 'ping') T.send('pong', { id: m.data.id }, m.from);
+      if (alive && deadT > 0 && T) T.send('kd', { w: d.w }, m.from);   // this hit killed me: the shooter gets the kill
+    } else if (m.type === 'kd') {                 // the victim says our hit killed it (our own copy may lag behind)
+      const p = NET.peers.get(m.from), b = p && p.b;
+      if (b && b.dead <= 0) { b.localKillMs = b.awaitDD = performance.now(); try { _damageBot(b, (b.hp || 100) + 999, false, b.pos.clone(), { kind: m.data.w }); } catch (e) {} }
+    } else if (m.type === 'ping') T && T.send('pong', { id: m.data.id }, m.from);
     else if (m.type === 'pong' && pings[m.data.id]) { NET.rtt = Math.round(performance.now() - pings[m.data.id]); delete pings[m.data.id]; }
     else if (m.type === 'bye') { const p = NET.peers.get(m.from); if (p) removePeer(p); }
-  };
+  }
   const pings = {};
-  setInterval(() => { if (!NET.peers.size) return; const id = Math.random().toString(36).slice(2, 8); pings[id] = performance.now(); const p = NET.peers.values().next().value; T.send('ping', { id }, p.id); }, 2000);
+  setInterval(() => { if (!ON || !T || !NET.peers.size) return; const id = Math.random().toString(36).slice(2, 8); pings[id] = performance.now(); const p = NET.peers.values().next().value; T.send('ping', { id }, p.id); }, 2000);
 
   // ----- what we send: our state 15 times a second, with the shots fired since the last packet -----
   let shots = [], sendT = 0;
   const _castShot = castShot;
   castShot = function (spread, out) {
     const r = _castShot(spread, out);
-    try { const o = ray.ray.origin, d = ray.ray.direction; if (shots.length < 12) shots.push([+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2), +d.x.toFixed(3), +d.y.toFixed(3), +d.z.toFixed(3), W.id]); } catch (e) {}
+    if (ON) try { const o = ray.ray.origin, d = ray.ray.direction; if (shots.length < 12) shots.push([+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2), +d.x.toFixed(3), +d.y.toFixed(3), +d.z.toFixed(3), W.id]); } catch (e) {}
     return r;
   };
   function sendState() {
+    if (!T) return;
     const P = player.pos;
     T.send('st', { n: myName, p: [+P.x.toFixed(2), +P.y.toFixed(2), +P.z.toFixed(2)], y: +yaw.toFixed(3), w: W.id, d: deadT > 0 ? 1 : 0, hp: Math.max(0, Math.round(hp)), g: player.onGround ? 1 : 0, s: shots });
     shots = []; NET.sent++;
@@ -155,8 +240,8 @@
     if (!bot || !bot.net) return _damageBot(bot, dmg, head, point, opt);
     if (bot.dead > 0) return false;
     const h0 = bot.hp, r = _damageBot(bot, dmg, head, point, opt), dealt = Math.max(0, h0 - bot.hp);
-    if (dealt > 0) { T.send('hit', { d: Math.round(dealt), h: head ? 1 : 0, w: opt.kind || W.id }, bot.net); bot.myHitMs = performance.now(); }
-    if (r) bot.localKillMs = performance.now();
+    if (dealt > 0 && T) { T.send('hit', { d: Math.round(dealt), h: head ? 1 : 0, w: opt.kind || W.id }, bot.net); bot.myHitMs = performance.now(); }
+    if (r) bot.localKillMs = bot.awaitDD = performance.now();
     return r;
   };
   if (typeof hzHurtBot === 'function') { const _hz = hzHurtBot; hzHurtBot = function (b) { if (b && b.net) return; return _hz.apply(this, arguments); }; }
@@ -195,8 +280,11 @@
     }
     return buf[buf.length - 1];
   }
+  let lastTick = 0;
   function netTick(dt) {
-    const now = performance.now();
+    const now = lastTick = performance.now();
+    // auto mode, left alone (in a match or between matches): the usual opponents come back
+    if (AUTO) { if (NET.peers.size) aloneMs = 0; else if (!aloneMs) aloneMs = now; else if (now - aloneMs > ALONE_MS) { aloneMs = 0; disable(); return; } }
     if ((sendT -= dt * 1000) <= 0) { sendT = SEND_MS; sendState(); }
     for (const p of [...NET.peers.values()]) {
       if (now - p.last > PEER_TIMEOUT) { removePeer(p); continue; }
@@ -205,10 +293,11 @@
       if (st.dd) {                                      // dead on its own screen (hazard, someone else): break apart here too
         if (b.dead <= 0) { b.dead = 999; try { burstBot(b, 'rifle', b.pos); } catch (e) {}
           if (now - (b.localKillMs || 0) > 900) { b.sd = (b.sd || 0) + 1; try { drawBoard(); } catch (e) {} } }   // own grenade, hazard: a death, no kill to anyone
+        else b.awaitDD = 0;                            // its own death packet after our kill: from now on a live packet is a respawn
         continue;
       }
       if (b.dead > 0) {                                 // alive again over there
-        if (now - (b.localKillMs || 0) < 900) continue;
+        if (now - (b.localKillMs || 0) < 900 || (b.awaitDD && now - b.awaitDD < 5000)) continue;   // older packets from before the kill
         b.dead = 0; b.hp = st.hp; try { restoreDebris(b); } catch (e) {} b.g.visible = true; b.mats.forEach(m => m.emissive && m.emissive.setHex(0));
         b.pos.set(st.x, st.y, st.z); try { pfx('respawn-beam', b.pos, 3.4); } catch (e) {}
       }
@@ -227,13 +316,16 @@
   // the AI loop runs without the puppets; the network moves them instead
   const _updateBots = updateBots;
   updateBots = function (dt) {
+    if (!ON) return _updateBots(dt);
     const keep = bots.splice(0);
     try { _updateBots(dt); } finally { bots.push(...keep); }
     netTick(dt);
   };
-  // the menu stays open in this mode until the player presses «Играть»; keep sending state anyway
-  setInterval(() => { if (!playing) netTick(0.1); }, 100);
+  // the menu stays open until the player presses «Play»; keep sending state anyway
+  // and while the world stands still (menu, 3-2-1 countdown, pause) nobody runs the AI loop
+  setInterval(() => { if (ON && performance.now() - lastTick > 150) netTick(0.1); }, 100);
+  if (!AUTO) { openRoom(); if (T) enable(); }
   drawChip();
   }
 })();
-/* ===== FASTRIX ONLINE PROTOTYPE (end) ===== */
+/* ===== FASTRIX ONLINE (end) ===== */
