@@ -19282,6 +19282,120 @@ const DT57 = (() => {
 })();
 window.__dt57 = DT57;   // test hook
 
+/* ---- LIVE CROSSHAIR (Ivan 2026-11-28 10:34-10:35: «Перекрестье прицела должно реагировать на движение, стрельбу»; at least:
+   see-through, red on a target, an empty centre while firing that widens with the spread, a special kill animation).
+   One small SVG inside #cross, updated by its own rAF only while a match is on (a few attribute writes per frame, no layout).
+   - idle: four see-through arms around a small gap and a dot;
+   - the gap follows the real spread of the shot: the gun's spread + movement + bloom of the burst, tightened by aiming, so what
+     you see is where the bullets go (castShot offsets the ray by up to spread/2 in screen units);
+   - running, in the air and the dash push the arms out; aiming pulls them in;
+   - firing: the dot goes, a thin ring with an empty centre shows the spread circle;
+   - on an opponent (centre ray, ~12 checks a second): red;
+   - hit: short diagonal ticks (gold for a head shot); kill: the arms turn diagonal and fly apart, then come back. ---- */
+(function () {
+  if (window.__xh) { try { window.__xh.stop(); } catch (e) {} }   // an arena switch re-runs this script: one loop only
+  const el = document.getElementById('cross'); if (!el) return;
+  const NS = 'http://www.w3.org/2000/svg', S = 120, C = S / 2;
+  el.classList.add('live');
+  const st = document.createElement('style'); st.id = 'crossLiveCss';
+  st.textContent = `#cross.live{width:${S}px!important;height:${S}px!important;margin:-${C}px 0 0 -${C}px!important;transform:none!important;animation:none!important;pointer-events:none}
+#cross.live::before,#cross.live::after{display:none!important}
+#cross.live svg{position:absolute;inset:0;overflow:visible}
+#cross.live .xa,#cross.live .xr,#cross.live .xd,#cross.live .xt{stroke-linecap:round;fill:none;paint-order:stroke}
+body.scoped #cross.live{display:none!important}`;
+  if (!document.getElementById('crossLiveCss')) document.head.appendChild(st);
+  el.innerHTML = '';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', `0 0 ${S} ${S}`); svg.setAttribute('width', S); svg.setAttribute('height', S); el.appendChild(svg);
+  const mk = (tag, at) => { const n = document.createElementNS(NS, tag); for (const k in at) n.setAttribute(k, at[k]); svg.appendChild(n); return n; };
+  // each element twice: a dark halo underneath, the colour on top (both see-through)
+  const pair = (tag, at, cls) => [mk(tag, Object.assign({ class: cls, stroke: 'rgba(10,6,24,.42)' }, at)), mk(tag, Object.assign({ class: cls }, at))];
+  const ring = pair('circle', { cx: C, cy: C, r: 10 }, 'xr');
+  const dot = pair('circle', { cx: C, cy: C, r: 1.2 }, 'xd');
+  const arms = [0, 1, 2, 3].map(() => pair('line', { x1: C, y1: C, x2: C, y2: C }, 'xa'));
+  const ticks = [0, 1, 2, 3].map(() => pair('line', { x1: C, y1: C, x2: C, y2: C }, 'xt'));
+  const touch = () => document.body.classList.contains('touch');
+  let gapS = 6, ringA = 0, rot = 0, killT = 9, killHead = false, hitT = 9, hitHead = false, onT = false, onCol = 0, lastK = -1, lastHits = -1, lastHeads = -1, rayT = 0, raf = 0, t0 = performance.now();
+  const xRay = new THREE.Raycaster(), ctr = new THREE.Vector2(0, 0);
+  function onTarget() {
+    try {
+      xRay.setFromCamera(ctr, camera); xRay.far = 120;
+      const parts = botParts.filter(m => m.userData.bot && m.userData.bot.dead <= 0 && !(typeof mdMate === 'function' && mdMate(m.userData.bot)));
+      if (!parts.length) return false;
+      const h = xRay.intersectObjects(parts.concat(solidMeshes), false);
+      return !!(h.length && h[0].object.userData.bot);
+    } catch (e) { return false; }
+  }
+  function curSpread() {   // the same numbers castShot gets, in screen units (NDC)
+    if (!W || W.melee) return 0.02;
+    const hs = Math.hypot(player.vel.x, player.vel.z);
+    const moveSp = W.id === 'sniper' ? (hs > 1.5 || !player.onGround ? 0.05 : 0) : Math.min(0.02, hs * 0.0016);
+    const hip = W.id === 'sniper' && !isTouch ? 0.06 * (1 - aimK) : 0, tight = 1 - ((typeof AIM_TIGHT !== 'undefined' && AIM_TIGHT[W.id]) || 0) * aimK;
+    const bloom = W.bl && burstT > 0 ? Math.min(W.cap || 0, W.bl * (burstN + 1)) : 0;
+    const r = ((W.spread || 0) + moveSp + hip + (bloom || 0)) * tight;   // the laser has no spread field
+    return isFinite(r) ? r : 0;
+  }
+  const RED = '#ff3b4a', WHITE = '#ffffff', GOLD = '#ffd23f';
+  function setLine(p, x1, y1, x2, y2) { for (const n of p) { n.setAttribute('x1', x1.toFixed(1)); n.setAttribute('y1', y1.toFixed(1)); n.setAttribute('x2', x2.toFixed(1)); n.setAttribute('y2', y2.toFixed(1)); } }
+  function tick(now) {
+    raf = requestAnimationFrame(tick);
+    const dt = Math.min(0.05, (now - t0) / 1000); t0 = now;
+    if (!document.body.classList.contains('playing') || typeof W === 'undefined' || !W) return;
+    if (!el.classList.contains('live')) el.classList.add('live');   // the weapon switch rewrites className
+    const tc = touch(), sw = tc ? 2.2 : 2, halo = sw + 2.2;
+    // events: hits, head shots, kills (read from the game's own counters)
+    if (lastK < 0) { lastK = kills; lastHits = lifeStats.hits; lastHeads = lifeStats.heads; }
+    if (lifeStats.hits > lastHits) { hitT = 0; hitHead = false; }
+    if (lifeStats.heads > lastHeads) hitHead = true;
+    if (kills > lastK) { killT = 0; killHead = lifeStats.heads > lastHeads; }
+    if (kills < lastK || lifeStats.hits < lastHits) { killT = hitT = 9; }
+    lastK = kills; lastHits = lifeStats.hits; lastHeads = lifeStats.heads;
+    hitT += dt; killT += dt;
+    // red on a target, checked ~12 times a second
+    rayT -= dt; if (rayT <= 0) { rayT = 0.08; onT = window.__xh && window.__xh.force != null ? window.__xh.force : onTarget(); }
+    onCol += ((onT ? 1 : 0) - onCol) * Math.min(1, dt * 18);
+    // spread -> gap in px (vertical half-height of the view); movement, air and dash push out, aiming pulls in
+    const hH = innerHeight / 2, sp = curSpread();
+    const hs = Math.hypot(player.vel.x, player.vel.z), air = player.onGround ? 0 : 1;
+    let gap = Math.max(3, sp / 2 * hH) + Math.min(8, hs * 0.9) + air * 6 + (dashT > 0 ? 8 : 0);
+    gap = gap * (1 - 0.45 * aimK) + (W.fam === 'pistol' ? 1 : 0);
+    gap = Math.min(C - 16, gap); if (!isFinite(gap)) gap = 4;
+    if (!isFinite(gapS)) gapS = gap;
+    const firing = burstT > 0 || fireCd > 0.02;
+    gapS += (gap - gapS) * Math.min(1, dt * (gap > gapS ? 30 : 10));
+    ringA += ((firing && !W.melee ? 1 : 0) - ringA) * Math.min(1, dt * (firing ? 24 : 6));
+    // kill: diagonal and apart for 0.45 s, then back
+    const kq = killT < 0.45 ? killT / 0.45 : 1, kOut = kq < 1 ? Math.sin(kq * Math.PI) : 0;
+    rot += ((kq < 1 ? 45 : 0) - rot) * Math.min(1, dt * (kq < 1 ? 30 : 12));
+    const len = (tc ? 8 : 7) * (1 - 0.15 * aimK) + kOut * 4, g = gapS + kOut * 14 + (hitT < 0.12 ? 2 * (1 - hitT / 0.12) : 0);
+    const col = kq < 1 ? (killHead ? GOLD : RED) : onCol > 0.5 ? RED : WHITE;
+    const a = (Math.PI / 180) * rot;
+    for (let i = 0; i < 4; i++) {
+      const ang = a + i * Math.PI / 2, cx = Math.cos(ang), cy = Math.sin(ang);
+      setLine(arms[i], C + cx * g, C + cy * g, C + cx * (g + len), C + cy * (g + len));
+    }
+    for (const [h, n] of arms) { h.setAttribute('stroke-width', halo); n.setAttribute('stroke', col); n.setAttribute('stroke-width', sw); n.setAttribute('stroke-opacity', '.82'); h.setAttribute('stroke-opacity', '1'); }
+    // ring with the empty centre: the real spread circle while firing
+    const rr = Math.max(4, gapS - 1);
+    for (const n of ring) n.setAttribute('r', rr.toFixed(1));
+    ring[0].setAttribute('stroke-width', 1.4 + 2); ring[0].setAttribute('stroke-opacity', (0.5 * ringA).toFixed(2));
+    ring[1].setAttribute('stroke-width', 1.4); ring[1].setAttribute('stroke', col); ring[1].setAttribute('stroke-opacity', (0.7 * ringA).toFixed(2));
+    // dot only at rest
+    const dA = (1 - ringA) * (kq < 1 ? 0 : 1);
+    dot[0].setAttribute('stroke-width', 3.6); dot[0].setAttribute('stroke-opacity', (0.5 * dA).toFixed(2));
+    dot[1].setAttribute('stroke-width', 1.6); dot[1].setAttribute('stroke', col); dot[1].setAttribute('stroke-opacity', (0.9 * dA).toFixed(2));
+    // hit marker: four short diagonal ticks around the gap
+    const hA = hitT < 0.25 ? 1 - hitT / 0.25 : 0, hg = g + 3, hl = 6;
+    for (let i = 0; i < 4; i++) {
+      const ang = Math.PI / 4 + i * Math.PI / 2, cx = Math.cos(ang), cy = Math.sin(ang);
+      setLine(ticks[i], C + cx * hg, C + cy * hg, C + cx * (hg + hl), C + cy * (hg + hl));
+      ticks[i][0].setAttribute('stroke-width', halo); ticks[i][0].setAttribute('stroke-opacity', (0.5 * hA).toFixed(2));
+      ticks[i][1].setAttribute('stroke-width', sw); ticks[i][1].setAttribute('stroke', hitHead ? GOLD : WHITE); ticks[i][1].setAttribute('stroke-opacity', (0.95 * hA).toFixed(2));
+    }
+  }
+  raf = requestAnimationFrame(tick);
+  window.__xh = { force: null, stop() { cancelAnimationFrame(raf); }, state: () => ({ gap: gapS, ring: ringA, onT, killT, hitT, sp: curSpread() }), fakeKill(h) { killT = 0; killHead = !!h; }, fakeHit(h) { hitT = 0; hitHead = !!h; } };
+})();
+
 /*FX_TESTER{*/
 // ---------- FX_TESTER (economy thread, Ivan 2026-11-28 00:43): in tester mode the separate save gets everything a player pays for ----------
 if (window.__fxTester) {
@@ -19306,6 +19420,201 @@ if (window.__fxTester) {
 }
 /*}FX_TESTER*/
 
+/*FX_TESTER{*/
+// ---------- FX_PERF: FPS counter and drop recorder for optimisation (Ivan 2026-11-28 10:42: «выведи счетчик fps и инструменты
+// отслеживания проседания графики по отдельной ссылке. Я буду играть, ты будешь записывать статистику»). Internal tool only.
+// On with ?perf=1 (sticky, off with ?perf=0) or window.__fxPerfForce (the separate perf page). Dead on release hosts and in the
+// Playgama build (window.__fxBridge); the release build cuts this block out (the tester-mode strip markers around it).
+// The session lives on window.__fxPerf, so it survives arena switches (each new game instance re-attaches its hooks).
+(function () {
+  var host = location.hostname || '', okHost = location.protocol === 'file:' || /(^|\.)github\.io$|^localhost$|^127\.0\.0\.1$|claudeusercontent\.com$|claude\.ai$/.test(host);
+  if (!okHost || window.__fxBridge) return;
+  var want = !!window.__fxPerfForce;
+  try {
+    var q = new URLSearchParams(location.search).get('perf');
+    if (q === '1' || q === 'on') localStorage.setItem('fxPerf', '1');
+    if (q === '0' || q === 'off') localStorage.removeItem('fxPerf');
+    want = want || localStorage.getItem('fxPerf') === '1';
+  } catch (e) {}
+  if (!want) return;
+  var P = window.__fxPerf;
+  if (!P) P = window.__fxPerf = perfCore();
+  P.attach({
+    // per-instance view of the game; every getter is guarded so a renamed variable only drops that field
+    st: function () { try { return !playing ? 'menu' : (typeof pauseOpen !== 'undefined' && pauseOpen) ? 'pause' : (typeof matchOver !== 'undefined' && matchOver > 0) ? 'end' : (typeof deadT !== 'undefined' && deadT > 0) ? 'dead' : (typeof cdLeft !== 'undefined' && cdLeft > 0) ? 'cd' : 'play'; } catch (e) { return '?'; } },
+    map: function () { try { return MAP; } catch (e) { return '?'; } },
+    pos: function () { try { return [Math.round(player.pos.x), Math.round(player.pos.z)]; } catch (e) { return null; } },
+    bots: function () { try { var n = 0; for (var i = 0; i < bots.length; i++) if (!(bots[i].dead > 0)) n++; return n; } catch (e) { return -1; } },
+    pfx: function () { try { var n = 0; for (var i = 0; i < pfxPool.length; i++) if (pfxPool[i].live) n++; return n; } catch (e) { return -1; } },
+    q: function () { try { return { tier: TQ.tier, ds: TQ.ds, dpr: +renderer.getPixelRatio().toFixed(2), why: TQ.why, gfx: typeof gfx !== 'undefined' ? gfx : '' }; } catch (e) { return {}; } },
+    info: function () { var i = renderer.info; return { calls: i.render.calls, tris: i.render.triangles, prog: i.programs ? i.programs.length : 0, geo: i.memory.geometries, tex: i.memory.textures }; },
+    canvasSize: function () { try { var c = renderer.domElement; return [c.width, c.height]; } catch (e) { return null; } },
+    rafTs: function () { return typeof tqRaw !== 'undefined' && tqRaw > 0 ? tqRaw : performance.now(); }
+  });
+  // hooks: function declarations in this script are plain bindings, so wrapping them reaches every caller
+  function wrap(name, get, set, before, after) {
+    try { var f = get(); if (typeof f !== 'function' || f.__fxp) return; var w = function () { if (before) before.apply(this, arguments); var r = f.apply(this, arguments); if (after) after.apply(this, arguments); return r; }; w.__fxp = 1; set(w); } catch (e) {}
+  }
+  var tU = 0, tR = 0;
+  wrap('update', function () { return update; }, function (w) { update = w; }, function () { tU = performance.now(); }, function () { P.cpuU += performance.now() - tU; });
+  wrap('renderScene', function () { return renderScene; }, function (w) { renderScene = w; }, function () { tR = performance.now(); P.frameStart(); }, function () { P.frameEnd(performance.now() - tR); });
+  wrap('explode', function () { return explode; }, function (w) { explode = w; }, function () { P.mark('boom'); });
+  wrap('ddOnKill', function () { return ddOnKill; }, function (w) { ddOnKill = w; }, function () { P.mark('kill'); });
+  wrap('ddOnDeath', function () { return ddOnDeath; }, function (w) { ddOnDeath = w; }, function () { P.mark('death'); });
+  wrap('spawnBot', function () { return spawnBot; }, function (w) { spawnBot = w; }, function () { P.mark('spawn'); });
+  wrap('respawnPlayer', function () { return respawnPlayer; }, function (w) { respawnPlayer = w; }, function () { P.mark('respawn'); });
+  wrap('resize', function () { return resize; }, function (w) { resize = w; }, function () { P.mark('resize'); });
+  wrap('goPlay', function () { return goPlay; }, function (w) { goPlay = w; }, function (fresh) { if (fresh) P.matchStart(); });
+  wrap('endMatch', function () { return endMatch; }, function (w) { endMatch = w; }, null, function () { P.matchEnd(); });
+  wrap('fxSwitch', function () { return fxSwitch; }, function (w) { fxSwitch = w; }, function (k) { P.mark('switch'); P.flush('switch'); });
+
+  function perfCore() {
+    var t0 = performance.now(), sid = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + '_' + Math.random().toString(36).slice(2, 6);
+    var S = {
+      v: 1, sid: sid, started: new Date().toISOString(), page: location.hostname + location.pathname,
+      dev: { ua: navigator.userAgent, scr: [screen.width, screen.height], dpr: devicePixelRatio, cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0, gpu: '' },
+      sum: null, sec: [], ev: [], matches: [], notes: []
+    };
+    var G = null, cur = null, last = 0, iv = [], ivMed = 16.7, frames = 0, secAcc = null, marks = [], prevInfo = null, heap0 = 0;
+    var H = { all: new Uint32Array(12), play: new Uint32Array(12) };   // frame-time histogram: <12,14,17,20,25,34,50,67,100,150,250,>=250 ms
+    var EDGES = [12, 14, 17, 20, 25, 34, 50, 67, 100, 150, 250];
+    var tot = { play: { n: 0, ms: 0, drop: 0, hitch: 0 }, all: { n: 0, ms: 0 } }, mt = null, dirty = true, db = null, dbState = '', dbT = 0, dbBusy = false;
+    var api = {
+      cpuU: 0,
+      attach: function (g) { G = g; try { var gl = renderer.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'); S.dev.gpu = String(x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) {}
+        prevInfo = null; last = 0; api.mark('instance'); ui(); },
+      mark: function (k) { marks.push([performance.now(), k]); if (marks.length > 40) marks.shift(); },
+      frameStart: function () { cur = { ts: G.rafTs(), u: api.cpuU }; api.cpuU = 0; },
+      frameEnd: function (rMs) {
+        if (!cur || !G) return;
+        var ts = cur.ts, dt = last ? ts - last : 0; last = ts; frames++;
+        var inf = G.info(), tags = [];
+        if (prevInfo) {
+          if (inf.prog > prevInfo.prog) tags.push('compile+' + (inf.prog - prevInfo.prog));
+          if (inf.geo > prevInfo.geo) tags.push('geo+' + (inf.geo - prevInfo.geo));
+          if (inf.tex > prevInfo.tex) tags.push('tex+' + (inf.tex - prevInfo.tex));
+        }
+        prevInfo = inf;
+        if (performance.memory) { var hp = performance.memory.usedJSHeapSize; if (heap0 && hp < heap0 - 2e6) tags.push('gc-' + Math.round((heap0 - hp) / 1e6) + 'MB'); heap0 = hp; }
+        if (!(dt > 0) || dt > 1000) return;   // first frame, or the tab was hidden
+        var st = G.st(), play = st === 'play' || st === 'dead' || st === 'cd';
+        iv.push(dt); if (iv.length >= 60) { var c = iv.slice().sort(function (a, b) { return a - b; }); ivMed = Math.max(6, c[30]); iv.length = 0; }
+        var bin = 0; while (bin < EDGES.length && dt >= EDGES[bin]) bin++;
+        H.all[bin]++; tot.all.n++; tot.all.ms += dt;
+        var drop = dt > Math.max(ivMed * 1.6, 20), hitch = dt > 50;
+        if (play) { H.play[bin]++; tot.play.n++; tot.play.ms += dt; if (drop) tot.play.drop++; if (hitch) tot.play.hitch++; if (mt) { mt.n++; mt.ms += dt; if (drop) mt.drop++; if (hitch) mt.hitch++; if (dt > mt.worst) mt.worst = dt; } }
+        var now = performance.now();
+        if (!secAcc) secAcc = { t0: now, n: 0, ms: 0, worst: 0, u: 0, r: 0, calls: 0, tris: 0, drop: 0 };
+        secAcc.n++; secAcc.ms += dt; if (dt > secAcc.worst) secAcc.worst = dt; secAcc.u += cur.u; secAcc.r += rMs; secAcc.calls += inf.calls; secAcc.tris += inf.tris; if (drop) secAcc.drop++;
+        if (drop && S.ev.length < 400) {
+          for (var i = 0; i < marks.length; i++) if (now - marks[i][0] < dt + 300) tags.push(marks[i][1]);   // inside the slow gap or just before it
+          var q = G.q();
+          S.ev.push({ t: +((now - t0) / 1000).toFixed(1), ms: Math.round(dt), u: +cur.u.toFixed(1), r: +rMs.toFixed(1), st: st, map: G.map(), pos: G.pos(), calls: inf.calls, tris: inf.tris, bots: G.bots(), pfx: G.pfx(), tier: q.tier, ds: q.ds, tags: tags });
+          dirty = true;
+        }
+        if (now - secAcc.t0 >= 1000) {
+          var a = secAcc, q2 = G.q();
+          S.sec.push({ t: Math.round((now - t0) / 1000), fps: Math.round(a.n * 1000 / a.ms), worst: Math.round(a.worst), u: +(a.u / a.n).toFixed(1), r: +(a.r / a.n).toFixed(1), calls: Math.round(a.calls / a.n), ktri: Math.round(a.tris / a.n / 1000), drop: a.drop, st: st, map: G.map(), bots: G.bots(), pfx: G.pfx(), ds: q2.ds, tier: q2.tier });
+          if (S.sec.length > 1500) S.sec.splice(0, S.sec.length - 1500);
+          secAcc = null; dirty = true; draw(a);
+        }
+        ring[ri] = dt; ri = (ri + 1) % ring.length;
+        if (now - dbT > 30000) api.flush('timer');
+      },
+      matchStart: function () { if (mt) api.matchEnd(); mt = { map: G ? G.map() : '?', t: Math.round((performance.now() - t0) / 1000), n: 0, ms: 0, drop: 0, hitch: 0, worst: 0, q: G ? G.q() : {} }; api.mark('match'); },
+      matchEnd: function () { if (!mt) return; var m = mt; mt = null; S.matches.push({ map: m.map, t: m.t, dur: Math.round((performance.now() - t0) / 1000) - m.t, fps: m.n ? Math.round(m.n * 1000 / m.ms) : 0, drops: m.drop, hitches: m.hitch, worst: Math.round(m.worst), dropPct: m.n ? +(100 * m.drop / m.n).toFixed(1) : 0, q: m.q }); dirty = true; api.flush('match'); },
+      report: function () { S.sum = summary(); S.updated = new Date().toISOString(); return S; },
+      text: function () { return textSummary(summary()); },
+      reset: function () { S.sec = []; S.ev = []; S.matches = []; H.all.fill(0); H.play.fill(0); tot = { play: { n: 0, ms: 0, drop: 0, hitch: 0 }, all: { n: 0, ms: 0 } }; t0 = performance.now(); S.started = new Date().toISOString(); S.sid = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + '_' + Math.random().toString(36).slice(2, 6); dirty = true; draw(null); },
+      flush: function (why) {
+        dbT = performance.now(); if (!dirty) return; dirty = false;
+        api.mark('flush'); askDb();
+        var r = api.report(), js = JSON.stringify(r), doc = r;
+        if (js.length > 200000) { doc = trim(r, 200000); js = JSON.stringify(doc); }
+        try { localStorage.setItem('fxPerfLast', js); } catch (e) {}
+        if (db && !dbBusy) { dbBusy = true;
+          db.doc('perf/' + S.sid).set(doc).then(function () { dbState = 'сохранено ' + new Date().toTimeString().slice(0, 5); }, function (e) { dbState = 'ошибка: ' + (e && e.code || e); })
+            .then(function () { dbBusy = false; paintState(); }); }
+      },
+      get session() { return S; }
+    };
+    function pct(h, n, p) { var k = 0, want = n * p; for (var i = 0; i < h.length; i++) { k += h[i]; if (k >= want) return i < EDGES.length ? EDGES[i] : 999; } return 999; }
+    function summary() {
+      var p = tot.play, causes = {};
+      for (var i = 0; i < S.ev.length; i++) { var e = S.ev[i]; if (e.st !== 'play' && e.st !== 'dead' && e.st !== 'cd') continue; var tg = e.tags.length ? e.tags : ['?'];
+        for (var j = 0; j < tg.length; j++) { var k = tg[j].replace(/[+-]\d.*$/, ''); causes[k] = (causes[k] || 0) + 1; } }
+      var byMap = {}; S.sec.forEach(function (s) { if (s.st !== 'play') return; var m = byMap[s.map] || (byMap[s.map] = { s: 0, fps: 0, drop: 0, worst: 0 }); m.s++; m.fps += s.fps; m.drop += s.drop; if (s.worst > m.worst) m.worst = s.worst; });
+      for (var m in byMap) byMap[m].fps = Math.round(byMap[m].fps / byMap[m].s);
+      return { playFrames: p.n, playFps: p.n ? Math.round(p.n * 1000 / p.ms) : 0, p95ms: pct(H.play, p.n, 0.95), p99ms: pct(H.play, p.n, 0.99), drops: p.drop, dropPct: p.n ? +(100 * p.drop / p.n).toFixed(2) : 0, hitches: p.hitch, causes: causes, byMap: byMap, hist: { edges: EDGES, play: Array.from(H.play), all: Array.from(H.all) }, q: G ? G.q() : {}, canvas: G ? G.canvasSize() : null, minutes: +((performance.now() - t0) / 60000).toFixed(1) };
+    }
+    function textSummary(s) {
+      var L = ['FASTRIX perf ' + S.sid + ' · ' + s.minutes + ' мин · ' + (S.dev.gpu || '?') + ' · ' + S.dev.scr.join('x') + '@' + S.dev.dpr,
+        'Качество: ' + (s.q.tier || '?') + ' ratio ' + s.q.dpr + ' ds ' + s.q.ds + ' стиль ' + s.q.gfx + (s.q.why ? ' (' + s.q.why + ')' : '') + ' · canvas ' + (s.canvas || []).join('x'),
+        'В бою: ' + s.playFps + ' fps, 95% кадров быстрее ' + s.p95ms + ' мс, 99% быстрее ' + s.p99ms + ' мс; просадок ' + s.drops + ' (' + s.dropPct + '%), рывков >50 мс ' + s.hitches];
+      var c = Object.keys(s.causes).sort(function (a, b) { return s.causes[b] - s.causes[a]; }).slice(0, 8).map(function (k) { return k + ' ' + s.causes[k]; });
+      if (c.length) L.push('Что было рядом с просадками: ' + c.join(', '));
+      for (var m in s.byMap) L.push('  ' + m + ': ' + s.byMap[m].fps + ' fps, худший кадр ' + s.byMap[m].worst + ' мс, просадок ' + s.byMap[m].drop);
+      S.matches.slice(-6).forEach(function (m) { L.push('  матч ' + m.map + ' ' + m.dur + ' с: ' + m.fps + ' fps, просадок ' + m.dropPct + '%, худший ' + m.worst + ' мс'); });
+      return L.join('\n');
+    }
+    function trim(r, max) { var c = JSON.parse(JSON.stringify(r)); while (JSON.stringify(c).length > max && (c.sec.length > 60 || c.ev.length > 60)) { if (c.sec.length > 60) c.sec.splice(0, Math.ceil(c.sec.length / 4)); if (c.ev.length > 60) c.ev.splice(0, Math.ceil(c.ev.length / 4)); } return c; }
+    // ---- overlay
+    var ring = new Float32Array(120), ri = 0, box = null, cv = null, l1 = null, l2 = null, l3 = null, panel = null, stEl = null;
+    function el(tag, css, txt) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (txt) e.textContent = txt; return e; }
+    function ui() {
+      if (box && box.isConnected) return; box = document.getElementById('fxPerf');
+      if (box) { box.remove(); }
+      box = el('div', 'position:fixed;left:calc(env(safe-area-inset-left) + 92px);top:6px;z-index:3000;background:rgba(10,8,24,.72);color:#e8f0ff;font:600 11px/1.25 ui-monospace,Menlo,monospace;padding:5px 7px;border-radius:8px;pointer-events:auto;user-select:none;-webkit-user-select:none;max-width:330px');
+      box.id = 'fxPerf';
+      var top = el('div', 'display:flex;gap:6px;align-items:center'); cv = el('canvas', 'width:96px;height:22px;flex:none'); cv.width = 192; cv.height = 44;
+      l1 = el('div', 'font-size:13px;font-weight:800'); top.appendChild(l1); top.appendChild(cv); box.appendChild(top);
+      l2 = el('div', 'opacity:.85'); l3 = el('div', 'opacity:.85'); box.appendChild(l2); box.appendChild(l3);
+      panel = el('div', 'display:none;margin-top:5px;gap:4px;flex-wrap:wrap'); stEl = el('div', 'width:100%;opacity:.8');
+      var bt = function (t, f) { var b = el('button', 'font:700 12px system-ui;padding:6px 8px;border-radius:7px;border:0;background:#2f5ff0;color:#fff', t); b.addEventListener('click', function (ev) { ev.stopPropagation(); f(b); }); panel.appendChild(b); return b; };
+      bt('Скопировать итог', function (b) { copy(api.text(), b); });
+      bt('Скопировать всё', function (b) { copy(JSON.stringify(api.report()), b); });
+      bt('Скачать файл', function () { save(); });
+      bt('Новая запись', function () { api.reset(); paintState(); });
+      bt('Свернуть', function () { panel.style.display = 'none'; });
+      panel.appendChild(stEl); box.appendChild(panel);
+      var stop = function (ev) { ev.stopPropagation(); };
+      ['pointerdown', 'pointerup', 'touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup'].forEach(function (t) { box.addEventListener(t, stop, { passive: true }); });
+      box.addEventListener('click', function (ev) { ev.stopPropagation(); if (panel.style.display === 'none') { panel.style.display = 'flex'; paintState(); } });
+      document.body.appendChild(box); draw(null);
+      askDb(); setTimeout(askDb, 3000);
+    }
+    var dbAsked = false;
+    function askDb() { if (dbAsked || !(window.claude && window.claude.use)) return; dbAsked = true;
+      try { window.claude.use('db').then(function (d) { db = d; dbState = d ? 'запись в облако включена' : ''; paintState(); if (d) { dirty = true; api.flush('db'); } }, function () {}); } catch (e) {} }
+    function paintState() { if (stEl) stEl.textContent = (db ? '☁ ' + dbState : 'Облака нет: отчёт копируется или скачивается') + ' · сессия ' + S.sid + ' · просадок ' + S.ev.length; }
+    function draw(a) {
+      if (!box) return; if (!box.isConnected) ui();
+      if (a) { var fps = Math.round(a.n * 1000 / a.ms); l1.textContent = fps + ' fps'; l1.style.color = fps >= 55 ? '#7dff9b' : fps >= 40 ? '#ffd84a' : '#ff6b6b';
+        var q = G ? G.q() : {}; l2.textContent = (a.ms / a.n).toFixed(1) + ' мс · худший ' + Math.round(a.worst) + ' · cpu ' + (a.u / a.n).toFixed(1) + '+' + (a.r / a.n).toFixed(1);
+        l3.textContent = (q.tier || '') + ' ×' + q.dpr + (q.ds < 1 ? ' ds' + q.ds : '') + ' · ' + Math.round(a.calls / a.n) + ' calls · ' + Math.round(a.tris / a.n / 1000) + 'k tri · просадок ' + tot.play.drop; }
+      else { l1.textContent = '— fps'; l2.textContent = 'запись идёт'; l3.textContent = ''; }
+      var x = cv.getContext('2d'), W = cv.width, Hh = cv.height; x.clearRect(0, 0, W, Hh);
+      x.strokeStyle = 'rgba(255,255,255,.25)'; x.beginPath(); var y60 = Hh - 16.7 / 50 * Hh; x.moveTo(0, y60); x.lineTo(W, y60); x.stroke();
+      for (var i = 0; i < ring.length; i++) { var v = ring[(ri + i) % ring.length]; if (!v) continue; var h = Math.min(Hh, v / 50 * Hh); x.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffd84a' : '#7dff9b'; x.fillRect(i * W / ring.length, Hh - h, Math.max(1, W / ring.length - 0.3), h); }
+    }
+    function copy(txt, b) {
+      var done = function (ok) { var o = b.textContent; b.textContent = ok ? 'Скопировано' : 'Не вышло, жми «Скачать»'; setTimeout(function () { b.textContent = o; }, 1800); };
+      try { navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(fallback(txt)); }); } catch (e) { done(fallback(txt)); }
+    }
+    function fallback(txt) { try { var t = el('textarea', 'position:fixed;left:0;top:0;opacity:0'); t.value = txt; document.body.appendChild(t); t.select(); var ok = document.execCommand('copy'); t.remove(); return ok; } catch (e) { return false; } }
+    function save() {
+      var name = 'fastrix_perf_' + S.sid + '.json', data = JSON.stringify(api.report(), null, 1);
+      var viaLink = function () { try { var a = el('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000); } catch (e) {} };
+      try { if (window.claude && window.claude.use) { window.claude.use('downloads').then(function (d) { if (d) d.save({ filename: name, data: data }).catch(function () {}); else viaLink(); }, viaLink); return; } } catch (e) {}
+      viaLink();
+    }
+    __on(document, 'visibilitychange', function () { if (document.hidden) api.flush('hidden'); });
+    __on(window, 'pagehide', function () { api.flush('pagehide'); });
+    if (window.PerformanceObserver) try { new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { if (e.duration > 80) api.mark('longtask+' + Math.round(e.duration)); }); }).observe({ entryTypes: ['longtask'] }); } catch (e) {}
+    return api;
+  }
+})();
+/*}FX_TESTER*/
 
 
 /* v57s: Arsenal on phones in landscape: tabs in a column at the side, stage in the middle, items in a scrolling column (interface thread) */
@@ -19405,9 +19714,31 @@ function fxSwitch(k) {
 setTimeout(() => { const ov = document.getElementById('fxSwitch'); if (ov) ov.remove(); }, 6000);
 window.__fxUp = __G;   // this instance came up to the end of its script
 
+/* v61g: the phone grenade button shows the grenade sticker (the desktop plate's picture) */
+{ const nb = document.getElementById('nade'), ni = document.getElementById('nadeIc');
+  if (nb && ni && !nb.querySelector('img.ngi')) { const im = document.createElement('img'); im.className = 'ngi'; im.alt = ''; im.src = ni.getAttribute('src') || ''; nb.prepend(im);
+    if (!im.getAttribute('src')) { let k = 0; const t = setInterval(() => { const v = ni.getAttribute('src'); if (v || ++k > 40) { if (v) im.src = v; clearInterval(t); } }, 250); } } }
+
 frame();
 })();
 </script>
+
+<style id="v61g">
+html:root body:not(.touch) #hudv #wbar { width: max-content !important; max-width: none !important; }
+html:root body:not(.touch) #hudv #wbar > * { flex: 0 0 auto !important; min-width: max-content !important; }
+html:root body.touch.hudm #hudv #jump { bottom: calc(var(--sb) + 42px + var(--ds-ctrl-size) / 2 * (var(--bz) - 1)) !important; }
+html:root body.touch.hudm #hudv #nade.btn { left: auto !important; right: calc(var(--sr) + 13px) !important; bottom: calc(calc(var(--sb) + 42px + var(--ds-ctrl-size) / 2 * (var(--bz) - 1)) + (var(--ds-ctrl-size) * var(--bz) + var(--ds-ctrl-gap))) !important;
+  width: calc(var(--ds-ctrl-size) - 2 * var(--ds-ctrl-stroke-w)) !important; height: calc(var(--ds-ctrl-size) - 2 * var(--ds-ctrl-stroke-w)) !important; box-sizing: content-box !important;
+  background: none !important; border: var(--ds-ctrl-stroke-w) solid transparent !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; }
+html:root body.touch.hudm #hudv #nade.btn > svg { display: none !important; }
+html:root body.touch.hudm #hudv #nade.btn > img.ngi { position: absolute; inset: 2%; width: 96%; height: 96%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+html:root body.touch.hudm #hudv #nade.btn.on, html:root body.touch.hudm #hudv #nade.btn.ic14.on { background: none !important; transform: scale(.9); filter: brightness(1.1); }
+html:root body.touch.hudm #hudv #nade.btn > i { left: auto !important; top: auto !important; right: -2px !important; bottom: -2px !important; min-width: 22px !important; height: 22px !important; padding: 0 5px !important;
+  box-sizing: border-box !important; border: 0 !important; border-radius: 11px !important; background: rgba(27,16,54,.88) !important; box-shadow: none !important;
+  color: #fff !important; font: 900 13px/22px var(--stk) !important; text-align: center; }
+html:root body.touch.hudm #hudv #slide { right: calc(var(--sr) + 13px + (var(--ds-ctrl-size) * var(--bz) + var(--ds-ctrl-gap))) !important; bottom: calc(var(--sb) + 42px + var(--ds-ctrl-size) / 2 * (var(--bz) - 1)) !important; }
+html:root body.touch.hudm #hudv #aimBtn, html:root body.touch.hudm.afire #hudv #aimBtn { left: calc(50% - 38px - var(--ds-badge-size) - var(--ds-badge-gap)) !important; }
+</style>
 
 </body>
 </html>
