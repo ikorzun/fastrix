@@ -18978,6 +18978,243 @@ let GE_THIN = 0;   // > 0 inside a chest roll: each form joins the candidates 2 
 window.__ge = { list: () => GE_LIST().map(f => 'gf.' + f.wid + '.' + f.form), it: geById, pool: () => chPool().filter(o => o.kind === 'gf').map(o => o.id) };   // test hook
 
 
+// ---------- v57: WORLD DETAIL (Ivan 2026-11-28 00:43 «как еще можно улучшить детализацию мира и объектов, при этом не увеличить нагрузку…
+// приблизиться к уровню fortnite по ощущению мира»; comparison page and bench by the core thread, lab56). What ships, by the quality tier:
+//   low  (weak phones)            nothing changes
+//   mid                           ground shade (walls darker toward the floor, soft contact shadows), sky with sun and clouds + height haze,
+//                                 floor marks (cracks, stains, scuffs, leaves)
+//   high (strong phones, desktop) the above + toy-plastic matcaps on props and buildings + small things at the feet of walls
+// Everything is drawn here (no downloads). The matcaps are our own canvas drawings, not the nidorx/matcaps images (that repo has no
+// licence). The ground shade and haze are a shared uniform, so a tier change never compiles a shader; a change waits for the lobby.
+const DT57 = (() => {
+  const T0 = performance.now(), info = { lv: -1, ms: 0, world: 0, twins: 0, movers: 0, contact: 0, decals: null, clutter: null, err: '' };
+  const MAPC = {   // per map: pebbles, tufts, decal tint, sun colour, clouds
+    arena:  { peb: [0xb9b2a6, 0x958d82, 0xcfc6b6], tuft: [0x5fbf4a, 0x46a83d, 0x7bd05a], dec: 0x3a2c22, sun: 0xfff1d0, clouds: 1 },
+    desert: { peb: [0xd2b07a, 0xb08a58, 0x9c7a4c], tuft: [0xc9a25e, 0xb48c4a, 0xd8b86e], dec: 0x5a3a1c, sun: 0xffe7b8, clouds: 1 },
+    bunker: { peb: [0x6b6474, 0x4d475a, 0x857c8e], tuft: null, dec: 0x120c1c, sun: 0xb691ff, clouds: 0 },
+    room:   { peb: [0xff5d5d, 0x38c6ff, 0xffd23f, 0x3ee08a, 0xb691ff], tuft: null, dec: 0x4a3426, sun: 0xfff1d0, clouds: 0, bricks: 1 } };
+  const MC = MAPC[MAP] || MAPC.arena;
+  // ---- what moves (living arenas: train, presses, robot vacuum, top, jack-in-the-box, caravan…): no matcap swap, no ray targets, no shadows
+  const movers = new Set(), moverB = new Set(), seen = new Set();
+  const walk = (v, d) => { if (!v || typeof v !== 'object' || seen.has(v) || d > 5) return; seen.add(v);
+    if (v.isObject3D) { v.traverse(q => movers.add(q)); return; }
+    if (v.isBox3) { moverB.add(v); return; }
+    if (v.isVector3 || v.isMaterial || v.isBufferGeometry || v.isTexture || v.isColor || v instanceof Map || v instanceof Set) return;
+    if (Array.isArray(v)) { for (const x of v) walk(x, d + 1); return; }
+    for (const k in v) walk(v[k], d + 1); };
+  try { walk(typeof FX21 !== 'undefined' ? FX21 : (window.__v21 || {}).FX21, 0); } catch (e) {}
+  info.movers = movers.size;
+  // ---- world meshes: toon-shaded, not an opponent, not loot, not the player's view, not the sky
+  const skip = new Set(); const mark = o => o && o.traverse(q => skip.add(q));
+  for (const b of bots) mark(b.g); for (const l of loot) mark(l.mesh); mark(yawObj); mark(sky);
+  const world = [], toonMats = new Set();
+  scene.traverse(o => { if (!o.isMesh || skip.has(o)) return; const m = o.material; if (!m || Array.isArray(m) || !m.isMeshToonMaterial || m.visible === false) return; world.push(o); toonMats.add(m); });
+  const still = world.filter(o => !movers.has(o));
+  info.world = world.length;
+  // ---- drawn textures
+  function noiseTex(N, oct) {   // tileable value noise (clouds)
+    const c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N);
+    const lat = (n, seed) => { const a = []; let s = seed; for (let i = 0; i < n * n; i++) { s = (s * 16807) % 2147483647; a.push(s / 2147483647); } return a; };
+    const fs = oct.map(([n, w], j) => { const L = lat(n, 1234 + j * 13); return [(u, v) => { const X = u * n, Y = v * n, x0 = Math.floor(X), y0 = Math.floor(Y), fx = X - x0, fy = Y - y0,
+      sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), g = (i, k) => L[((k % n + n) % n) * n + ((i % n + n) % n)];
+      return (g(x0, y0) * (1 - sx) + g(x0 + 1, y0) * sx) * (1 - sy) + (g(x0, y0 + 1) * (1 - sx) + g(x0 + 1, y0 + 1) * sx) * sy; }, w]; });
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const p = (j * N + i) * 4; let v = 0, W = 0; for (const [f, w] of fs) { v += f(i / N, j / N) * w; W += w; }
+      im.data[p] = im.data[p + 1] = im.data[p + 2] = Math.round(255 * v / W); im.data[p + 3] = 255; }
+    x.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  }
+  function toyMatcap() {   // a lit sphere: key light up-left, soft fill, rim, a glossy highlight like painted plastic
+    const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N);
+    const L = new THREE.Vector3(-0.45, 0.6, 0.66).normalize(), H = new THREE.Vector3(-0.3, 0.45, 1).normalize(), n = new THREE.Vector3();
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const p = (j * N + i) * 4, u = (i + 0.5) / N * 2 - 1, v = 1 - (j + 0.5) / N * 2, r2 = Math.min(1, u * u + v * v);
+      n.set(u, v, Math.sqrt(Math.max(0, 1 - r2))).normalize();
+      const d = Math.max(0, n.dot(L)), fill = 0.5 + 0.5 * n.y, rim = Math.pow(1 - n.z, 2.2), h = Math.max(0, n.dot(H));
+      const val = 0.46 + 0.52 * d + 0.08 * fill + 0.2 * rim, spec = Math.pow(h, 60) * 0.9 + Math.pow(h, 8) * 0.1;
+      const wr = 1.0 + 0.04 * d, wb = 1.0 - 0.04 * d + 0.05 * (1 - fill);   // warm key, cool shadows
+      im.data[p] = Math.min(255, 255 * (val * wr + spec)); im.data[p + 1] = Math.min(255, 255 * (val + spec)); im.data[p + 2] = Math.min(255, 255 * (val * wb + spec)); im.data[p + 3] = 255; }
+    x.putImageData(im, 0, 0); return new THREE.CanvasTexture(c);
+  }
+  // ---- ground shade + height haze, shared by the toon world, its matcap twins and the clutter. U = 0 switches both off (low tier).
+  const U = { value: 0 };
+  function inject(m) {
+    if (m.userData.dt57) return; m.userData.dt57 = true;
+    const prev = m.onBeforeCompile, pk = m.customProgramCacheKey.call(m);
+    m.onBeforeCompile = function (sh, r) { if (prev) prev.call(this, sh, r);
+      sh.uniforms.uDt = U;
+      sh.vertexShader = 'varying vec3 vDtW; varying vec3 vDtN;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+        { vec4 lw = vec4(transformed, 1.0); vec3 ln = objectNormal;
+          #ifdef USE_INSTANCING
+            lw = instanceMatrix * lw; ln = mat3(instanceMatrix) * ln;
+          #endif
+          lw = modelMatrix * lw; vDtW = lw.xyz; vDtN = normalize(mat3(modelMatrix) * ln); }`);
+      sh.fragmentShader = 'varying vec3 vDtW; varying vec3 vDtN; uniform float uDt;\n' + sh.fragmentShader
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          { float vert = 1.0 - smoothstep(0.55, 0.85, abs(vDtN.y));   // walls and sides darken toward the ground, faces turned down are darker
+            float k = mix(1.0, mix(0.64, 1.0, smoothstep(0.0, 1.6, vDtW.y)), vert) * (0.86 + 0.14 * clamp(vDtN.y * 0.5 + 0.5, 0.0, 1.0));
+            diffuseColor.rgb *= mix(1.0, k, uDt); }`)
+        .replace('#include <fog_fragment>', `#ifdef USE_FOG
+            float fogFactor = smoothstep( fogNear, fogFar, fogDepth ) * mix(1.0, mix(1.0, 0.5, smoothstep(3.0, 30.0, vDtW.y)), uDt);
+            gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+          #endif`);
+    };
+    m.customProgramCacheKey = () => 'dt57|' + pk;
+    m.needsUpdate = true;
+  }
+  // ---- matcap twins (high tier) of props and buildings; the ground, moving things and glowing materials keep their toon light
+  const MCAP = toyMatcap(), twin = new Map(), groundish = new Set(), bb = new THREE.Box3(), bs = new THREE.Vector3();
+  for (const o of world) { bb.setFromObject(o).getSize(bs); if (o === floor || (o.material.map && PAL[FLOOR_KEY] && o.material.map === PAL[FLOOR_KEY].tex) || (bs.y < 2 && bs.x * bs.z > 900)) groundish.add(o); }
+  for (const m of toonMats) {
+    const glow = m.emissiveMap || (m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01);
+    if (glow) continue;
+    const t = new THREE.MeshMatcapMaterial({ color: m.color.clone().multiplyScalar(1.12), map: m.map, vertexColors: m.vertexColors, side: m.side, transparent: m.transparent, opacity: m.opacity,
+      polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits, alphaTest: m.alphaTest, flatShading: m.flatShading, matcap: MCAP });
+    t.userData.toonTwin = m; inject(t); twin.set(m, t); }
+  info.twins = twin.size;
+  // ---- sky: three-stop gradient, sun glow, drifting clouds (outdoor maps); fog leans to the horizon colour outdoors
+  const sunDir = sun.position.clone().normalize();
+  const sky2 = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: skyMat.uniforms.top, hor: skyMat.uniforms.bottom, sunC: { value: new THREE.Color(MC.sun) }, sunD: { value: sunDir },
+      cl: { value: MC.clouds ? noiseTex(256, [[4, 1], [8, 0.55], [16, 0.3], [32, 0.15]]) : null }, clK: { value: MC.clouds ? 1 : 0 },
+      t: { get value() { return performance.now() * 1e-3; } } },
+    vertexShader: 'varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform vec3 top, hor, sunC, sunD; uniform sampler2D cl; uniform float clK, t; varying vec3 vD;
+      void main(){ vec3 d = normalize(vD); float h = d.y;
+        vec3 c = mix(hor, top, smoothstep(0.0, 0.6, h)); c = mix(c, hor * 0.92, smoothstep(0.0, -0.15, h));
+        float s = max(dot(d, normalize(sunD)), 0.0); c += sunC * (pow(s, 6.0) * 0.28 + pow(s, 600.0) * 1.2);
+        if (clK > 0.5 && h > 0.0) { vec2 uv = d.xz / (h + 0.18) * 0.22 + vec2(t * 0.004, 0.0); float q = texture2D(cl, uv).r;
+          float a = smoothstep(0.5, 0.78, q) * smoothstep(0.0, 0.25, h); c = mix(c, mix(vec3(1.0), hor, 0.25) + sunC * pow(s, 4.0) * 0.15, a * 0.8); }
+        gl_FragColor = vec4(c, 1.0); }` });
+  if (!MC.clouds) sky2.uniforms.cl.value = MCAP;   // a sampler needs a texture even when unused
+  const sky0 = sky.material, fog0 = scene.fog ? scene.fog.color.clone() : null;
+  // ---- placement: rays down onto the still world. Big merged meshes (the desert's baked decor spans the whole map) get a 4 m grid of their
+  // triangles, so a ray tests a handful of triangles there instead of thousands; small meshes go through three's raycast.
+  const rc = new THREE.Raycaster(), dn = new THREE.Vector3(0, -1, 0), nW = new THREE.Vector3(), org = new THREE.Vector3();
+  const small = [], boxes = [], big = [], CS = 4, va = new THREE.Vector3(), vb = new THREE.Vector3(), vc = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
+  for (const o of still) {
+    const g = o.geometry, pos = g && g.attributes.position, idx = g && g.index, n = pos ? (idx ? idx.count : pos.count) / 3 : 0;
+    if (!o.isInstancedMesh && n > 300) {
+      const P = new Float32Array(n * 9), N = new Float32Array(n * 3), cells = new Map(), huge = [], mw = o.matrixWorld;
+      for (let t = 0; t < n; t++) {
+        for (let k = 0; k < 3; k++) { const i = idx ? idx.getX(t * 3 + k) : t * 3 + k; va.fromBufferAttribute(pos, i).applyMatrix4(mw); P[t * 9 + k * 3] = va.x; P[t * 9 + k * 3 + 1] = va.y; P[t * 9 + k * 3 + 2] = va.z; }
+        va.fromArray(P, t * 9); vb.fromArray(P, t * 9 + 3); vc.fromArray(P, t * 9 + 6); e1.subVectors(vc, vb); e2.subVectors(va, vb); e1.cross(e2).normalize(); N[t * 3] = e1.x; N[t * 3 + 1] = e1.y; N[t * 3 + 2] = e1.z;
+        const x0 = Math.floor(Math.min(va.x, vb.x, vc.x) / CS), x1 = Math.floor(Math.max(va.x, vb.x, vc.x) / CS), z0 = Math.floor(Math.min(va.z, vb.z, vc.z) / CS), z1 = Math.floor(Math.max(va.z, vb.z, vc.z) / CS);
+        if ((x1 - x0 + 1) * (z1 - z0 + 1) > 400) { huge.push(t); continue; }   // a huge triangle (a floor slab) is tested on every ray
+        for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const key = gx * 65536 + gz; let L = cells.get(key); if (!L) cells.set(key, L = []); L.push(t); } }
+      big.push({ o, P, N, cells, huge, dbl: o.material.side === THREE.DoubleSide });
+    } else { small.push(o); boxes.push(new THREE.Box3().setFromObject(o)); }
+  }
+  const hits = [];
+  function ground(x, z, yTop) {
+    hits.length = 0;
+    for (const q of big) { const L = q.cells.get(Math.floor(x / CS) * 65536 + Math.floor(z / CS)) || [], P = q.P;
+      for (const t of q.huge.length ? L.concat(q.huge) : L) { const i = t * 9, ax = P[i], az = P[i + 2], bx = P[i + 3], bz = P[i + 5], cx = P[i + 6], cz = P[i + 8];
+        const d = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz); if (Math.abs(d) < 1e-9) continue;
+        const l1 = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / d, l2 = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / d, l3 = 1 - l1 - l2;
+        if (l1 < 0 || l2 < 0 || l3 < 0) continue; const y = l1 * P[i + 1] + l2 * P[i + 4] + l3 * P[i + 7]; if (y > yTop) continue;
+        hits.push({ y, ny: q.N[t * 3 + 1], dbl: q.dbl }); } }
+    const cand = []; for (let i = 0; i < small.length; i++) { const B = boxes[i]; if (x >= B.min.x && x <= B.max.x && z >= B.min.z && z <= B.max.z && B.min.y <= yTop) cand.push(small[i]); }
+    if (cand.length) { rc.set(org.set(x, yTop, z), dn); rc.far = yTop + 5;
+      for (const h of rc.intersectObjects(cand, false)) { if (!h.face) continue; nW.copy(h.face.normal).transformDirection(h.object.matrixWorld); hits.push({ y: h.point.y, ny: nW.y, dbl: h.object.material.side === THREE.DoubleSide }); } }
+    hits.sort((a, b) => b.y - a.y);
+    for (const h of hits) { if (!h.dbl && h.ny < 0) continue; if (h.ny < -0.5) continue; return h.ny > 0.86 ? new THREE.Vector3(x, h.y, z) : null; }
+    return null;
+  }
+  let rs = 20261128; const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+  const stillB = solids.filter(b => !moverB.has(b) && b.min.x <= b.max.x && Math.abs(b.min.x) < 1000 && Math.abs(b.max.z) < 1000 && Math.abs(b.min.y) < 1000);
+  const footB = stillB.filter(b => b.min.y < 0.6 && b.max.y - b.min.y > 0.4 && (b.max.x - b.min.x > 0.5 || b.max.z - b.min.z > 0.5));
+  const yTop = MAP === 'room' ? 36 : 30;
+  function spot(nearWall) {   // a ground point: next to the foot of a wall or box, or anywhere on open ground
+    for (let k = 0; k < 12; k++) { let x, z;
+      if (nearWall && footB.length) { const b = footB[Math.floor(rnd() * footB.length)], side = Math.floor(rnd() * 4), off = 0.12 + rnd() * rnd() * 0.9;
+        if (side < 2) { x = b.min.x + rnd() * (b.max.x - b.min.x); z = side ? b.max.z + off : b.min.z - off; } else { z = b.min.z + rnd() * (b.max.z - b.min.z); x = side === 3 ? b.max.x + off : b.min.x - off; } }
+      else { x = (rnd() * 2 - 1) * (S - 2); z = (rnd() * 2 - 1) * (S - 2); }
+      if (Math.abs(x) > S - 0.8 || Math.abs(z) > S - 0.8) continue;
+      const p = ground(x, z, yTop); if (p && p.y < 12) return p; }
+    return null;
+  }
+  // ---- floor marks: cracks, stains, scuffs, leaves from one drawn atlas, up to 4 instanced draws
+  function buildDecals() {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128; const x = c.getContext('2d');
+    x.strokeStyle = '#fff'; x.fillStyle = '#fff'; x.lineCap = 'round';
+    x.lineWidth = 4; for (let k = 0; k < 6; k++) { x.beginPath(); let px = 64, py = 64, a = rnd() * 6.3; x.moveTo(px, py);   // 0 cracks
+      for (let s = 0; s < 7; s++) { a += (rnd() - 0.5) * 1.1; px += Math.cos(a) * 8; py += Math.sin(a) * 8; x.lineTo(px, py); } x.stroke(); }
+    { const g = x.createRadialGradient(192, 64, 6, 192, 64, 58); g.addColorStop(0, 'rgba(255,255,255,.75)'); g.addColorStop(0.7, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g;   // 1 stain
+      x.beginPath(); for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283, r = 40 + rnd() * 20; x.lineTo(192 + Math.cos(a) * r, 64 + Math.sin(a) * r); } x.fill(); }
+    x.fillStyle = '#fff'; for (let k = 0; k < 160; k++) { const a = rnd() * 6.283, r = Math.sqrt(rnd()) * 56; x.globalAlpha = 0.25 + rnd() * 0.6; x.beginPath(); x.arc(320 + Math.cos(a) * r, 64 + Math.sin(a) * r, 0.8 + rnd() * 2.2, 0, 7); x.fill(); }   // 2 scuffs
+    x.globalAlpha = 1;
+    for (let k = 0; k < 9; k++) { const cx = 400 + rnd() * 96, cy = 16 + rnd() * 96, a = rnd() * 6.3; x.save(); x.translate(cx, cy); x.rotate(a); x.globalAlpha = 0.85; x.beginPath(); x.ellipse(0, 0, 9, 4, 0, 0, 7); x.fill(); x.restore(); }   // 3 leaves
+    x.globalAlpha = 1;
+    const tex = new THREE.CanvasTexture(c), G = new THREE.Group();
+    const A = 4 * S * S / 100, cols = [MC.dec, MC.dec, MC.dec, MAP === 'room' ? 0x6b4a32 : 0x6f7a2a], ops = [0.7, 0.42, 0.5, 0.75],
+      cnt = (MAP === 'room' ? [0.12, 0.25, 0.4, 0] : [0.45, 0.4, 0.6, MAP === 'bunker' || MAP === 'desert' ? 0 : 0.45]).map(k => Math.round(k * A));
+    for (let k = 0; k < 4; k++) { if (!cnt[k]) continue;
+      const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, (k + uv.getX(i)) / 4);
+      const m = new THREE.MeshBasicMaterial({ map: tex, color: cols[k], transparent: true, opacity: ops[k], depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const im = new THREE.InstancedMesh(g, m, cnt[k]), M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0); let n = 0;
+      for (let i = 0; i < cnt[k]; i++) { const p = spot(k !== 3 && rnd() < 0.55); if (!p) continue; const s = k === 0 ? 2.2 + rnd() * 2.4 : k === 1 ? 2.6 + rnd() * 3.4 : 1.8 + rnd() * 2;
+        q.setFromAxisAngle(up, rnd() * 6.283); sc.set(s, 1, s); M.compose(p.clone().setY(p.y + 0.015), q, sc); im.setMatrixAt(n++, M); }
+      im.count = n; im.frustumCulled = false; im.renderOrder = 2; im.raycast = () => {}; G.add(im); }
+    info.decals = G.children.map(c => c.count); return G;
+  }
+  // ---- small things at the feet of walls and boxes: pebbles (toy bricks in the room), grass tufts outdoors; 1 draw each
+  function buildClutter() {
+    const G = new THREE.Group(), M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), col = new THREE.Color();
+    const pebG = MC.bricks ? new THREE.BoxGeometry(0.32, 0.2, 0.16) : new THREE.IcosahedronGeometry(1, 0);
+    const A = 4 * S * S / 100, NP = Math.round(A * (MC.bricks ? 0.8 : 3)), pm = new THREE.InstancedMesh(pebG, new THREE.MeshToonMaterial({ gradientMap: gradTex }), NP); let n = 0;
+    for (let i = 0; i < NP; i++) { const p = spot(rnd() < 0.8); if (!p) continue;
+      if (MC.bricks) { e.set(0, rnd() * 6.283, 0); sc.set(1, 1, 1); p.y += 0.1; }
+      else { const s = 0.1 + Math.pow(rnd(), 2.2) * 0.28; e.set(rnd() * 6.3, rnd() * 6.3, rnd() * 6.3); sc.set(s * (0.8 + rnd() * 0.5), s * 0.55, s * (0.8 + rnd() * 0.5)); p.y += s * 0.2; }
+      q.setFromEuler(e); M.compose(p, q, sc); pm.setMatrixAt(n, M); pm.setColorAt(n, col.setHex(MC.peb[Math.floor(rnd() * MC.peb.length)])); n++; }
+    pm.count = n; pm.frustumCulled = false; pm.raycast = () => {}; G.add(pm);
+    if (MC.tuft) {   // a tuft = 5 thin leaning blades, no texture and no alpha test (cheap on phones)
+      const pos = []; for (let b = 0; b < 5; b++) { const a = b / 5 * 6.283 + 0.3, lx = Math.cos(a), lz = Math.sin(a), h = 0.7 + (b % 3) * 0.18, w = 0.07, px = -lz * w, pz = lx * w;
+        pos.push(-px, 0, -pz, px, 0, pz, lx * 0.35, h, lz * 0.35); pos.push(px, 0, pz, -px, 0, -pz, lx * 0.35, h, lz * 0.35); }
+      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.computeVertexNormals();
+      const NT = Math.round(A * 2.2), tm = new THREE.InstancedMesh(tg, new THREE.MeshToonMaterial({ gradientMap: gradTex, side: THREE.DoubleSide }), NT); let k = 0;
+      for (let i = 0; i < NT; i++) { const p = spot(rnd() < 0.75); if (!p) continue; const s = 0.35 + rnd() * 0.45; e.set(0, rnd() * 6.3, 0); q.setFromEuler(e); sc.set(s, s * (0.8 + rnd() * 0.6), s);
+        M.compose(p, q, sc); tm.setMatrixAt(k, M); tm.setColorAt(k, col.setHex(MC.tuft[Math.floor(rnd() * MC.tuft.length)])); k++; }
+      tm.count = k; tm.frustumCulled = false; tm.raycast = () => {}; G.add(tm); }
+    G.traverse(o => { if (o.material) inject(o.material); });
+    info.clutter = G.children.map(c => c.count); return G;
+  }
+  // ---- contact shadows: a soft dark strip on the floor along each side of every still box that stands on it (part of the ground shade)
+  function buildContact() {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d');
+    for (let j = 0; j < 64; j++) for (let i = 0; i < 64; i++) { const v = j / 63, u = Math.min(i, 63 - i) / 12; x.fillStyle = `rgba(255,255,255,${(Math.pow(1 - v, 2.2) * Math.min(1, u)).toFixed(3)})`; x.fillRect(i, j, 1, 1); }
+    const tex = new THREE.CanvasTexture(c), g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); g.translate(0, 0, 0.5);   // v = 0 at the box edge, 1 outward
+    const list = stillB.filter(b => b.max.y - b.min.y > 0.35 && b.min.y < 8), m = new THREE.MeshBasicMaterial({ map: tex, color: MAP === 'bunker' ? 0x05030a : 0x1b1036, transparent: true, opacity: MAP === 'bunker' ? 0.5 : 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const im = new THREE.InstancedMesh(g, m, Math.max(1, list.length * 4)), M = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(), p = new THREE.Vector3(); let n = 0;
+    for (const b of list) { const w = b.max.x - b.min.x, d = b.max.z - b.min.z, y = b.min.y + 0.012, r = Math.min(1.3, 0.45 + 0.25 * (b.max.y - b.min.y)), cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
+      const sides = [[cx, b.max.z, 0, w, 0, 1], [cx, b.min.z, Math.PI, w, 0, -1], [b.max.x, cz, Math.PI / 2, d, 1, 0], [b.min.x, cz, -Math.PI / 2, d, -1, 0]];
+      for (const [sx, sz, a, L, ox, oz] of sides) { if (L < 0.3) continue;
+        const gp = ground(sx + ox * 0.3, sz + oz * 0.3, b.min.y + 0.6); if (!gp || Math.abs(gp.y - b.min.y) > 0.25) continue;   // only where the floor meets the box
+        q.setFromAxisAngle(up, a); sc.set(L + r * 0.6, 1, r); p.set(sx, y, sz); M.compose(p, q, sc); im.setMatrixAt(n++, M); } }
+    im.count = n; im.frustumCulled = false; im.renderOrder = 1; im.raycast = () => {}; info.contact = n; return im;
+  }
+  // ---- apply a level (0 low, 1 mid, 2 high); building happens once, the first time a level needs it
+  let decals = null, clutter = null, contact = null, injected = false;
+  function apply(lv) {
+    try {
+      if (lv && !injected) { for (const m of toonMats) inject(m); injected = true; }
+      U.value = lv ? 1 : 0;
+      if (lv && !contact) { contact = buildContact(); scene.add(contact); } if (contact) contact.visible = lv >= 1;
+      if (lv && !decals) { decals = buildDecals(); scene.add(decals); } if (decals) decals.visible = lv >= 1;
+      if (lv >= 2 && !clutter) { clutter = buildClutter(); scene.add(clutter); } if (clutter) clutter.visible = lv >= 2;
+      for (const o of world) { const base = o.material.userData.toonTwin || o.material, t = twin.get(base);
+        const want = lv >= 2 && t && !groundish.has(o) && !movers.has(o) ? t : base; if (o.material !== want) o.material = want; }
+      sky.material = lv ? sky2 : sky0;
+      if (scene.fog && fog0) scene.fog.color.copy(lv && MC.clouds ? new THREE.Color(skyMat.uniforms.bottom.value).lerp(fog0, 0.35) : fog0);   // indoor maps keep their fog colour
+    } catch (e) { info.err = String(e); }
+    info.lv = lv;
+  }
+  const level = () => TQ.tier === 'low' ? 0 : TQ.tier === 'mid' ? 1 : 2;
+  apply(level()); info.ms = Math.round(performance.now() - T0);
+  // a tier change (the «Авто» measurement, Settings, a step down in play) is applied in the lobby; the 3-2-1 upload pass then builds it
+  const api = { info, apply, level, hold: false };   // hold: tests pin a level
+  setInterval(() => { if (!api.hold && !playing && level() !== info.lv) apply(level()); }, 500);
+  return api;
+})();
+window.__dt57 = DT57;   // test hook
+
 /*FX_TESTER{*/
 // ---------- FX_TESTER (economy thread, Ivan 2026-11-28 00:43): in tester mode the separate save gets everything a player pays for ----------
 if (window.__fxTester) {
