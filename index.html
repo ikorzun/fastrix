@@ -19586,13 +19586,13 @@ if (window.__fxTester) {
     var dbAsked = false;
     function askDb() { if (dbAsked || !(window.claude && window.claude.use)) return; dbAsked = true;
       try { window.claude.use('db').then(function (d) { db = d; dbState = d ? 'запись в облако включена' : ''; paintState(); if (d) { dirty = true; api.flush('db'); } }, function () {}); } catch (e) {} }
-    function paintState() { if (stEl) stEl.textContent = (db ? '☁ ' + dbState : 'Облака нет: отчёт копируется или скачивается') + ' · сессия ' + S.sid + ' · просадок ' + S.ev.length; }
+    function paintState() { if (stEl) stEl.textContent = (db ? 'Облако: ' + dbState : 'Облака нет: отчёт копируется или скачивается') + ' · сессия ' + S.sid + ' · просадок ' + S.ev.length; }
     function draw(a) {
       if (!box) return; if (!box.isConnected) ui();
       if (a) { var fps = Math.round(a.n * 1000 / a.ms); l1.textContent = fps + ' fps'; l1.style.color = fps >= 55 ? '#7dff9b' : fps >= 40 ? '#ffd84a' : '#ff6b6b';
         var q = G ? G.q() : {}; l2.textContent = (a.ms / a.n).toFixed(1) + ' мс · худший ' + Math.round(a.worst) + ' · cpu ' + (a.u / a.n).toFixed(1) + '+' + (a.r / a.n).toFixed(1);
         l3.textContent = (q.tier || '') + ' ×' + q.dpr + (q.ds < 1 ? ' ds' + q.ds : '') + ' · ' + Math.round(a.calls / a.n) + ' calls · ' + Math.round(a.tris / a.n / 1000) + 'k tri · просадок ' + tot.play.drop; }
-      else { l1.textContent = '— fps'; l2.textContent = 'запись идёт'; l3.textContent = ''; }
+      else { l1.textContent = '- fps'; l2.textContent = 'запись идёт'; l3.textContent = ''; }
       var x = cv.getContext('2d'), W = cv.width, Hh = cv.height; x.clearRect(0, 0, W, Hh);
       x.strokeStyle = 'rgba(255,255,255,.25)'; x.beginPath(); var y60 = Hh - 16.7 / 50 * Hh; x.moveTo(0, y60); x.lineTo(W, y60); x.stroke();
       for (var i = 0; i < ring.length; i++) { var v = ring[(ri + i) % ring.length]; if (!v) continue; var h = Math.min(Hh, v / 50 * Hh); x.fillStyle = v > 50 ? '#ff4d4d' : v > 25 ? '#ffd84a' : '#7dff9b'; x.fillRect(i * W / ring.length, Hh - h, Math.max(1, W / ring.length - 0.3), h); }
@@ -19719,6 +19719,28 @@ window.__fxUp = __G;   // this instance came up to the end of its script
   if (nb && ni && !nb.querySelector('img.ngi')) { const im = document.createElement('img'); im.className = 'ngi'; im.alt = ''; im.src = ni.getAttribute('src') || ''; nb.prepend(im);
     if (!im.getAttribute('src')) { let k = 0; const t = setInterval(() => { const v = ni.getAttribute('src'); if (v || ++k > 40) { if (v) im.src = v; clearInterval(t); } }, 250); } } }
 
+/* v61i: Decor guide folded into an «i» popup next to Upgrade, the weapon gets the stage */
+{ const dg0 = diDraw;
+  const dhClose = () => { const h = document.getElementById('diHelp'); if (h) h.hidden = true; };
+  const dhOpen = () => { let h = document.getElementById('diHelp');
+    if (!h) { h = document.createElement('div'); h.id = 'diHelp'; h.hidden = true; document.body.appendChild(h);
+      h.addEventListener('click', e => { if (e.target.closest('.dhx') || e.target.classList.contains('dhs')) { try { tap(0.4); } catch (er) {} dhClose(); } }); }
+    const w = handW(), star = fxStar(w.id), wn = w.name || '';
+    h.innerHTML = `<div class="dhs"></div><div class="dhb" role="dialog" aria-modal="true" aria-labelledby="dhT"><div class="dhh"><b id="dhT">${DIT.gT}</b>`
+      + `<button type="button" class="dhx" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="#1b1036" stroke-width="3.2" stroke-linecap="round"/></svg></button></div>`
+      + `<ul><li class="inf"><i>›</i><span>${DIT.g1}</span></li><li class="inf"><i>★</i><span>${DIT.g2(3)}</span></li>`
+      + `<li class="${star >= 3 ? 'ok' : ''}"><i>${star >= 3 ? DI_OK : DI_NO}</i><span>${DIT.g3(wn, star)}</span></li></ul></div>`;
+    h.hidden = false; };
+  diDraw = function () { dg0();
+    try { const box = arsStage.querySelector('#decInfo'), guide = !!box && arsMode === 'd' && !arsStage.classList.contains('disel');
+      arsStage.classList.toggle('diguide', guide);
+      if (guide) { const up = box.querySelector('.dib'); box.innerHTML = (up ? up.outerHTML : '') + `<button type="button" class="dii" data-dh="1" aria-label="${DIT.gT}">i</button>`; }
+    } catch (e) {} };
+  const ra1 = renderArsenal; renderArsenal = function () { ra1(); try { if (arsMode !== 'd') arsStage.classList.remove('diguide'); } catch (e) {} };
+  arsStage.addEventListener('click', e => { const b = e.target.closest('#decInfo [data-dh]'); if (!b) return; e.stopPropagation(); try { tap(0.6); } catch (er) {} dhOpen(); });
+  __on(document, 'keydown', e => { if (e.key === 'Escape') { const h = document.getElementById('diHelp'); if (h && !h.hidden) { e.stopPropagation(); dhClose(); } } }, true);
+  try { if (typeof pmTab !== 'undefined' && pmTab === 'ars' && arsMode === 'd') decDrawTab(); } catch (e) {} }
+
 frame();
 })();
 </script>
@@ -19738,6 +19760,33 @@ html:root body.touch.hudm #hudv #nade.btn > i { left: auto !important; top: auto
   color: #fff !important; font: 900 13px/22px var(--stk) !important; text-align: center; }
 html:root body.touch.hudm #hudv #slide { right: calc(var(--sr) + 13px + (var(--ds-ctrl-size) * var(--bz) + var(--ds-ctrl-gap))) !important; bottom: calc(var(--sb) + 42px + var(--ds-ctrl-size) / 2 * (var(--bz) - 1)) !important; }
 html:root body.touch.hudm #hudv #aimBtn, html:root body.touch.hudm.afire #hudv #aimBtn { left: calc(50% - 38px - var(--ds-badge-size) - var(--ds-badge-gap)) !important; }
+</style>
+
+<style id="v61i">
+html:root body #lobby #arsStage.dl.diguide.diguide #decInfo { top: auto !important; left: auto !important; right: 8px !important; bottom: 8px !important; width: auto !important; max-width: calc(100% - 16px) !important;
+  height: auto !important; padding: 0 !important; background: none !important; border-radius: 0 !important; flex-direction: row !important; align-items: center !important; gap: 8px !important; overflow: visible !important; }
+html:root body #lobby #arsStage.dl.diguide.diguide #decInfo .dib { margin: 0 !important; height: 34px !important; padding: 0 14px !important; font-size: 14px !important; border-radius: 999px !important; flex: 0 1 auto; min-width: 0; }
+html:root body #lobby #arsStage.dl.diguide.diguide canvas.pv3 { left: 0 !important; right: auto !important; width: 100% !important; transform: none !important; }
+html:root body.arsSide #lobby #arsStage.dl.diguide.diguide .stw { max-width: 46% !important; }
+#decInfo .dii { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center;
+  background: #fff; color: var(--ink, #1b1036); font: 900 19px/1 var(--stk, var(--font)); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+#decInfo .dii:active { transform: scale(.92); }
+body.touch #lobby #arsStage.dl.diguide #decInfo .dib, body.touch #decInfo .dii { height: 38px !important; }
+body.touch #decInfo .dii { width: 38px; }
+#diHelp { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; }
+#diHelp[hidden] { display: none; }
+#diHelp .dhs { position: absolute; inset: 0; background: rgba(10,6,24,.55); }
+#diHelp .dhb { position: relative; box-sizing: border-box; width: min(440px, 78vw); max-height: 80vh; overflow: auto; padding: 14px 16px 16px; border-radius: 20px;
+  background: rgba(27,16,54,.95); color: #fff; font: 700 14px/1.3 var(--font); display: grid; gap: 10px; }
+#diHelp .dhh { display: flex; align-items: center; gap: 10px; }
+#diHelp .dhh b { flex: 1; font: 900 18px/1.15 var(--font); }
+#diHelp .dhx { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0; background: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+#diHelp .dhx svg { width: 18px; height: 18px; }
+#diHelp ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#diHelp li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; color: rgba(255,255,255,.85); }
+#diHelp li i { font-style: normal; font-weight: 900; color: #ff7a7a; text-align: center; } #diHelp li.ok i { color: #6be08f; } #diHelp li.inf i { color: #ffd23f; }
+#diHelp li b { color: #fff; font-weight: 900; }
+body.touch #diHelp .dhb { width: min(400px, 72vw); font-size: 13px; padding: 12px 14px 14px; }
 </style>
 
 </body>
