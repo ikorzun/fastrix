@@ -27,6 +27,12 @@
   addEventListener('pagehide', function () { store.flush(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden) store.flush(); });
 
+  // Rule 1.5.2: the browser reserves Esc for leaving full screen, so the game never
+  // reacts to it here (P pauses; every popup has its own close button). Registered
+  // before any game script, so it runs first and stops the game's Esc handlers.
+  // Leaving pointer lock with Esc still pauses through the game's pointerlockchange.
+  addEventListener('keydown', function (e) { if (e.code === 'Escape' || e.key === 'Escape') e.stopImmediatePropagation(); }, true);
+
   // Game hooks (window.__fx) are defined at the end of the game script.
   var paused = false, audioOn = true;
   window.__fxPaused = false;
@@ -94,6 +100,8 @@
     B.initialize()
       .then(function () {
         window.__fxLang = B.platform.language || 'en';
+        // Rule 1.5.4: touch controls by Bridge device.type (a touchscreen laptop gets mouse+keyboard).
+        try { var dt = B.device.type; if (dt) window.__fxTouch = (dt === 'mobile' || dt === 'tablet'); } catch (e) {}
         audioOn = B.platform.isAudioEnabled !== false;
         setupRewarded(B);
         return B.storage.get([SAVE_KEY]);

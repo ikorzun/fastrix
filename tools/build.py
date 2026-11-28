@@ -44,6 +44,10 @@ window.__fx = {
   var ia = initAudio; initAudio = function () { var r = ia.apply(this, arguments); if (window.__fxAudioOn === false && actx) { try { actx.suspend(); } catch (e) {} } return r; };
 })();
 '''
+TOUCH_RE = re.compile(r"matchMedia\('\(pointer: coarse\)'\)\.matches \|\| 'ontouchstart' in window")
+STORE_TITLE = 'Fastrix: FPS Arena Shooter Online'   # rule 3.5.1: matches the Playgama form title
+# Tester-only switches that must never ship to Playgama (economy thread's unlock-everything etc.).
+TESTER_RE = re.compile(r'__fxTester\s*=\s*true|UNLOCK_ALL\s*=\s*true|unlockEverything\s*=\s*true', re.I)
 SCRIPT_RE = re.compile(r'<script(\s[^>]*)?>(.*?)</script>', re.S | re.I)
 
 
@@ -60,6 +64,8 @@ def inject_bridge(html):
             parked.append(src.group(1))
             return '<script type="text/x-fastrix" data-src="%s"></script>' % src.group(1)
         body = re.sub(r'\blocalStorage\b', 'window.__fxStore', body)
+        # rule 1.5.4: touch controls follow Bridge device.type, not the pointer or screen
+        body = TOUCH_RE.sub(lambda m: "(window.__fxTouch !== undefined ? window.__fxTouch : (%s))" % m.group(0), body)
         parked.append(len(body))
         return '<script type="text/x-fastrix">%s</script>' % body
 
@@ -81,6 +87,9 @@ def inject_bridge(html):
     boot = open(BOOT_JS, encoding='utf-8').read()
     head = '<script src="%s"></script>\n<script>%s</script>\n' % (BRIDGE_CDN, boot)
     html = re.sub(r'<head>\s*', lambda m: m.group(0) + head, html, count=1)
+    html = re.sub(r'<title>[^<]*</title>', '<title>%s</title>' % STORE_TITLE, html, count=1)
+    if TESTER_RE.search(html):
+        sys.exit('bridge: a tester unlock switch is ON in this build: turn it off before a Playgama archive')
     return html, len(parked)
 
 
@@ -107,7 +116,9 @@ def main():
     if not re.search(r'<!doctype', html[:200], re.I):
         html = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                 '<meta name="viewport" content="width=device-width, initial-scale=1, '
-                'maximum-scale=1, user-scalable=no, viewport-fit=cover">\n</head>\n<body>\n'
+                'maximum-scale=1, user-scalable=no, viewport-fit=cover">\n'
+                # rule 1.6.3: the page itself never scrolls (browser default body margin is 8 px)
+                '<style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden}</style>\n</head>\n<body>\n'
                 + html + '\n</body>\n</html>\n')
 
     nparked = 0
