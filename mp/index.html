@@ -19083,13 +19083,16 @@ window.__ge = { list: () => GE_LIST().map(f => 'gf.' + f.wid + '.' + f.form), it
 //   high (strong phones, desktop) the above + toy-plastic matcaps on props and buildings + small things at the feet of walls
 // Everything is drawn here (no downloads). The matcaps are our own canvas drawings, not the nidorx/matcaps images (that repo has no
 // licence). The ground shade and haze are a shared uniform, so a tier change never compiles a shader; a change waits for the lobby.
+// v58 (Ivan 2026-11-28 09:19 «Убери траву с карт», 09:20 «С маткапом многие объекты стали темнее… результат нужен где-то посередине»):
+//   no grass tufts on any map; the matcap no longer replaces the toon light (that lost the sun and made objects ~15 % darker), it now
+//   tints the lit toon colour halfway: highlight and roundness stay, brightness lands between v56 and v57.
 const DT57 = (() => {
-  const T0 = performance.now(), info = { lv: -1, ms: 0, world: 0, twins: 0, movers: 0, contact: 0, decals: null, clutter: null, err: '' };
-  const MAPC = {   // per map: pebbles, tufts, decal tint, sun colour, clouds
-    arena:  { peb: [0xb9b2a6, 0x958d82, 0xcfc6b6], tuft: [0x5fbf4a, 0x46a83d, 0x7bd05a], dec: 0x3a2c22, sun: 0xfff1d0, clouds: 1 },
-    desert: { peb: [0xd2b07a, 0xb08a58, 0x9c7a4c], tuft: [0xc9a25e, 0xb48c4a, 0xd8b86e], dec: 0x5a3a1c, sun: 0xffe7b8, clouds: 1 },
-    bunker: { peb: [0x6b6474, 0x4d475a, 0x857c8e], tuft: null, dec: 0x120c1c, sun: 0xb691ff, clouds: 0 },
-    room:   { peb: [0xff5d5d, 0x38c6ff, 0xffd23f, 0x3ee08a, 0xb691ff], tuft: null, dec: 0x4a3426, sun: 0xfff1d0, clouds: 0, bricks: 1 } };
+  const T0 = performance.now(), info = { lv: -1, ms: 0, world: 0, mcMats: 0, movers: 0, contact: 0, decals: null, clutter: null, err: '' };
+  const MAPC = {   // per map: pebbles, decal tint, sun colour, clouds (v58: no grass tufts)
+    arena:  { peb: [0xb9b2a6, 0x958d82, 0xcfc6b6], dec: 0x3a2c22, sun: 0xfff1d0, clouds: 1 },
+    desert: { peb: [0xd2b07a, 0xb08a58, 0x9c7a4c], dec: 0x5a3a1c, sun: 0xffe7b8, clouds: 1 },
+    bunker: { peb: [0x6b6474, 0x4d475a, 0x857c8e], dec: 0x120c1c, sun: 0xb691ff, clouds: 0 },
+    room:   { peb: [0xff5d5d, 0x38c6ff, 0xffd23f, 0x3ee08a, 0xb691ff], dec: 0x4a3426, sun: 0xfff1d0, clouds: 0, bricks: 1 } };
   const MC = MAPC[MAP] || MAPC.arena;
   // ---- what moves (living arenas: train, presses, robot vacuum, top, jack-in-the-box, caravan…): no matcap swap, no ray targets, no shadows
   const movers = new Set(), moverB = new Set(), seen = new Set();
@@ -19130,24 +19133,31 @@ const DT57 = (() => {
       im.data[p] = Math.min(255, 255 * (val * wr + spec)); im.data[p + 1] = Math.min(255, 255 * (val + spec)); im.data[p + 2] = Math.min(255, 255 * (val * wb + spec)); im.data[p + 3] = 255; }
     x.putImageData(im, 0, 0); return new THREE.CanvasTexture(c);
   }
-  // ---- ground shade + height haze, shared by the toon world, its matcap twins and the clutter. U = 0 switches both off (low tier).
-  const U = { value: 0 };
+  // ---- ground shade + height haze (U), matcap tint (UMC, high tier), shared by the toon world and the clutter; 0 switches them off.
+  const U = { value: 0 }, UMC = { value: 0 }, MCAP = { value: toyMatcap() };
+  const MC_K = 1.13, MC_A = 0.6;   // v58: tint strength and scale; the toy matcap averages 0.78, so the mean factor is ~0.93 (v57 full matcap: ~0.85)
   function inject(m) {
     if (m.userData.dt57) return; m.userData.dt57 = true;
-    const prev = m.onBeforeCompile, pk = m.customProgramCacheKey.call(m);
+    const prev = m.onBeforeCompile, pk = m.customProgramCacheKey.call(m), on = m.userData.mcOn = { value: 1 };
     m.onBeforeCompile = function (sh, r) { if (prev) prev.call(this, sh, r);
-      sh.uniforms.uDt = U;
+      sh.uniforms.uDt = U; sh.uniforms.uMc = UMC; sh.uniforms.uMcOn = on; sh.uniforms.uMcap = MCAP;
       sh.vertexShader = 'varying vec3 vDtW; varying vec3 vDtN;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
         { vec4 lw = vec4(transformed, 1.0); vec3 ln = objectNormal;
           #ifdef USE_INSTANCING
             lw = instanceMatrix * lw; ln = mat3(instanceMatrix) * ln;
           #endif
           lw = modelMatrix * lw; vDtW = lw.xyz; vDtN = normalize(mat3(modelMatrix) * ln); }`);
-      sh.fragmentShader = 'varying vec3 vDtW; varying vec3 vDtN; uniform float uDt;\n' + sh.fragmentShader
+      sh.fragmentShader = 'varying vec3 vDtW; varying vec3 vDtN; uniform float uDt, uMc, uMcOn; uniform sampler2D uMcap;\n' + sh.fragmentShader
         .replace('#include <color_fragment>', `#include <color_fragment>
           { float vert = 1.0 - smoothstep(0.55, 0.85, abs(vDtN.y));   // walls and sides darken toward the ground, faces turned down are darker
             float k = mix(1.0, mix(0.64, 1.0, smoothstep(0.0, 1.6, vDtW.y)), vert) * (0.86 + 0.14 * clamp(vDtN.y * 0.5 + 0.5, 0.0, 1.0));
             diffuseColor.rgb *= mix(1.0, k, uDt); }`)
+        .replace('gl_FragColor = vec4( outgoingLight, diffuseColor.a );', `
+          if (uMc * uMcOn > 0.0) {   // v58: the matcap tints the lit colour (sun and sky light stay), half strength, mean x~0.93
+            vec3 vd = normalize( vViewPosition ), mx = normalize( vec3( vd.z, 0.0, - vd.x ) ), my = cross( vd, mx );
+            vec3 mc = texture2D( uMcap, vec2( dot( mx, normal ), dot( my, normal ) ) * 0.495 + 0.5 ).rgb;
+            outgoingLight *= mix( vec3( 1.0 ), mc * ${MC_K.toFixed(3)}, ${MC_A.toFixed(3)} * uMc * uMcOn ); }
+          gl_FragColor = vec4( outgoingLight, diffuseColor.a );`)
         .replace('#include <fog_fragment>', `#ifdef USE_FOG
             float fogFactor = smoothstep( fogNear, fogFar, fogDepth ) * mix(1.0, mix(1.0, 0.5, smoothstep(3.0, 30.0, vDtW.y)), uDt);
             gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
@@ -19156,16 +19166,11 @@ const DT57 = (() => {
     m.customProgramCacheKey = () => 'dt57|' + pk;
     m.needsUpdate = true;
   }
-  // ---- matcap twins (high tier) of props and buildings; the ground, moving things and glowing materials keep their toon light
-  const MCAP = toyMatcap(), twin = new Map(), groundish = new Set(), bb = new THREE.Box3(), bs = new THREE.Vector3();
-  for (const o of world) { bb.setFromObject(o).getSize(bs); if (o === floor || (o.material.map && PAL[FLOOR_KEY] && o.material.map === PAL[FLOOR_KEY].tex) || (bs.y < 2 && bs.x * bs.z > 900)) groundish.add(o); }
-  for (const m of toonMats) {
-    const glow = m.emissiveMap || (m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01);
-    if (glow) continue;
-    const t = new THREE.MeshMatcapMaterial({ color: m.color.clone().multiplyScalar(1.12), map: m.map, vertexColors: m.vertexColors, side: m.side, transparent: m.transparent, opacity: m.opacity,
-      polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits, alphaTest: m.alphaTest, flatShading: m.flatShading, matcap: MCAP });
-    t.userData.toonTwin = m; inject(t); twin.set(m, t); }
-  info.twins = twin.size;
+  // ---- the matcap tint (high tier) goes on props and buildings; the ground and glowing materials keep their plain toon light
+  const groundM = new Set(), bb = new THREE.Box3(), bs = new THREE.Vector3();
+  for (const o of world) { bb.setFromObject(o).getSize(bs); if (o === floor || (o.material.map && PAL[FLOOR_KEY] && o.material.map === PAL[FLOOR_KEY].tex) || (bs.y < 2 && bs.x * bs.z > 900)) groundM.add(o.material); }
+  const mcOff = m => groundM.has(m) || !!(m.emissiveMap || (m.emissive && m.emissive.r + m.emissive.g + m.emissive.b > 0.01));
+  for (const m of toonMats) if (!mcOff(m)) info.mcMats++;
   // ---- sky: three-stop gradient, sun glow, drifting clouds (outdoor maps); fog leans to the horizon colour outdoors
   const sunDir = sun.position.clone().normalize();
   const sky2 = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false,
@@ -19180,7 +19185,7 @@ const DT57 = (() => {
         if (clK > 0.5 && h > 0.0) { vec2 uv = d.xz / (h + 0.18) * 0.22 + vec2(t * 0.004, 0.0); float q = texture2D(cl, uv).r;
           float a = smoothstep(0.5, 0.78, q) * smoothstep(0.0, 0.25, h); c = mix(c, mix(vec3(1.0), hor, 0.25) + sunC * pow(s, 4.0) * 0.15, a * 0.8); }
         gl_FragColor = vec4(c, 1.0); }` });
-  if (!MC.clouds) sky2.uniforms.cl.value = MCAP;   // a sampler needs a texture even when unused
+  if (!MC.clouds) sky2.uniforms.cl.value = MCAP.value;   // a sampler needs a texture even when unused
   const sky0 = sky.material, fog0 = scene.fog ? scene.fog.color.clone() : null;
   // ---- placement: rays down onto the still world. Big merged meshes (the desert's baked decor spans the whole map) get a 4 m grid of their
   // triangles, so a ray tests a handful of triangles there instead of thousands; small meshes go through three's raycast.
@@ -19252,7 +19257,7 @@ const DT57 = (() => {
       im.count = n; im.frustumCulled = false; im.renderOrder = 2; im.raycast = () => {}; G.add(im); }
     info.decals = G.children.map(c => c.count); return G;
   }
-  // ---- small things at the feet of walls and boxes: pebbles (toy bricks in the room), grass tufts outdoors; 1 draw each
+  // ---- small things at the feet of walls and boxes: pebbles (toy bricks in the room); 1 draw (v58: no grass tufts)
   function buildClutter() {
     const G = new THREE.Group(), M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), col = new THREE.Color();
     const pebG = MC.bricks ? new THREE.BoxGeometry(0.32, 0.2, 0.16) : new THREE.IcosahedronGeometry(1, 0);
@@ -19262,14 +19267,6 @@ const DT57 = (() => {
       else { const s = 0.1 + Math.pow(rnd(), 2.2) * 0.28; e.set(rnd() * 6.3, rnd() * 6.3, rnd() * 6.3); sc.set(s * (0.8 + rnd() * 0.5), s * 0.55, s * (0.8 + rnd() * 0.5)); p.y += s * 0.2; }
       q.setFromEuler(e); M.compose(p, q, sc); pm.setMatrixAt(n, M); pm.setColorAt(n, col.setHex(MC.peb[Math.floor(rnd() * MC.peb.length)])); n++; }
     pm.count = n; pm.frustumCulled = false; pm.raycast = () => {}; G.add(pm);
-    if (MC.tuft) {   // a tuft = 5 thin leaning blades, no texture and no alpha test (cheap on phones)
-      const pos = []; for (let b = 0; b < 5; b++) { const a = b / 5 * 6.283 + 0.3, lx = Math.cos(a), lz = Math.sin(a), h = 0.7 + (b % 3) * 0.18, w = 0.07, px = -lz * w, pz = lx * w;
-        pos.push(-px, 0, -pz, px, 0, pz, lx * 0.35, h, lz * 0.35); pos.push(px, 0, pz, -px, 0, -pz, lx * 0.35, h, lz * 0.35); }
-      const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.computeVertexNormals();
-      const NT = Math.round(A * 2.2), tm = new THREE.InstancedMesh(tg, new THREE.MeshToonMaterial({ gradientMap: gradTex, side: THREE.DoubleSide }), NT); let k = 0;
-      for (let i = 0; i < NT; i++) { const p = spot(rnd() < 0.75); if (!p) continue; const s = 0.35 + rnd() * 0.45; e.set(0, rnd() * 6.3, 0); q.setFromEuler(e); sc.set(s, s * (0.8 + rnd() * 0.6), s);
-        M.compose(p, q, sc); tm.setMatrixAt(k, M); tm.setColorAt(k, col.setHex(MC.tuft[Math.floor(rnd() * MC.tuft.length)])); k++; }
-      tm.count = k; tm.frustumCulled = false; tm.raycast = () => {}; G.add(tm); }
     G.traverse(o => { if (o.material) inject(o.material); });
     info.clutter = G.children.map(c => c.count); return G;
   }
@@ -19291,13 +19288,11 @@ const DT57 = (() => {
   let decals = null, clutter = null, contact = null, injected = false;
   function apply(lv) {
     try {
-      if (lv && !injected) { for (const m of toonMats) inject(m); injected = true; }
-      U.value = lv ? 1 : 0;
+      if (lv && !injected) { for (const m of toonMats) { inject(m); if (mcOff(m)) m.userData.mcOn.value = 0; } injected = true; }
+      U.value = lv ? 1 : 0; UMC.value = lv >= 2 ? 1 : 0;
       if (lv && !contact) { contact = buildContact(); scene.add(contact); } if (contact) contact.visible = lv >= 1;
       if (lv && !decals) { decals = buildDecals(); scene.add(decals); } if (decals) decals.visible = lv >= 1;
       if (lv >= 2 && !clutter) { clutter = buildClutter(); scene.add(clutter); } if (clutter) clutter.visible = lv >= 2;
-      for (const o of world) { const base = o.material.userData.toonTwin || o.material, t = twin.get(base);
-        const want = lv >= 2 && t && !groundish.has(o) && !movers.has(o) ? t : base; if (o.material !== want) o.material = want; }
       sky.material = lv ? sky2 : sky0;
       if (scene.fog && fog0) scene.fog.color.copy(lv && MC.clouds ? new THREE.Color(skyMat.uniforms.bottom.value).lerp(fog0, 0.35) : fog0);   // indoor maps keep their fog colour
     } catch (e) { info.err = String(e); }
